@@ -62,6 +62,7 @@ Eigen::VectorXd circularEigenBuffer::getChannelDataInOrder(int channel_index, in
     return orderedData;
 }
 
+// Down sampling currently not working
 Eigen::MatrixXd circularEigenBuffer::getDataInOrder(int downSamplingFactor) const {
     
     // If currentIndex is 0, the data is already in order.

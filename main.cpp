@@ -8,9 +8,9 @@
 #include "dataHandler.h"
 
 namespace plt = matplotlibcpp;
-const uint8_t CHANNEL_COUNT = 3;
+const uint8_t CHANNEL_COUNT = 20;
 const uint32_t SAMPLING_RATE = 5000;
-const uint32_t DOWNSAMPLING_FACTOR = 1;    // Down sampling currently not working
+const uint32_t DOWNSAMPLING_FACTOR = 10;
 const uint32_t DATABUFFER_LENGTH_IN_SECONDS = 5;
 
 // Loop for the data collecting and storing
@@ -25,11 +25,11 @@ void dataAcquisitionLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex)
 
 void plottingLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex) {
     const int dataPoints = SAMPLING_RATE * DATABUFFER_LENGTH_IN_SECONDS / DOWNSAMPLING_FACTOR;
-    // int channel_index = 0;
+    std::vector<int> channels_to_display = {1, 5, 15};
     int channel_count = CHANNEL_COUNT;
 
     plt::ion(); // Enable interactive mode
-    plt::figure_size(1920, 100 * channel_count);
+    plt::figure_size(1920, 100 * channels_to_display.size());
 
     // X values of the plot
     Eigen::VectorXd xVec = Eigen::VectorXd::LinSpaced(dataPoints, 0, DATABUFFER_LENGTH_IN_SECONDS);
@@ -38,22 +38,21 @@ void plottingLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex) {
     // Y values of the plot
     Eigen::VectorXd yVec = Eigen::VectorXd::Zero(dataPoints);
 
-    Eigen::MatrixXd bufferCopy(dataBuffer.rows(), dataPoints);
     while (true) { // Adjust this condition as needed
         plt::clf();
-
-        {
-            std::lock_guard<std::mutex> guard(dataMutex);
-            bufferCopy = dataBuffer.getDataInOrder();
-            // yVec = dataBuffer.getChannelDataInOrder(channel_index, DOWNSAMPLING_FACTOR);
-        }
         
-        for (int channel_index = 0; channel_index < channel_count; ++channel_index) {
-            yVec = bufferCopy.row(channel_index);
-            std::cout << yVec.size() << ' ' << x.size() << '\n';
-            plt::subplot(channel_count, 1, channel_index + 1);
+        int graph_ind = 0;
+        for (int channel_index : channels_to_display) {
+            {
+            std::lock_guard<std::mutex> guard(dataMutex);
+            yVec = dataBuffer.getChannelDataInOrder(channel_index, DOWNSAMPLING_FACTOR);
+            }
+
+            // std::cout << yVec.size() << ' ' << x.size() << '\n';
+            plt::subplot(channels_to_display.size(), 1, graph_ind + 1);
             plt::plot(x, std::vector<double>(yVec.data(), yVec.data() + yVec.size()));
             plt::title("Channel " + std::to_string(channel_index + 1)); // Optional: Add title to each subplot
+            graph_ind++;
         }
         
         plt::pause(0.01); // Pause for a short period to allow the plot to update
