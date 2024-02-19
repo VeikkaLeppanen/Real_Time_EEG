@@ -4,10 +4,11 @@
 #include <omp.h>
 #include <string>
 
-#include "matplotlibcpp.h"
 #include "dataHandler.h"
 
+#include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
+
 const uint8_t CHANNEL_COUNT = 20;
 const uint32_t SAMPLING_RATE = 5000;
 const uint32_t DOWNSAMPLING_FACTOR = 10;
@@ -23,9 +24,10 @@ void dataAcquisitionLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex)
     }
 }
 
+// Loop for matplotlibcpp graph visualization
 void plottingLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex) {
-    const int dataPoints = SAMPLING_RATE * DATABUFFER_LENGTH_IN_SECONDS / DOWNSAMPLING_FACTOR;
-    std::vector<int> channels_to_display = {1, 5, 15};
+    const int dataPoints = (SAMPLING_RATE * DATABUFFER_LENGTH_IN_SECONDS + DOWNSAMPLING_FACTOR - 1) / DOWNSAMPLING_FACTOR;
+    std::vector<int> channels_to_display = {0}; //, 5, 15};
     int channel_count = CHANNEL_COUNT;
 
     plt::ion(); // Enable interactive mode
@@ -37,10 +39,11 @@ void plottingLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex) {
 
     // Y values of the plot
     Eigen::VectorXd yVec = Eigen::VectorXd::Zero(dataPoints);
+    Eigen::MatrixXd downSampledData = Eigen::MatrixXd::Zero(dataBuffer.getNumberOfRows(), dataPoints);
 
     while (true) { // Adjust this condition as needed
         plt::clf();
-        
+
         int graph_ind = 0;
         for (int channel_index : channels_to_display) {
             {
@@ -60,8 +63,8 @@ void plottingLoop(circularEigenBuffer &dataBuffer, std::mutex &dataMutex) {
 }
 
 int main() {
-    // Shared array of circularEigenBuffer to store data from channels
-    circularEigenBuffer dataBuffer(CHANNEL_COUNT, SAMPLING_RATE * DATABUFFER_LENGTH_IN_SECONDS);
+    // Shared array of circularEigenBuffer to store data from channels. +1 for the time_stamps
+    circularEigenBuffer dataBuffer(CHANNEL_COUNT + 1, SAMPLING_RATE * DATABUFFER_LENGTH_IN_SECONDS);
     // Mutex to protect the shared vector
     std::mutex dataMutex;
 
