@@ -24,8 +24,8 @@ int dataHandler::simulateData() {
                 time += 1.0 / sampling_rate_;
 
                 {
-                std::unique_lock<std::mutex> mlock(dataMutex, std::try_to_lock);                
-                if (mlock) { this->addData(sample); }
+                std::lock_guard<std::mutex> guard(dataMutex);
+                this->addData(sample);
                 }
 
             // Multiple samples per packet
@@ -50,14 +50,22 @@ int dataHandler::simulateData() {
     return 0;
 }
 
-// Add samples to channels. Last row in the shortBuffer_ is for the time_stamp
+// Add samples to channels. Last row in the short_buffer_ is for the time_stamp
 template<typename Derived>
 void dataHandler::addData(const Eigen::MatrixBase<Derived> &sample_packet) {
     if (sample_packet.rows() != channel_count_ + 1) {
         std::cerr << "Invalid sample dimensions: " << sample_packet.rows() << " expected: " << channel_count_ + 1 << std::endl;
         return;
     }
-    shortBuffer_.addSamples(sample_packet.derived());
+
+    // Save samples to the short buffer
+    size_t old_index = short_buffer_.getCurrentIndex();
+    short_buffer_.addSamples(sample_packet.derived());
+
+    // If the short buffer is filled copy it to the long buffer
+    if (short_buffer_.getCurrentIndex() < old_index) {
+        long_buffer_.addSamples(short_buffer_.getDataInOrder());
+    }
 }
 
 // For demonstration, print the size of a buffer (e.g., for channel 0)
@@ -67,6 +75,6 @@ void dataHandler::printBufferSize(int channel) {
         return;
     }
     // Assuming circularEigenBuffer has a method getCapacity()
-    std::cout << "Buffer capacity: " << shortBuffer_.getCapacity() << std::endl;
+    std::cout << "Buffer capacity: " << short_buffer_.getCapacity() << std::endl;
 }
 

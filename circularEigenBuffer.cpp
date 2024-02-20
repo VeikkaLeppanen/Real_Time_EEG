@@ -8,6 +8,7 @@ void circularEigenBuffer::addSamples(const Eigen::VectorXd &samples) {
 
 // Add multiple samples to each channel
 void circularEigenBuffer::addSamples(const Eigen::MatrixXd &samples) {
+
     // Calculate the number of samples that fit before reaching the end
     int fitToEnd = std::min(samples.cols(), static_cast<Eigen::Index>(row_capacity_ - currentIndex_));
     
@@ -23,15 +24,15 @@ void circularEigenBuffer::addSamples(const Eigen::MatrixXd &samples) {
     if (overflow > 0) {
         data_.leftCols(overflow) = samples.rightCols(overflow);
     }
+
     currentIndex_ = (currentIndex_ + samples.cols()) % row_capacity_;
 }
 
 // Retrieve the sample at a specific index in the rolling buffer
 // Index 0 refers to the oldest sample, and capacity-1 refers to the newest sample.
 double circularEigenBuffer::getSample(int channel, int index) const {
-    if (index >= row_capacity_) {
-        throw std::out_of_range("Index out of bounds");
-    }
+    if (index >= row_capacity_) throw std::out_of_range("Buffer index out of bounds");
+
     // Calculate the actual index based on currentIndex
     int actualIndex = (currentIndex_ + index) % row_capacity_;
     return data_(channel, actualIndex);
@@ -39,7 +40,7 @@ double circularEigenBuffer::getSample(int channel, int index) const {
 
 // Retrieves data from the specified channel in chronological order
 Eigen::VectorXd circularEigenBuffer::getChannelDataInOrder(int channel_index, int downSamplingFactor) const {
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be > 0");
+    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
     // Calculate the effective size after downsampling
     size_t downSampledSize = (row_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
@@ -56,7 +57,7 @@ Eigen::VectorXd circularEigenBuffer::getChannelDataInOrder(int channel_index, in
 
 // Retrieves data form all channels in chronological order
 Eigen::MatrixXd circularEigenBuffer::getDataInOrder(int downSamplingFactor) const {
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be > 0");
+    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
     // Calculate the effective size after downsampling
     size_t downSampledSize = (row_capacity_ + downSamplingFactor - 1) / downSamplingFactor;

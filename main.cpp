@@ -9,12 +9,12 @@
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-const uint8_t CHANNEL_COUNT = 20;
+const uint8_t CHANNEL_COUNT = 100;
 const uint32_t SAMPLING_RATE = 5000;
 const uint32_t DELIVERY_RATE = 5000;
 const uint32_t DOWNSAMPLING_FACTOR = 10;
 const uint32_t SHORT_BUFFER_LENGTH_IN_SECONDS = 2;
-const uint32_t LONG_BUFFER_LENGTH_IN_SECONDS = 10;
+const uint32_t LONG_BUFFER_LENGTH_IN_SECONDS = 6;      // Long buffer length should be an exact multiple of the short buffer length
 
 // Loop for the data collecting and storing
 void dataAcquisitionLoop(circularEigenBuffer &short_data_buffer, circularEigenBuffer &long_data_buffer, std::mutex &dataMutex) {
@@ -34,7 +34,7 @@ void dataAcquisitionLoop(circularEigenBuffer &short_data_buffer, circularEigenBu
 // Loop for matplotlibcpp graph visualization
 void plottingLoop(circularEigenBuffer &short_data_buffer, std::mutex &dataMutex) {
     const int dataPoints = (SAMPLING_RATE * SHORT_BUFFER_LENGTH_IN_SECONDS + DOWNSAMPLING_FACTOR - 1) / DOWNSAMPLING_FACTOR;
-    std::vector<int> channels_to_display = {0}; //, 5, 15};
+    std::vector<int> channels_to_display = {0}; //, 20};
     int channel_count = CHANNEL_COUNT;
 
     plt::ion(); // Enable interactive mode
@@ -53,9 +53,11 @@ void plottingLoop(circularEigenBuffer &short_data_buffer, std::mutex &dataMutex)
 
         int graph_ind = 0;
         for (int channel_index : channels_to_display) {
+
             {
-            std::lock_guard<std::mutex> guard(dataMutex);
-            yVec = short_data_buffer.getChannelDataInOrder(channel_index, DOWNSAMPLING_FACTOR);
+            std::unique_lock<std::mutex> mlock(dataMutex, std::try_to_lock);
+            if (mlock) yVec = short_data_buffer.getChannelDataInOrder(channel_index, DOWNSAMPLING_FACTOR);
+            else continue;
             }
 
             // std::cout << yVec.size() << ' ' << x.size() << '\n';
@@ -70,9 +72,11 @@ void plottingLoop(circularEigenBuffer &short_data_buffer, std::mutex &dataMutex)
 }
 
 int main() {
-    // Shared array of circularEigenBuffer to store data from channels. +1 for the time_stamps
+    
+    // Shared circularEigenBuffers to store data from channels. +1 for the time_stamps
     circularEigenBuffer short_data_buffer(CHANNEL_COUNT + 1, SAMPLING_RATE * SHORT_BUFFER_LENGTH_IN_SECONDS);
     circularEigenBuffer long_data_buffer(CHANNEL_COUNT + 1, SAMPLING_RATE * LONG_BUFFER_LENGTH_IN_SECONDS);
+
     // Mutex to protect the shared vector
     std::mutex dataMutex;
 
