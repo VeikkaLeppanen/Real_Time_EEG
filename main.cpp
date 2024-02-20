@@ -9,7 +9,7 @@
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-const uint8_t CHANNEL_COUNT = 100;
+const uint8_t CHANNEL_COUNT = 20;
 const uint32_t SAMPLING_RATE = 5000;
 const uint32_t DELIVERY_RATE = 5000;
 const uint32_t DOWNSAMPLING_FACTOR = 10;
