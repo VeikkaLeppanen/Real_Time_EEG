@@ -12,23 +12,40 @@
 
 class dataHandler {
 public:
-    dataHandler(circularEigenBuffer &buffer, std::mutex &mutex, int buffer_size, int channel_count)
-                                :   dataBuffer(buffer),
-                                    dataMutex(mutex),
-                                    buffer_size_(buffer_size),
-                                    channel_count_(channel_count)
+    dataHandler(std::mutex          &mutex, 
+                circularEigenBuffer &shortBuffer, 
+                circularEigenBuffer &longBuffer,
+                int                  channel_count,
+                int                  sampling_rate,
+                int                  delivery_rate)
+                :   dataMutex(mutex),   
+                    shortBuffer_(shortBuffer),
+                    longBuffer_(longBuffer),
+                    short_buffer_capacity_(shortBuffer.getCapacity()),
+                    long_buffer_capacity_(longBuffer.getCapacity()),
+                    channel_count_(channel_count),
+                    sampling_rate_(sampling_rate),
+                    delivery_rate_(delivery_rate),
+                    sample_packet_size_(sampling_rate / delivery_rate)
     {}
 
-    int simulateData(int sampling_rate);
-    void addData(Eigen::VectorXd samples, double time_stamp);
-    void addData(Eigen::MatrixXd samples, double time_stamp);
+    int simulateData();
+    
+    template<typename Derived>
+    void addData(const Eigen::MatrixBase<Derived> &samples);
+    
     void printBufferSize(int channel);
 
 private:
     std::mutex &dataMutex;
-    circularEigenBuffer &dataBuffer;
-    int buffer_size_;
+    circularEigenBuffer &shortBuffer_;
+    circularEigenBuffer &longBuffer_;
+    int short_buffer_capacity_;
+    int long_buffer_capacity_;
     int channel_count_;
+    int sampling_rate_;
+    int delivery_rate_;
+    int sample_packet_size_;
 };
 
 #endif // DATAHANDLER_H

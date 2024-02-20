@@ -1,13 +1,13 @@
 #include "circularEigenBuffer.h"
 
 // Add a signle sample to each channel
-void circularEigenBuffer::addSamples(Eigen::VectorXd &samples) {
+void circularEigenBuffer::addSamples(const Eigen::VectorXd &samples) {
     data_.col(currentIndex_) = samples;
     currentIndex_ = (currentIndex_ + 1) % row_capacity_;
 }
 
 // Add multiple samples to each channel
-void circularEigenBuffer::addSamples(Eigen::MatrixXd &samples) {
+void circularEigenBuffer::addSamples(const Eigen::MatrixXd &samples) {
     // Calculate the number of samples that fit before reaching the end
     int fitToEnd = std::min(samples.cols(), static_cast<Eigen::Index>(row_capacity_ - currentIndex_));
     
@@ -23,6 +23,7 @@ void circularEigenBuffer::addSamples(Eigen::MatrixXd &samples) {
     if (overflow > 0) {
         data_.leftCols(overflow) = samples.rightCols(overflow);
     }
+    currentIndex_ = (currentIndex_ + samples.cols()) % row_capacity_;
 }
 
 // Retrieve the sample at a specific index in the rolling buffer

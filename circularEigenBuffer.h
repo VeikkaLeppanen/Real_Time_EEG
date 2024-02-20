@@ -13,8 +13,8 @@ public:
           row_capacity_(row_capacity), 
           currentIndex_(0) {}
           
-    void addSamples(Eigen::VectorXd &samples);
-    void addSamples(Eigen::MatrixXd &samples);
+    void addSamples(const Eigen::VectorXd &samples);
+    void addSamples(const Eigen::MatrixXd &samples);
     double getSample(int channel, int index) const;
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor = 1) const;
     Eigen::MatrixXd getDataInOrder(int downSamplingFactor = 1) const;
