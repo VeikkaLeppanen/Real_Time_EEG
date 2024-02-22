@@ -15,50 +15,46 @@ std::vector<uint8_t> serializeSamplePacketData(
     std::vector<std::vector<int32_t>> &int24Data) {
     
     std::vector<uint8_t> buffer;
-    // Reserve buffer space estimation (adjust based on int24Data size)
-    buffer.reserve(1472);
+    buffer.reserve(1472); // Adjust based on int24Data size
 
-    // Serialize fixed-size fields
+    // Serialize fixed-size fields in big-endian order
     buffer.push_back(type1);
     buffer.push_back(type2);
     buffer.insert(buffer.end(), type3, type3 + 2); // Assuming type3 is an array
-    // For uint32, uint16, and uint64, consider endianness
-    // Here we're directly pushing back data for simplicity
-    // You'll need to serialize these considering your platform's endianness
     
-    // Example for uint32_t, similar approach for uint16_t and uint64_t
-    for(int i = 0; i < 4; ++i) {
-        buffer.push_back((type4 >> (i * 8)) & 0xFF);
-    }
+    // Serialize multi-byte integers in big-endian order
+    buffer.push_back((type4 >> 24) & 0xFF);
+    buffer.push_back((type4 >> 16) & 0xFF);
+    buffer.push_back((type4 >> 8) & 0xFF);
+    buffer.push_back(type4 & 0xFF);
 
-    for(int i = 0; i < 2; ++i) {
-        buffer.push_back((type5 >> (i * 8)) & 0xFF);
-    }
+    buffer.push_back((type5 >> 8) & 0xFF);
+    buffer.push_back(type5 & 0xFF);
 
-    for(int i = 0; i < 2; ++i) {
-        buffer.push_back((type6 >> (i * 8)) & 0xFF);
-    }
+    buffer.push_back((type6 >> 8) & 0xFF);
+    buffer.push_back(type6 & 0xFF);
 
-    for(int i = 0; i < 8; ++i) {
+    for(int i = 7; i >= 0; --i) {
         buffer.push_back((type7 >> (i * 8)) & 0xFF);
     }
 
-    for(int i = 0; i < 8; ++i) {
+    for(int i = 7; i >= 0; --i) {
         buffer.push_back((type8 >> (i * 8)) & 0xFF);
     }
 
-    // Serialize int24[N][C]
+    // Serialize int24[N][C] in big-endian order
     for (auto &row : int24Data) {
         for (auto &val : row) {
-            // Serialize each int32_t value as int24, adjust for your needs
-            buffer.push_back((val >> 16) & 0xFF);
+            // Assuming val represents a signed 24-bit integer correctly, including handling negative values
+            buffer.push_back((val >> 16) & 0xFF); // MSB
             buffer.push_back((val >> 8) & 0xFF);
-            buffer.push_back(val & 0xFF);
+            buffer.push_back(val & 0xFF); // LSB
         }
     }
 
     return buffer;
 }
+
 
 // Example usage
 std::vector<uint8_t> generateExampleSamplePacket() {
@@ -93,7 +89,7 @@ void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int p
 
 int main() {
 
-    for(int i = 0; i < 10; i++) {
+    for(int i = 0; i < 5; i++) {
         std::vector<uint8_t> data = generateExampleSamplePacket();
 
         sendUDP(data, "127.0.0.1", 8080);

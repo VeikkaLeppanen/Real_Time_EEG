@@ -5,38 +5,9 @@
 #include <iostream>
 #include <csignal>
 #include <vector>
+#include "SamplePacket.h"
 
 volatile std::sig_atomic_t signal_received = 0;
-
-struct sample_packet {
-    uint8_t FrameType;
-    uint8_t MainUnitNum;
-    uint8_t Reserved[2];
-    uint32_t PacketSeqNo;
-    uint16_t NumChannels;
-    uint16_t NumSampleBundles;
-    uint64_t FirstSampleIndex;
-    uint64_t FirstSampleTime;
-    uint32_t Samples[1][4];
-};
-
-std::vector<std::vector<uint32_t>> process24BitSamples(const std::vector<uint8_t>& rawData, uint16_t numChannels, uint16_t numSampleBundles) {
-    std::vector<std::vector<uint32_t>> samples(numChannels, std::vector<uint32_t>(numSampleBundles));
-
-    size_t index = 0; // This would start after the sample_packet data in rawData
-    for (uint16_t bundle = 0; bundle < numSampleBundles; ++bundle) {
-        for (uint16_t channel = 0; channel < numChannels; ++channel) {
-            if (index + 3 <= rawData.size()) {
-                // Assuming samples are stored in little-endian format
-                samples[channel][bundle] = (rawData[index] | (rawData[index + 1] << 8) | (rawData[index + 2] << 16));
-                index += 3;
-            }
-        }
-    }
-
-    return samples;
-}
-
 
 // Temporary termination method for the receiving loop with Ctrl+C
 void signal_handler(int signal) {
@@ -55,7 +26,7 @@ int main() {
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-        std::cerr << "Socket creation failed" << std::endl;
+        std::cerr << "Socket creation failed" << '\n';
         exit(EXIT_FAILURE);
     }
 
@@ -67,26 +38,88 @@ int main() {
     servaddr.sin_port = htons(PORT);
     
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-        std::cerr << "Bind failed" << std::endl;
+        std::cerr << "Bind failed" << '\n';
         close(sockfd); // Ensure the socket is closed on failure
         exit(EXIT_FAILURE);
+    }
+  
+    // Set socket buffer size to 10 MB
+    int buffer_size = 1024 * 1024 * 10;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &buffer_size, sizeof(buffer_size)) == -1) {
+        std::cerr << "Failed to set socket receive buffer size." << std::endl;
     }
 
     unsigned char buffer[BUFFER_SIZE];
     socklen_t len = sizeof(cliaddr);
-
     while (!signal_received) {
-        int n = recvfrom(sockfd, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &cliaddr, &len);
+        int n = recvfrom(sockfd, (char*)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
         if (n < 0) {
             if (signal_received) break; // Check if the signal caused recvfrom to fail
-            std::cerr << "Receive failed" << std::endl;
+            std::cerr << "Receive failed" << '\n';
             break; // Optionally break on other errors too
         }
-        buffer[n] = '\0';
-        std::cout << "Received: " << std::size(buffer) << std::endl;
+
+        unsigned char firstByte = buffer[0];
+        // Handle packets
+        switch (firstByte)
+        {
+        case 0x01: { // MeasurementStart
+            /* code */
+            break;
+
+        } case 0x02: { // Samples
+
+            // Convert the received data to a vector (if using the vector-based version)
+            std::vector<uint8_t> receivedData(buffer, buffer + n);
+
+            // Deserialize the received data into a sample_packet instance
+            sample_packet packet = deserializeSamplePacket(receivedData);
+            // OR, if using the pointer and size version:
+            // sample_packet packet = deserializeSamplePacket(buffer, n);
+
+            // Here you can now access the fields of `packet` directly,
+            // for example, print out some deserialized values for verification
+            std::cout << "Deserialized PacketSeqNo: " << packet.PacketSeqNo << std::endl;
+            std::cout << "NumChannels: " << packet.NumChannels << ", NumSampleBundles: " << packet.NumSampleBundles << std::endl;
+
+            // If you need to process or print the sample data, do it here
+            printSamplePacket(packet);
+
+            break;
+        } case 0x03: { // Trigger
+            /* code */
+            break;
+
+        } case 0x04: { // MeasurementEnd
+            /* code */
+            break;
+        
+        } case 0x05: { // HardwareState
+            /* code */
+            break;
+        
+        
+        } default:
+            break;
+        }
+        // Convert the received data to a vector (if using the vector-based version)
+        std::vector<uint8_t> receivedData(buffer, buffer + n);
+
+        // Deserialize the received data into a sample_packet instance
+        sample_packet packet = deserializeSamplePacket(receivedData);
+        // OR, if using the pointer and size version:
+        // sample_packet packet = deserializeSamplePacket(buffer, n);
+
+        // Here you can now access the fields of `packet` directly,
+        // for example, print out some deserialized values for verification
+        std::cout << "Deserialized PacketSeqNo: " << packet.PacketSeqNo << std::endl;
+        std::cout << "NumChannels: " << packet.NumChannels << ", NumSampleBundles: " << packet.NumSampleBundles << std::endl;
+
+        // If you need to process or print the sample data, do it here
+        printSamplePacket(packet);
     }
 
-    std::cout << "Shutting down..." << std::endl;
+    std::cout << "Shutting down..." << '\n';
     close(sockfd);
     return 0;
 }
