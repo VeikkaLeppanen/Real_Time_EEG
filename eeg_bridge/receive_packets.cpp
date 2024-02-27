@@ -1,22 +1,12 @@
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <cstring>
-#include <iostream>
-#include <csignal>
-#include <vector>
-#include "SamplePacket.h"
+#include "eeg_bridge.h"
 
-volatile std::sig_atomic_t signal_received = 0;
-
-// Temporary termination method for the receiving loop with Ctrl+C
-void signal_handler(int signal) {
-    signal_received = 1;
+int main() {
+    eegBridge bridge;
+    bridge.bind_socket();
+    bridge.spin();
 }
 
-const int PORT = 8080;
-const int BUFFER_SIZE = 1472;
-
+/*
 int main() {
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
@@ -63,63 +53,50 @@ int main() {
         // Handle packets
         switch (firstByte)
         {
-        case 0x01: { // MeasurementStart
-            /* code */
-            break;
-
-        } case 0x02: { // Samples
+        case 0x02: { // Samples
 
             // Convert the received data to a vector (if using the vector-based version)
-            std::vector<uint8_t> receivedData(buffer, buffer + n);
+            // std::vector<uint8_t> receivedData(buffer, buffer + n);
 
             // Deserialize the received data into a sample_packet instance
-            sample_packet packet = deserializeSamplePacket(receivedData);
+            // sample_packet packet = deserializeSamplePacket_vector(receivedData);
             // OR, if using the pointer and size version:
-            // sample_packet packet = deserializeSamplePacket(buffer, n);
+            sample_packet packet_info;
+            std::vector<std::vector<double>> sample_data = deserializeSamplePacket_pointer(buffer, n, packet_info);
 
             // Here you can now access the fields of `packet` directly,
             // for example, print out some deserialized values for verification
-            std::cout << "Deserialized PacketSeqNo: " << packet.PacketSeqNo << std::endl;
-            std::cout << "NumChannels: " << packet.NumChannels << ", NumSampleBundles: " << packet.NumSampleBundles << std::endl;
+            std::cout << "Deserialized PacketSeqNo: " << packet_info.PacketSeqNo << std::endl;
+            std::cout << "NumChannels: " << packet_info.NumChannels << ", NumSampleBundles: " << packet_info.NumSampleBundles << std::endl;
 
             // If you need to process or print the sample data, do it here
-            printSamplePacket(packet);
+            printSamplePacket(packet_info);
 
             break;
+        } case 0x01: { // MeasurementStart
+            // code
+            break;
+
         } case 0x03: { // Trigger
-            /* code */
+            // code
             break;
 
         } case 0x04: { // MeasurementEnd
-            /* code */
+            // code
             break;
         
         } case 0x05: { // HardwareState
-            /* code */
+            // code
             break;
         
         
         } default:
             break;
         }
-        // Convert the received data to a vector (if using the vector-based version)
-        std::vector<uint8_t> receivedData(buffer, buffer + n);
-
-        // Deserialize the received data into a sample_packet instance
-        sample_packet packet = deserializeSamplePacket(receivedData);
-        // OR, if using the pointer and size version:
-        // sample_packet packet = deserializeSamplePacket(buffer, n);
-
-        // Here you can now access the fields of `packet` directly,
-        // for example, print out some deserialized values for verification
-        std::cout << "Deserialized PacketSeqNo: " << packet.PacketSeqNo << std::endl;
-        std::cout << "NumChannels: " << packet.NumChannels << ", NumSampleBundles: " << packet.NumSampleBundles << std::endl;
-
-        // If you need to process or print the sample data, do it here
-        printSamplePacket(packet);
     }
 
     std::cout << "Shutting down..." << '\n';
     close(sockfd);
     return 0;
 }
+*/

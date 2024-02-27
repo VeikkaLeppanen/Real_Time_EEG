@@ -1,4 +1,4 @@
-#include "NetworkUtils.h"
+#include "networkUtils.h"
 #include <arpa/inet.h>
 
 bool isBigEndian() {

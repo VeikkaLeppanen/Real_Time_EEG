@@ -11,8 +11,8 @@ struct sample_packet {
     uint16_t NumSampleBundles;
     uint64_t FirstSampleIndex;
     uint64_t FirstSampleTime;
-    // Omitting Samples due to complexity in variable-length handling
 };
 
-sample_packet deserializeSamplePacket(const std::vector<uint8_t>& buffer);
+sample_packet deserializeSamplePacket_vector(const std::vector<uint8_t> &buffer);
+std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet);
 void printSamplePacket(const sample_packet& packet);

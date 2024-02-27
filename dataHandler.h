@@ -9,6 +9,7 @@
 #include <vector>
 #include <cmath>
 #include "circularEigenBuffer.h" // Ensure this path is correct
+#include "eeg_bridge/eeg_bridge.h"
 
 class dataHandler {
 public:

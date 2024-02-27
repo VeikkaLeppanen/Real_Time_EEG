@@ -60,11 +60,11 @@ std::vector<uint8_t> serializeSamplePacketData(
 std::vector<uint8_t> generateExampleSamplePacket() {
     uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
     uint32_t PacketSeqNo = 123456;
-    uint16_t NumChannels = 123, NumSampleBundles = 456;
+    uint16_t NumChannels = 4, NumSampleBundles = 2;
     uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
 
     std::vector<std::vector<int32_t>> Samples = {
-        {1234567, -1234567, 1234567, -1234567}
+        {1234567, -1234567}, {1234567, -1234567}, {1234567, -1234567}, {1234567, -1234567}
     };
 
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
