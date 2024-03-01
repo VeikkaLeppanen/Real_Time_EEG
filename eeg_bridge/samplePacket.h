@@ -1,6 +1,9 @@
 #pragma once
+#include "networkUtils.h"
+#include <iostream>
+#include <arpa/inet.h>
 #include <cstdint>
-#include <vector>
+#include <cstring>
 
 struct sample_packet {
     uint8_t FrameType;
@@ -13,6 +16,5 @@ struct sample_packet {
     uint64_t FirstSampleTime;
 };
 
-sample_packet deserializeSamplePacket_vector(const std::vector<uint8_t> &buffer);
 std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet);
 void printSamplePacket(const sample_packet& packet);

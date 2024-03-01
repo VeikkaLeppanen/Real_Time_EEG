@@ -1,7 +1,7 @@
 #include "eeg_bridge.h"
 
 int main() {
-    eegBridge bridge;
+    EegBridge bridge;
     bridge.bind_socket();
     bridge.spin();
 }

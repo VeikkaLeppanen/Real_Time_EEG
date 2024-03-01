@@ -9,20 +9,24 @@
 #include <csignal>
 #include <vector>
 #include "samplePacket.h"
+#include "measurementStartPacket.h"
+#include "../dataHandler/dataHandler.h"
 
 // The maximum length of the UDP packet, as mentioned in the manual of Bittium NeurOne.
 #define BUFFER_LENGTH 1472
 
-class eegBridge {
+class EegBridge {
 public:
-    eegBridge() {};
+    EegBridge() {};
 
     void bind_socket();
-    void spin();
+    void spin(dataHandler &handler);
 
 private:
     int numChannels = 4;
     int numBundles = 2;
+    int sampling_rate = 5000;
+    int delivery_rate = 5000;
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     unsigned char buffer[BUFFER_LENGTH];

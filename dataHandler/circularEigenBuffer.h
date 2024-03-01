@@ -7,6 +7,13 @@
 
 class circularEigenBuffer {
 public:
+    // Default constructor
+    circularEigenBuffer() 
+        : data_(Eigen::MatrixXd::Zero(0, 0)),
+          number_of_rows_(0), 
+          row_capacity_(0), 
+          currentIndex_(0) {}
+
     circularEigenBuffer(const int number_of_rows, const int row_capacity) 
         : data_(Eigen::MatrixXd::Zero(number_of_rows, row_capacity)), 
           number_of_rows_(number_of_rows), 
@@ -26,8 +33,8 @@ public:
 
 private:
     Eigen::MatrixXd data_;
-    const int number_of_rows_;
-    const int row_capacity_;
+    int number_of_rows_;
+    int row_capacity_;
     size_t currentIndex_;
 };
 

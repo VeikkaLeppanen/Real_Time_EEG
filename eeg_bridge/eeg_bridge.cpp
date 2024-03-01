@@ -2,12 +2,13 @@
 
 const int PORT = 8080;
 
+// This is used to terminate the program with Ctrl+C
 volatile std::sig_atomic_t signal_received = 0;
 void signal_handler(int signal) {
     signal_received = 1;
 }
 
-void eegBridge::bind_socket() {
+void EegBridge::bind_socket() {
 
     // Register signal handler
     std::signal(SIGINT, signal_handler);
@@ -40,7 +41,7 @@ void eegBridge::bind_socket() {
     len = sizeof(cliaddr);
 }
 
-void eegBridge::spin() {
+void EegBridge::spin(dataHandler &handler) {
     while (!signal_received) {
         int n = recvfrom(sockfd, (char*)buffer, BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
         if (n < 0) {
@@ -50,17 +51,13 @@ void eegBridge::spin() {
         }
 
         unsigned char firstByte = buffer[0];
+
         // Handle packets
         switch (firstByte)
         {
-        case 0x02: { // Samples
-
-            // Convert the received data to a vector (if using the vector-based version)
-            // std::vector<uint8_t> receivedData(buffer, buffer + n);
+        case 0x02: { // SamplesPacket
 
             // Deserialize the received data into a sample_packet instance
-            // sample_packet packet = deserializeSamplePacket_vector(receivedData);
-            // OR, if using the pointer and size version:
             sample_packet packet_info;
             std::vector<std::vector<double>> sample_data = deserializeSamplePacket_pointer(buffer, n, packet_info);
 
@@ -75,19 +72,31 @@ void eegBridge::spin() {
             }
 
             break;
-        } case 0x01: { // MeasurementStart
+
+        } case 0x01: { // MeasurementStartPacket
+            
+            std::cout << "MeasurementStart package received!\n";
+            measurement_start_packet packet_info;
+            deserializeMeasurementStartPacket_pointer(buffer, n, packet_info);
+
+            // If you need to process or print the sample data, do it here
+            // printMeasurementStartPacket(packet_info);
+            std::cout << "MeasurementStart package processed!\n";
+
+            handler.reset_handler(packet_info.NumChannels, packet_info.SamplingRateHz);
+            std::cout << "DataHandler reset!\n";
+
+            break;
+
+        } case 0x03: { // TriggerPacket
             /* code */
             break;
 
-        } case 0x03: { // Trigger
-            /* code */
-            break;
-
-        } case 0x04: { // MeasurementEnd
+        } case 0x04: { // MeasurementEndPacket
             /* code */
             break;
         
-        } case 0x05: { // HardwareState
+        } case 0x05: { // HardwareStatePacket
             /* code */
             break;
         

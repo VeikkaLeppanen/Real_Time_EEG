@@ -1,40 +1,4 @@
 #include "samplePacket.h"
-#include "networkUtils.h"
-#include <iostream>
-#include <arpa/inet.h>
-#include <cstdint>
-#include <cstring>
-
-sample_packet deserializeSamplePacket_vector(const std::vector<uint8_t>& buffer) {
-    sample_packet packet;
-    size_t offset = 0;
-
-    // Direct copy for single byte fields
-    packet.FrameType = buffer[offset++];
-    packet.MainUnitNum = buffer[offset++];
-    packet.Reserved[0] = buffer[offset++];
-    packet.Reserved[1] = buffer[offset++];
-
-    // Assuming big-endian network byte order for multi-byte fields
-    packet.PacketSeqNo = ntohl(*reinterpret_cast<const uint32_t*>(&buffer[offset]));
-    offset += sizeof(uint32_t);
-
-    packet.NumChannels = ntohs(*reinterpret_cast<const uint16_t*>(&buffer[offset]));
-    offset += sizeof(uint16_t);
-
-    packet.NumSampleBundles = ntohs(*reinterpret_cast<const uint16_t*>(&buffer[offset]));
-    offset += sizeof(uint16_t);
-
-    packet.FirstSampleIndex = ntohll(*reinterpret_cast<const uint64_t*>(&buffer[offset]));
-    offset += sizeof(uint64_t);
-
-    packet.FirstSampleTime = ntohll(*reinterpret_cast<const uint64_t*>(&buffer[offset]));
-    offset += sizeof(uint64_t);
-
-    // Handle Samples based on NumChannels and NumSampleBundles, if applicable
-
-    return packet;
-}
 
 std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet) {
     std::vector<std::vector<double>> data;
