@@ -62,7 +62,7 @@ void EegBridge::spin(dataHandler &handler) {
             std::vector<std::vector<double>> sample_data = deserializeSamplePacket_pointer(buffer, n, packet_info);
 
             // If you need to process or print the sample data, do it here
-            printSamplePacket(packet_info);
+            // printSamplePacket(packet_info);
 
             for (int i = 0; i < sample_data.size(); i++) {
                 for (int j = 0; j < sample_data[i].size(); ++j) {
@@ -70,7 +70,9 @@ void EegBridge::spin(dataHandler &handler) {
                 }
                 std::cout  << '\n';
             }
+            std::cout  << '\n';
 
+            // handler.addData(data_handler_samples);
             break;
 
         } case 0x01: { // MeasurementStartPacket
@@ -78,9 +80,13 @@ void EegBridge::spin(dataHandler &handler) {
             std::cout << "MeasurementStart package received!\n";
             measurement_start_packet packet_info;
             deserializeMeasurementStartPacket_pointer(buffer, n, packet_info);
+            numChannels = packet_info.NumChannels;
+            sampling_rate = packet_info.SamplingRateHz;
 
-            // If you need to process or print the sample data, do it here
-            // printMeasurementStartPacket(packet_info);
+            // TODO: Initialize data_handler_samples
+            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 1000);
+
+
             std::cout << "MeasurementStart package processed!\n";
 
             handler.reset_handler(packet_info.NumChannels, packet_info.SamplingRateHz);

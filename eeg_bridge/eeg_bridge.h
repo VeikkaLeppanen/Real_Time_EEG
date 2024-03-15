@@ -30,6 +30,7 @@ private:
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     unsigned char buffer[BUFFER_LENGTH];
+    Eigen::MatrixXd data_handler_samples;
     socklen_t len;
 };
 
