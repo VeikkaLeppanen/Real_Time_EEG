@@ -24,7 +24,7 @@ void dataSimulationLoop(dataHandler &handler) {
     handler.reset_handler(CHANNEL_COUNT, SAMPLING_RATE, DELIVERY_RATE);
     
     std::cout << "Simulating data" << '\n';
-    if (!handler.simulateData()) {
+    if (!handler.simulateData_sin()) {
         std::cout << "Simulation loop terminated" << '\n';
     }
 }

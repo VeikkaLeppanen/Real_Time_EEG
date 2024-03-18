@@ -13,11 +13,7 @@ struct __attribute__((packed)) measurement_start_packet {
     uint32_t SampleFormat;
     uint32_t TriggerDefs;
     uint16_t NumChannels;
-
-    // TODO:
-    // uint16[N] SourceChannles
-    // uint8[N] ChannelTypes
 };
 
-void deserializeMeasurementStartPacket_pointer(const uint8_t *buffer, size_t size, measurement_start_packet &packet);
+void deserializeMeasurementStartPacket_pointer(const uint8_t *buffer, size_t size, measurement_start_packet &packet, std::vector<uint16_t> &SourceChannels, std::vector<uint8_t> &ChannelTypes);
 void printMeasurementStartPacket(const measurement_start_packet &packet);

@@ -68,7 +68,7 @@ std::vector<uint8_t> generateExampleMeasurementStartPacket() {
     uint8_t FrameType = 1; // Assuming 1 indicates a Measurement Start packet
     uint8_t MainUnitNum = 2;
     uint8_t Reserved[2] = {0, 0}; // Fill with appropriate values if needed
-    uint32_t SamplingRateHz = 5000; // Example: 5000 Hz
+    uint32_t SamplingRateHz = 50; // Example: 5000 Hz
     uint32_t SampleFormat = 1; // Example format
     uint32_t TriggerDefs = 0; // Example trigger definitions
     uint16_t NumChannels = 4; // Number of channels
@@ -132,7 +132,7 @@ std::vector<uint8_t> generateExampleSamplePacket() {
     uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
 
     std::vector<std::vector<int32_t>> Samples = {
-        {1234567, -1234567}, {1234567, -1234567}, {1234567, -1234567}, {1234567, -1234567}
+        {1, -2, 3, -4}, {5, -6, 7, -8}
     };
 
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);

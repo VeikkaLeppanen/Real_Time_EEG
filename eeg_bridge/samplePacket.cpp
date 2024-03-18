@@ -1,5 +1,58 @@
 #include "samplePacket.h"
 
+void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer) {
+    size_t offset = 0;
+
+    if (buffer == nullptr || size < sizeof(sample_packet)) {
+        throw std::runtime_error("Invalid buffer or size.");
+    }
+
+    packet.FrameType = buffer[offset++];
+    packet.MainUnitNum = buffer[offset++];
+    packet.Reserved[0] = buffer[offset++];
+    packet.Reserved[1] = buffer[offset++];
+
+    memcpy(&packet.PacketSeqNo, buffer + offset, sizeof(uint32_t));
+    packet.PacketSeqNo = ntohl(packet.PacketSeqNo);
+    offset += sizeof(uint32_t);
+
+    memcpy(&packet.NumChannels, buffer + offset, sizeof(uint16_t));
+    packet.NumChannels = ntohs(packet.NumChannels);
+    offset += sizeof(uint16_t);
+
+    memcpy(&packet.NumSampleBundles, buffer + offset, sizeof(uint16_t));
+    packet.NumSampleBundles = ntohs(packet.NumSampleBundles);
+    offset += sizeof(uint16_t);
+
+    memcpy(&packet.FirstSampleIndex, buffer + offset, sizeof(uint64_t));
+    packet.FirstSampleIndex = ntohll(packet.FirstSampleIndex);
+    offset += sizeof(uint64_t);
+
+    memcpy(&packet.FirstSampleTime, buffer + offset, sizeof(uint64_t));
+    packet.FirstSampleTime = ntohll(packet.FirstSampleTime);
+    offset += sizeof(uint64_t);
+
+    // Initialize an Eigen matrix to store samples. Rows correspond to channels, columns to sample bundles.
+
+    for (uint16_t bundle = 0; bundle < packet.NumSampleBundles; ++bundle) {
+        for (uint16_t channel = 0; channel < packet.NumChannels; ++channel) {
+            if (offset + 3 > size) {
+                throw std::runtime_error("Buffer overrun while reading samples.");
+            }
+            // Extracting and converting 24-bit signed integer to double
+            int32_t sample = (static_cast<int32_t>(buffer[offset]) << 24) |
+                             (static_cast<int32_t>(buffer[offset + 1]) << 16) |
+                             (static_cast<int32_t>(buffer[offset + 2]) << 8);
+            sample >>= 8; // Sign extension for 24-bit to 32-bit
+            packet_handler_buffer(channel, bundle) = static_cast<double>(sample);
+            offset += 3;
+        }
+    }
+
+    return;
+}
+
+
 std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet) {
     std::vector<std::vector<double>> data;
     size_t offset = 0;

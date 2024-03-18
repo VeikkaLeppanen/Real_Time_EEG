@@ -6,7 +6,6 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     this->channel_count_ = channel_count;
     this->sampling_rate_ = sampling_rate;
     this->simulation_delivery_rate_ = simulation_delivery_rate;
-    this->sample_packet_size_ = sampling_rate_ / simulation_delivery_rate_;
 
     this->buffer_capacity_ = buffer_length_in_seconds_ * sampling_rate;
     this->current_data_index_ = 0;
@@ -21,57 +20,40 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     this->GACorr_ = GACorrection(channel_count, this->GA_average_length, this->TA_length);
 }
 
-int dataHandler::simulateData() {
+int dataHandler::simulateData_sin() {
     auto startTime = std::chrono::high_resolution_clock::now();
     double time = 0.0;
 
-    Eigen::MatrixXd sample_packet(channel_count_, sample_packet_size_);
     Eigen::VectorXd sample(channel_count_);
     const Eigen::VectorXd linspace_example = Eigen::VectorXd::LinSpaced(channel_count_, 0, channel_count_);
 
-    int stimulation_interval = 4000;
+    int stimulation_interval = 10000;
     int stimulation_tracker = 0;
     while (true) { // Adjust this condition as needed
         auto currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = currentTime - startTime;
-        Eigen::VectorXd time_stamps = Eigen::VectorXd::Zero(sample_packet_size_);
-        Eigen::VectorXd triggers = Eigen::VectorXd::Zero(sample_packet_size_);
+        double time_stamp = 0.0;
+        int trigger = 0;
         
         // Check if it's time to generate the next sample
-        if (elapsed.count() >= 1.0 / simulation_delivery_rate_) {
+        if (elapsed.count() >= 1.0 / sampling_rate_) {
             startTime = currentTime;
 
-            // Single sample per packet
-            if (sample_packet_size_ == 1) {
-                double SIN = 5.0 * M_PI * time;
-                sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)); });
-                time_stamps.fill(std::chrono::duration<double>(currentTime.time_since_epoch()).count());
-                
-                if (stimulation_tracker == stimulation_interval) {
-                    triggers.fill(1);
-                    stimulation_tracker = 0;
-                } else {
-                    triggers.fill(0);
-                }
-                
-                time += 1.0 / sampling_rate_;
-
-                this->addData(sample, time_stamps, triggers);
-
-            // Multiple samples per packet
+            double SIN = 3.0 * M_PI * time;
+            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)) * 20; });
+            time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
+            
+            if (stimulation_tracker == stimulation_interval) {
+                trigger = 1;
+                stimulation_tracker = 0;
             } else {
-                for (int i = 0; i < sample_packet_size_; i++) {
-                    double SIN = 2.0 * M_PI * time;
-                    sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (1.0 + x)); });
-                    sample_packet.col(i) = sample;
-                    time += 1.0 / sampling_rate_;
-                }
-
-                time_stamps.fill(std::chrono::duration<double>(currentTime.time_since_epoch()).count());
-                triggers.fill(0);
-
-                this->addData(sample_packet, time_stamps, triggers);
+                trigger = 0;
             }
+            
+            time += 1.0 / sampling_rate_;
+
+            this->addData(sample, time_stamp, trigger);
+
             stimulation_tracker++;
         }
     }
@@ -79,60 +61,51 @@ int dataHandler::simulateData() {
     return 0;
 }
 
-// TODO: This needs to be implemented to accept sample packets with multiple bundles.
-// Add samples to channels. First rows of sample packet are the data and the last two are stimulation flag and time stamp.
-// void dataHandler::addDataGACorr(const Eigen::VectorXd &sample_packet) {
-//     if (sample_packet.rows() != channel_count_) {
-//         std::cerr << "Invalid sample dimensions: " << sample_packet.rows() << " expected: " << channel_count_<< std::endl;
-//         return;
-//     }
+int dataHandler::simulateData_mat() {
 
-//     // Check for stimulation flag
-//     if (sample_packet(sample_packet.size() - 2) == 1) { this->stimulation_tracker = 0; }
+    // Eigen::MatrixXd readMatFile("interl_eegfmri.mat");
 
-//     if (this->stimulation_tracker < this->TA_length) {
+
+
+    auto startTime = std::chrono::high_resolution_clock::now();
+    double time = 0.0;
+
+    Eigen::VectorXd sample(channel_count_);
+    const Eigen::VectorXd linspace_example = Eigen::VectorXd::LinSpaced(channel_count_, 0, channel_count_);
+
+    int stimulation_interval = 10000;
+    int stimulation_tracker = 0;
+    while (false) { // Adjust this condition as needed
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = currentTime - startTime;
+        double time_stamp = 0.0;
+        int trigger = 0;
         
-//         Eigen::VectorXd samples_corrected = sample_packet - GACorr_.getTemplateCol(this->stimulation_tracker);
-//         std::lock_guard<std::mutex> guard(this->dataMutex);
-//         sample_buffer_.addSamples(samples_corrected);
+        // Check if it's time to generate the next sample
+        if (elapsed.count() >= 1.0 / sampling_rate_) {
+            startTime = currentTime;
 
-//         this->stimulation_tracker++;
-//     } else { // Add data to buffer
-//         std::lock_guard<std::mutex> guard(this->dataMutex);
-//         sample_buffer_.addSamples(sample_packet.derived());
-//     }
-// }
+            double SIN = 5.0 * M_PI * time;
+            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)); });
+            time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
+            
+            if (stimulation_tracker >= stimulation_interval) {
+                trigger = 1;
+                stimulation_tracker = 0;
+            } else {
+                trigger = 0;
+            }
+            
+            time += 1.0 / sampling_rate_;
 
-// template<typename Derived>
-// void dataHandler::addData(const Eigen::MatrixBase<Derived> &sample_packet, const Eigen::VectorXd &time_stamps, const Eigen::VectorXd &triggers) {
-//     if (sample_packet.rows() != channel_count_) {
-//         std::cerr << "Invalid sample dimensions: " << sample_packet.rows() << " expected: " << channel_count_ << std::endl;
-//         return;
-//     }
+            this->addData(sample, time_stamp, trigger);
 
-//     { // Add data to buffer
-//         std::lock_guard<std::mutex> guard(this->dataMutex);
-//         sample_buffer_.addSamples(sample_packet.derived());
-//         time_stamp_buffer_.addSamples(time_stamp.transpose());
-//         trigger_buffer_.addSamples(triggers.transpose());
-//     }
-// }
+            stimulation_tracker++;
+        }
+    }
 
-// Retrieves data from the specified channel in chronological order
-// Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSamplingFactor) {
-//     {
-//         std::lock_guard<std::mutex> guard(this->dataMutex);
-//         return this->sample_buffer_.getChannelDataInOrder(channel_index, downSamplingFactor);
-//     }
-// }
-
-// // Retrieves data form all channels in chronological order
-// Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
-//     {
-//         std::lock_guard<std::mutex> guard(this->dataMutex);
-//         return this->sample_buffer_.getDataInOrder(downSamplingFactor);
-//     }
-// }
+    return 0;
+}
 
 // For demonstration, print the size of a buffer (e.g., for channel 0)
 void dataHandler::printBufferSize() {
@@ -157,9 +130,12 @@ void dataHandler::printBufferSize() {
 
 // Buffer functions
 // Add a signle sample to each channel
-void dataHandler::addData(const Eigen::VectorXd &samples, const Eigen::VectorXd &time_stamps, const Eigen::VectorXd &triggers) {
+void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger) {
 
-    if (triggers(0) == 1.0) { stimulation_tracker = 0; }
+    if (trigger == 1) { 
+        stimulation_tracker = 0;
+        // GACorr_.printTemplate();
+    }
 
     if (stimulation_tracker < TA_length) {
 
@@ -177,44 +153,10 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const Eigen::VectorXd 
 
     }
 
-    time_stamp_buffer_(current_data_index_) = time_stamps(0);
-    trigger_buffer_(current_data_index_) = triggers(0);
+    time_stamp_buffer_(current_data_index_) = time_stamp;
+    trigger_buffer_(current_data_index_) = trigger;
     current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 }
-
-// Add multiple samples to each channel
-void dataHandler::addData(const Eigen::MatrixXd &samples, const Eigen::VectorXd &time_stamps, const Eigen::VectorXd &triggers) {
-
-    std::lock_guard<std::mutex> (this->dataMutex);
-
-    // Calculate the number of samples that fit before reaching the end
-    int fitToEnd = std::min(samples.cols(), static_cast<Eigen::Index>(buffer_capacity_ - current_data_index_));
-    
-    // Assign samples that fit to the end
-    if (fitToEnd > 0) {
-        sample_buffer_.middleCols(current_data_index_, fitToEnd) = samples.leftCols(fitToEnd);
-    }
-    
-    // Calculate remaining samples that need to wrap around
-    int overflow = samples.cols() - fitToEnd;
-    
-    // If there are any samples that didn't fit, wrap them around to the beginning
-    if (overflow > 0) {
-        sample_buffer_.leftCols(overflow) = samples.rightCols(overflow);
-    }
-
-    current_data_index_ = (current_data_index_ + samples.cols()) % buffer_capacity_;
-}
-
-// Retrieve the sample at a specific index in the rolling buffer
-// Index 0 refers to the oldest sample, and capacity-1 refers to the newest sample.
-// double dataHandler::getSample(int channel, int index) const {
-//     if (index >= row_capacity_) throw std::out_of_range("Buffer index out of bounds");
-
-//     // Calculate the actual index based on currentIndex
-//     int actualIndex = (currentIndex_ + index) % row_capacity_;
-//     return data_(channel, actualIndex);
-// }
 
 // Retrieves data form all channels in chronological order
 Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
@@ -256,7 +198,7 @@ Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSa
     return downSampledData;
 }
 
-// Retrieves data from the specified channel in chronological order
+// Retrieves data from the time stamp channel in chronological order
 Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
 
     std::lock_guard<std::mutex> (this->dataMutex);
@@ -276,7 +218,7 @@ Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
     return downSampledData;
 }
 
-// Retrieves data from the specified channel in chronological order
+// Retrieves data from the trigger channel in chronological order
 Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
     std::lock_guard<std::mutex> (this->dataMutex);
@@ -295,3 +237,46 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
     return downSampledData;
 }
+
+
+
+
+
+
+// Converts .mat files into an eigen matrix
+// Eigen::MatrixXd dataHandler::readMatFile(const std::string& fileName) {
+//     mat_t *matfp = Mat_Open(fileName.c_str(), MAT_ACC_RDONLY);
+//     if (matfp == nullptr) {
+//         throw std::runtime_error("Error opening MAT file.");
+//     }
+
+//     // Replace "variableName" with the name of your variable in the MAT file
+//     matvar_t *matvar = Mat_VarRead(matfp, "interleavedEegfmri");
+//     if (matvar == nullptr) {
+//         Mat_Close(matfp);
+//         throw std::runtime_error("Error reading variable from MAT file.");
+//     }
+
+//     if (matvar->rank != 2 || matvar->data_type != MAT_T_DOUBLE) {
+//         Mat_VarFree(matvar);
+//         Mat_Close(matfp);
+//         throw std::runtime_error("Variable must be a 2D double array.");
+//     }
+
+//     size_t rows = matvar->dims[0];
+//     size_t cols = matvar->dims[1];
+//     double* data = static_cast<double*>(matvar->data);
+
+//     // Transfer data to Eigen
+//     Eigen::MatrixXd matrix(rows, cols);
+//     for (size_t i = 0; i < rows; ++i) {
+//         for (size_t j = 0; j < cols; ++j) {
+//             matrix(i, j) = data[i + j * rows]; // Column-major order in MATLAB
+//         }
+//     }
+
+//     Mat_VarFree(matvar);
+//     Mat_Close(matfp);
+
+//     return matrix;
+// }

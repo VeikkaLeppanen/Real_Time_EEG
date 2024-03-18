@@ -2,8 +2,10 @@
 #include "networkUtils.h"
 #include <iostream>
 #include <arpa/inet.h>
+#include <stdexcept>
 #include <cstdint>
 #include <cstring>
+#include <Eigen/Dense>
 
 struct sample_packet {
     uint8_t FrameType;
@@ -16,5 +18,6 @@ struct sample_packet {
     uint64_t FirstSampleTime;
 };
 
+void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer);
 std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet);
 void printSamplePacket(const sample_packet& packet);

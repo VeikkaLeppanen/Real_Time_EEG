@@ -42,6 +42,7 @@ void EegBridge::bind_socket() {
 }
 
 void EegBridge::spin(dataHandler &handler) {
+    std::cout << "Waiting for packets..." << '\n';
     while (!signal_received) {
         int n = recvfrom(sockfd, (char*)buffer, BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
         if (n < 0) {
@@ -59,27 +60,25 @@ void EegBridge::spin(dataHandler &handler) {
 
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
-            std::vector<std::vector<double>> sample_data = deserializeSamplePacket_pointer(buffer, n, packet_info);
+            deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
 
-            // If you need to process or print the sample data, do it here
-            // printSamplePacket(packet_info);
-
-            for (int i = 0; i < sample_data.size(); i++) {
-                for (int j = 0; j < sample_data[i].size(); ++j) {
-                    std::cout << sample_data[i][j] << ' ';
-                }
-                std::cout  << '\n';
+            for (int i = 0; i < packet_info.NumSampleBundles; i++) {
+                handler.addData(data_handler_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), 0);
             }
-            std::cout  << '\n';
 
-            // handler.addData(data_handler_samples);
+            std::cout << handler.getDataInOrder(1) << '\n';
+            std::cout << handler.get_buffer_capacity() << '\n';
             break;
 
         } case 0x01: { // MeasurementStartPacket
             
             std::cout << "MeasurementStart package received!\n";
             measurement_start_packet packet_info;
-            deserializeMeasurementStartPacket_pointer(buffer, n, packet_info);
+            std::vector<uint16_t> SourceChannels;
+            std::vector<uint8_t> ChannelTypes;
+            
+            deserializeMeasurementStartPacket_pointer(buffer, n, packet_info, SourceChannels, ChannelTypes);
+
             numChannels = packet_info.NumChannels;
             sampling_rate = packet_info.SamplingRateHz;
 
@@ -89,7 +88,7 @@ void EegBridge::spin(dataHandler &handler) {
 
             std::cout << "MeasurementStart package processed!\n";
 
-            handler.reset_handler(packet_info.NumChannels, packet_info.SamplingRateHz);
+            handler.reset_handler(numChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
 
             break;

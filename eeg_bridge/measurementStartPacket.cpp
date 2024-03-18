@@ -1,6 +1,6 @@
 #include "measurementStartPacket.h"
 
-void deserializeMeasurementStartPacket_pointer(const uint8_t *buffer, size_t size, measurement_start_packet &packet) {
+void deserializeMeasurementStartPacket_pointer(const uint8_t *buffer, size_t size, measurement_start_packet &packet, std::vector<uint16_t> &SourceChannels, std::vector<uint8_t> &ChannelTypes) {
     size_t offset = 0;
 
     if (buffer == nullptr || size < sizeof(measurement_start_packet)) {
@@ -30,6 +30,23 @@ void deserializeMeasurementStartPacket_pointer(const uint8_t *buffer, size_t siz
     memcpy(&packet.NumChannels, buffer + offset, sizeof(uint16_t));
     packet.NumChannels = ntohs(packet.NumChannels);
     offset += sizeof(uint16_t);
+    
+    // Assuming SourceChannels are next in the buffer
+    SourceChannels.resize(packet.NumChannels);
+    for (uint16_t channel = 0; channel < packet.NumChannels; ++channel) {
+        if (offset + sizeof(uint16_t) > size) throw std::runtime_error("Buffer overrun while reading SourceChannels.");
+        uint16_t sourceChannel;
+        memcpy(&sourceChannel, buffer + offset, sizeof(uint16_t));
+        SourceChannels[channel] = ntohs(sourceChannel);
+        offset += sizeof(uint16_t);
+    }
+    
+    // Assuming ChannelTypes follow SourceChannels in the buffer
+    ChannelTypes.resize(packet.NumChannels);
+    for (uint16_t channel = 0; channel < packet.NumChannels; ++channel) {
+        if (offset + sizeof(uint8_t) > size) throw std::runtime_error("Buffer overrun while reading ChannelTypes.");
+        ChannelTypes[channel] = buffer[offset++];
+    }
 }
 
 void printMeasurementStartPacket(const measurement_start_packet &packet) {
