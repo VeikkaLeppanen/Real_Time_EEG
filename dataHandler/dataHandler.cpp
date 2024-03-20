@@ -40,7 +40,7 @@ int dataHandler::simulateData_sin() {
             startTime = currentTime;
 
             double SIN = 3.0 * M_PI * time;
-            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)) * 20; });
+            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (5.0 + x)) * 20; });
             time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
             
             if (stimulation_tracker == stimulation_interval) {
@@ -160,6 +160,9 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
 // Retrieves data form all channels in chronological order
 Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
+    
+    // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
+    // DONWSAMPLINGFACTOR 10
 
     std::lock_guard<std::mutex> (this->dataMutex);
 

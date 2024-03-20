@@ -9,8 +9,8 @@
 #include <vector>
 #include <cmath>
 #include <matio.h>
+#include <Eigen/Dense>
 
-#include "circularEigenBuffer.h" // Ensure this path is correct
 #include "GACorrection.h"
 
 class dataHandler {

@@ -62,6 +62,9 @@ void EegBridge::spin(dataHandler &handler) {
             sample_packet packet_info;
             deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
 
+            // AMPLIFIER *100
+            // NANO TO MICRO /1000
+
             for (int i = 0; i < packet_info.NumSampleBundles; i++) {
                 handler.addData(data_handler_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), 0);
             }

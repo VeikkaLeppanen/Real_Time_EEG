@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 #include <cmath>
-#include "circularEigenBuffer.h"
+#include <Eigen/Dense>
 
 class GACorrection {
 public:
@@ -41,21 +41,3 @@ private:
 };
 
 #endif // GACORRECTION_H
-
-
-/*
-
-def update_average(old_average, n, old_value, new_value):
-    new_average = old_average + (new_value - old_value) / n
-    return new_average
-
-# Example usage
-old_average = 20  # The old average
-n = 25  # Number of values
-old_value = 15  # The value being updated
-new_value = 25  # The new value
-
-new_average = update_average(old_average, n, old_value, new_value)
-print(f"Updated average: {new_average}")
-
-*/
