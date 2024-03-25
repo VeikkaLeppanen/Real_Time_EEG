@@ -15,6 +15,16 @@
 // The maximum length of the UDP packet, as mentioned in the manual of Bittium NeurOne.
 #define BUFFER_LENGTH 1472
 
+enum EegBridgeState {
+  WAITING_FOR_MEASUREMENT_START,
+  WAITING_FOR_MEASUREMENT_STOP,
+  WAITING_FOR_SESSION_STOP,
+  WAITING_FOR_SESSION_START,
+  STREAMING,
+  ERROR_OUT_OF_SYNC,
+  ERROR_SAMPLES_DROPPED
+};
+
 class EegBridge {
 public:
     EegBridge() {};
@@ -23,10 +33,13 @@ public:
     void spin(dataHandler &handler);
 
 private:
+    EegBridgeState eeg_bridge_state;
+    
     int numChannels = 4;
     int numBundles = 2;
     int sampling_rate = 5000;
     int delivery_rate = 5000;
+    
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     unsigned char buffer[BUFFER_LENGTH];

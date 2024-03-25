@@ -10,11 +10,10 @@
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-const uint8_t CHANNEL_COUNT = 20;
-const uint32_t SAMPLING_RATE = 5000;
-const uint32_t DELIVERY_RATE = 5000;
+const uint8_t CHANNEL_COUNT = 4;
+const uint32_t SAMPLING_RATE = 1000;
+const uint32_t DELIVERY_RATE = 1000;
 const uint32_t DOWNSAMPLING_FACTOR = 1;
-const uint32_t BUFFER_LENGTH_IN_SECONDS = 5;
 
 
 // Data simulation loop
@@ -41,6 +40,13 @@ void dataAcquisitionLoop(dataHandler &handler) {
 
 // Loop for matplotlibcpp graph visualization
 void plottingLoop(dataHandler &handler) {
+    
+    // Wait for the handler initialization with measurementStartPackage
+    while (!handler.isReady()) {
+        // Optionally, sleep for a short duration to avoid busy waiting
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
     int datapoints = handler.get_buffer_capacity();
     int dataPoints_downsampled = (datapoints + DOWNSAMPLING_FACTOR - 1) / DOWNSAMPLING_FACTOR;
 
@@ -51,7 +57,7 @@ void plottingLoop(dataHandler &handler) {
     plt::figure_size(1920, 100 * (channels_to_display.size() + 2));
 
     // X values of the plot
-    Eigen::VectorXd xVec = Eigen::VectorXd::LinSpaced(dataPoints_downsampled, 0, BUFFER_LENGTH_IN_SECONDS);
+    Eigen::VectorXd xVec = Eigen::VectorXd::LinSpaced(dataPoints_downsampled, handler.get_buffer_length_in_seconds(), 0);
     std::vector<double> x(xVec.data(), xVec.data() + xVec.size());
 
     // Y values of the plot
@@ -101,8 +107,8 @@ int main() {
     
     dataHandler handler;
 
-    std::thread dataThread(dataSimulationLoop, std::ref(handler));
-    // std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
+    // std::thread dataThread(dataSimulationLoop, std::ref(handler));
+    std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::thread plotThread(plottingLoop, std::ref(handler));

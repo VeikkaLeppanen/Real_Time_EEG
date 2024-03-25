@@ -23,5 +23,8 @@ include_directories(/usr/include/eigen3)
 # Add executable
 add_executable(my_project main.cpp eeg_bridge/eeg_bridge.cpp eeg_bridge/measurementStartPacket.cpp eeg_bridge/samplePacket.cpp eeg_bridge/networkUtils.cpp dataHandler/dataHandler.cpp dataHandler/GACorrection.cpp)
 
+# Use the flag to suppress deprecated declarations warnings
+target_compile_options(my_project PRIVATE -Wno-deprecated-declarations)
+
 # Link Python libraries
 target_link_libraries(my_project ${PYTHON_LIBRARIES})

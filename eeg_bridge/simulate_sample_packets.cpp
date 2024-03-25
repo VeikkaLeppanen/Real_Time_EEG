@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <thread>
+#include <random>
 
 /*
 This can be used to send packets to the port used by the main program to simulate the retrieval of bittium packets.
@@ -19,8 +20,20 @@ TODO:
     MeasurementEndPackage
 */
 
+const uint16_t CHANNEL_COUNT = 20;
+const uint32_t SAMPLINGRATE = 5000;
+
+
 // Target port
 #define PORT 8080
+
+int32_t getRandomNumber(int32_t min, int32_t max) {
+    std::random_device rd; // Obtain a random number from hardware
+    std::mt19937 gen(rd()); // Seed the generator
+    std::uniform_int_distribution<> distr(min, max); // Define the range
+
+    return distr(gen); // Generate and return the random number
+}
 
 
 std::vector<uint8_t> serializeMeasurementStartPacketData(
@@ -30,7 +43,9 @@ std::vector<uint8_t> serializeMeasurementStartPacketData(
     uint32_t SamplingRateHz,
     uint32_t SampleFormat,
     uint32_t TriggerDefs,
-    uint16_t NumChannels) {
+    uint16_t NumChannels,
+    const std::vector<uint16_t>& SourceChannels,
+    const std::vector<uint8_t>& ChannelTypes) {
     
     std::vector<uint8_t> buffer;
     
@@ -61,21 +76,18 @@ std::vector<uint8_t> serializeMeasurementStartPacketData(
     buffer.push_back((NumChannels >> 8) & 0xFF);
     buffer.push_back(NumChannels & 0xFF);
 
+    // Serialize SourceChannels
+    for (auto channel : SourceChannels) {
+        buffer.push_back((channel >> 8) & 0xFF);
+        buffer.push_back(channel & 0xFF);
+    }
+
+    // Serialize ChannelTypes
+    for (auto type : ChannelTypes) {
+        buffer.push_back(type);
+    }
+
     return buffer;
-}
-
-std::vector<uint8_t> generateExampleMeasurementStartPacket() {
-    uint8_t FrameType = 1; // Assuming 1 indicates a Measurement Start packet
-    uint8_t MainUnitNum = 2;
-    uint8_t Reserved[2] = {0, 0}; // Fill with appropriate values if needed
-    uint32_t SamplingRateHz = 50; // Example: 5000 Hz
-    uint32_t SampleFormat = 1; // Example format
-    uint32_t TriggerDefs = 0; // Example trigger definitions
-    uint16_t NumChannels = 4; // Number of channels
-
-    return serializeMeasurementStartPacketData(
-        FrameType, MainUnitNum, Reserved, SamplingRateHz,
-        SampleFormat, TriggerDefs, NumChannels);
 }
 
 std::vector<uint8_t> serializeSamplePacketData(
@@ -124,16 +136,49 @@ std::vector<uint8_t> serializeSamplePacketData(
     return buffer;
 }
 
+std::vector<uint8_t> generateExampleMeasurementStartPacket() {
+    uint8_t FrameType = 1; // Assuming 1 indicates a Measurement Start packet
+    uint8_t MainUnitNum = 2;
+    uint8_t Reserved[2] = {0, 0}; // Fill with appropriate values if needed
+    uint32_t SamplingRateHz = SAMPLINGRATE; // Example: 5000 Hz
+    uint32_t SampleFormat = 1; // Example format
+    uint32_t TriggerDefs = 0; // Example trigger definitions
+    uint16_t NumChannels = CHANNEL_COUNT; // Number of channels
+
+    // Example source channels and types
+    std::vector<uint16_t> SourceChannels = {1, 2, 3, 4}; // Example channel IDs
+    std::vector<uint8_t> ChannelTypes = {0, 1, 0, 1}; // Example channel types (0 and 1 for demonstration)
+
+    return serializeMeasurementStartPacketData(
+        FrameType, MainUnitNum, Reserved, SamplingRateHz,
+        SampleFormat, TriggerDefs, NumChannels, SourceChannels, ChannelTypes);
+}
+
 // Example usage
 std::vector<uint8_t> generateExampleSamplePacket() {
     uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
     uint32_t PacketSeqNo = 123456;
-    uint16_t NumChannels = 4, NumSampleBundles = 2;
+    uint16_t NumChannels = CHANNEL_COUNT, NumSampleBundles = 2;
     uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
 
-    std::vector<std::vector<int32_t>> Samples = {
-        {1, -2, 3, -4}, {5, -6, 7, -8}
-    };
+    std::vector<std::vector<int32_t>> Samples(NumSampleBundles, std::vector<int32_t>(NumChannels));
+
+    for (auto &vec : Samples) {
+        for (auto &val : vec) {
+            val = getRandomNumber(-10, 10);
+        }
+    }
+
+    // for (auto &vec : Samples) {
+    //     for (auto &val : vec) {
+    //         std::cout << val << ' ';
+    //     }
+    //     std::cout << '\n';
+    // }
+
+    // std::vector<std::vector<int32_t>> Samples = {
+    //     {1, -2, 3, -4}, {5, -6, 7, -8}
+    // };
 
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
 }
@@ -165,14 +210,18 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    for(int i = 0; i < 3; i++) {
+    int number_of_sample_packets_to_send = 5000;
+    for(int i = 0; i < number_of_sample_packets_to_send; i++) {
         std::vector<uint8_t> sample_data = generateExampleSamplePacket();
 
         sendUDP(sample_data, "127.0.0.1", PORT);
 
         std::cout << "Package " << i << " sent!" << '\n';
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    
+        // Calculate sleep duration to maintain the sampling rate
+        // Cast to long long to ensure the multiplication happens correctly
+        auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
+        std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
     }
     
     return 0;

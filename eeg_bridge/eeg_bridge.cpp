@@ -43,6 +43,7 @@ void EegBridge::bind_socket() {
 
 void EegBridge::spin(dataHandler &handler) {
     std::cout << "Waiting for packets..." << '\n';
+    eeg_bridge_state = WAITING_FOR_MEASUREMENT_START;
     while (!signal_received) {
         int n = recvfrom(sockfd, (char*)buffer, BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
         if (n < 0) {
@@ -69,8 +70,8 @@ void EegBridge::spin(dataHandler &handler) {
                 handler.addData(data_handler_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), 0);
             }
 
-            std::cout << handler.getDataInOrder(1) << '\n';
-            std::cout << handler.get_buffer_capacity() << '\n';
+            // std::cout << handler.getDataInOrder(1) << '\n';
+            // std::cout << handler.get_buffer_capacity() << '\n';
             break;
 
         } case 0x01: { // MeasurementStartPacket
@@ -93,6 +94,7 @@ void EegBridge::spin(dataHandler &handler) {
 
             handler.reset_handler(numChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
+            eeg_bridge_state = WAITING_FOR_MEASUREMENT_STOP;
 
             break;
 

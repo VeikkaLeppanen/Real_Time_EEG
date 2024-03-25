@@ -18,6 +18,7 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     }
 
     this->GACorr_ = GACorrection(channel_count, this->GA_average_length, this->TA_length);
+    this->handler_state = WAITING_FOR_STOP;
 }
 
 int dataHandler::simulateData_sin() {

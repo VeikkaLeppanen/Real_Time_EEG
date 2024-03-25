@@ -33,6 +33,7 @@ void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sa
     offset += sizeof(uint64_t);
 
     // Initialize an Eigen matrix to store samples. Rows correspond to channels, columns to sample bundles.
+    // packet_handler_buffer.resize(packet.NumChannels, packet.NumSampleBundles);
 
     for (uint16_t bundle = 0; bundle < packet.NumSampleBundles; ++bundle) {
         for (uint16_t channel = 0; channel < packet.NumChannels; ++channel) {

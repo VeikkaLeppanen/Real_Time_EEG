@@ -13,6 +13,11 @@
 
 #include "GACorrection.h"
 
+enum HandlerState {
+  WAITING_FOR_START,
+  WAITING_FOR_STOP
+};
+
 class dataHandler {
 public:
     // Default constructor
@@ -34,6 +39,8 @@ public:
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
     void reset_handler(int channel_count, int sampling_rate) { reset_handler(channel_count, sampling_rate, sampling_rate); }
 
+    bool isReady() { return (handler_state == WAITING_FOR_STOP); }
+
     int simulateData_sin();
     int simulateData_mat();
 
@@ -45,6 +52,7 @@ public:
     Eigen::VectorXd getTriggersInOrder(int downSamplingFactor);
 
     int get_buffer_capacity() { return buffer_capacity_; }
+    int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
     
     void printBufferSize();
@@ -52,12 +60,14 @@ public:
     // Eigen::MatrixXd readMatFile(const std::string& fileName);
 
 private:
+    HandlerState handler_state = WAITING_FOR_START;
+
     std::mutex dataMutex;
     Eigen::MatrixXd sample_buffer_;
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXd trigger_buffer_;
     size_t current_data_index_ = 0;
-    int buffer_length_in_seconds_ = 4;
+    int buffer_length_in_seconds_ = 5;
     int buffer_capacity_;
     int channel_count_;
     int sampling_rate_;
