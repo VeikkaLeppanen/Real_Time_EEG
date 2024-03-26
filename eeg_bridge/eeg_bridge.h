@@ -35,8 +35,9 @@ public:
 private:
     EegBridgeState eeg_bridge_state;
     
-    int numChannels = 4;
-    int numBundles = 2;
+    int numChannels;        // Number of total channels
+    int numDataChannels;    // Number of channels storing EEG data
+    int numBundles;
     int sampling_rate = 5000;
     int delivery_rate = 5000;
     

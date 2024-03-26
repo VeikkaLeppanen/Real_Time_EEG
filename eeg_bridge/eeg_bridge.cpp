@@ -2,6 +2,11 @@
 
 const int PORT = 8080;
 
+// AMPLIFIER *100
+// NANO TO MICRO /1000
+const uint8_t DC_MODE_SCALE = 100;
+const uint16_t NANO_TO_MICRO_CONVERSION = 1000;
+
 // This is used to terminate the program with Ctrl+C
 volatile std::sig_atomic_t signal_received = 0;
 void signal_handler(int signal) {
@@ -58,16 +63,17 @@ void EegBridge::spin(dataHandler &handler) {
         switch (firstByte)
         {
         case 0x02: { // SamplesPacket
-
+        
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
             deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
 
-            // AMPLIFIER *100
-            // NANO TO MICRO /1000
+            Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
+
+            Eigen::MatrixXd data_samples = (data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION;
 
             for (int i = 0; i < packet_info.NumSampleBundles; i++) {
-                handler.addData(data_handler_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), 0);
+                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)));
             }
 
             // std::cout << handler.getDataInOrder(1) << '\n';
@@ -84,15 +90,16 @@ void EegBridge::spin(dataHandler &handler) {
             deserializeMeasurementStartPacket_pointer(buffer, n, packet_info, SourceChannels, ChannelTypes);
 
             numChannels = packet_info.NumChannels;
+            numDataChannels = numChannels - 1;              // Excluding trigger channel
             sampling_rate = packet_info.SamplingRateHz;
 
             // TODO: Initialize data_handler_samples
-            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 1000);
+            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 10);
 
 
             std::cout << "MeasurementStart package processed!\n";
 
-            handler.reset_handler(numChannels, sampling_rate);
+            handler.reset_handler(numDataChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
             eeg_bridge_state = WAITING_FOR_MEASUREMENT_STOP;
 

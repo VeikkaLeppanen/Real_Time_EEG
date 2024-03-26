@@ -78,7 +78,7 @@ private:
     // Set this according to the gradient length in samples
     int TA_length = 5000;
     // Set this according to the number of gradients to average over
-    int GA_average_length = 25;
+    int GA_average_length = 5;
     int stimulation_tracker = 100000;
 };
 

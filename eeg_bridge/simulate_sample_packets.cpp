@@ -9,6 +9,9 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 /*
 This can be used to send packets to the port used by the main program to simulate the retrieval of bittium packets.
@@ -20,7 +23,8 @@ TODO:
     MeasurementEndPackage
 */
 
-const uint16_t CHANNEL_COUNT = 20;
+// Simulating parameters
+const uint16_t CHANNEL_COUNT = 13;
 const uint32_t SAMPLINGRATE = 5000;
 
 
@@ -155,7 +159,7 @@ std::vector<uint8_t> generateExampleMeasurementStartPacket() {
 }
 
 // Example usage
-std::vector<uint8_t> generateExampleSamplePacket() {
+std::vector<uint8_t> generateExampleSamplePacket_random() {
     uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
     uint32_t PacketSeqNo = 123456;
     uint16_t NumChannels = CHANNEL_COUNT, NumSampleBundles = 2;
@@ -176,9 +180,21 @@ std::vector<uint8_t> generateExampleSamplePacket() {
     //     std::cout << '\n';
     // }
 
-    // std::vector<std::vector<int32_t>> Samples = {
-    //     {1, -2, 3, -4}, {5, -6, 7, -8}
-    // };
+    return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
+}
+
+// Example usage
+std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample_vector) {
+    uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
+    uint32_t PacketSeqNo = 123456;
+    uint16_t NumChannels = CHANNEL_COUNT, NumSampleBundles = 1;
+    uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
+
+    std::vector<std::vector<int32_t>> Samples(NumSampleBundles, std::vector<int32_t>(NumChannels));
+
+    for (auto &vec : Samples) {
+        vec = sample_vector;
+    }
 
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
 }
@@ -210,19 +226,49 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    int number_of_sample_packets_to_send = 5000;
-    for(int i = 0; i < number_of_sample_packets_to_send; i++) {
-        std::vector<uint8_t> sample_data = generateExampleSamplePacket();
+    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/eeg_data_with_tr_markers.csv");
+    std::string line;
+    int lineCount = 0;
 
-        sendUDP(sample_data, "127.0.0.1", PORT);
+    int number_of_sample_packets_to_send = 50000000;
+    while (std::getline(csvFile, line) && lineCount < number_of_sample_packets_to_send) {
+        std::stringstream lineStream(line);
+        std::string cell;
+        std::vector<int32_t> sampleVector;
 
-        std::cout << "Package " << i << " sent!" << '\n';
-    
-        // Calculate sleep duration to maintain the sampling rate
-        // Cast to long long to ensure the multiplication happens correctly
+        while (std::getline(lineStream, cell, ',')) {
+            sampleVector.push_back(std::stoi(cell));
+        }
+
+        // Generate packet from the CSV row
+        std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector);
+
+        // Send the packet via UDP
+        sendUDP(samplePacket, "127.0.0.1", PORT);
+        std::cout << "Package " << lineCount << " sent!" << '\n';
+
+        // Throttle sending to maintain sampling rate
         auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
         std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
+
+        lineCount++;
     }
+
+
+
+    // int number_of_sample_packets_to_send = 5000;
+    // for(int i = 0; i < number_of_sample_packets_to_send; i++) {
+    //     std::vector<uint8_t> sample_data = generateExampleSamplePacket_random();
+
+    //     sendUDP(sample_data, "127.0.0.1", PORT);
+
+    //     std::cout << "Package " << i << " sent!" << '\n';
+    
+    //     // Calculate sleep duration to maintain the sampling rate
+    //     // Cast to long long to ensure the multiplication happens correctly
+    //     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
+    //     std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
+    // }
     
     return 0;
 }

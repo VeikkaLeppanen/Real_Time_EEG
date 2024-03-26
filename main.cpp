@@ -10,7 +10,8 @@
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
-const uint8_t CHANNEL_COUNT = 4;
+// Simulation loop parameters
+const uint8_t CHANNEL_COUNT = 12;
 const uint32_t SAMPLING_RATE = 1000;
 const uint32_t DELIVERY_RATE = 1000;
 const uint32_t DOWNSAMPLING_FACTOR = 1;
@@ -51,7 +52,6 @@ void plottingLoop(dataHandler &handler) {
     int dataPoints_downsampled = (datapoints + DOWNSAMPLING_FACTOR - 1) / DOWNSAMPLING_FACTOR;
 
     std::vector<int> channels_to_display = {0};
-    int channel_count = CHANNEL_COUNT;
 
     plt::ion(); // Enable interactive mode
     plt::figure_size(1920, 100 * (channels_to_display.size() + 2));
