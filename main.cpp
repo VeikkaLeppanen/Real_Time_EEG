@@ -12,9 +12,14 @@ namespace plt = matplotlibcpp;
 
 // Simulation loop parameters
 const uint8_t CHANNEL_COUNT = 12;
-const uint32_t SAMPLING_RATE = 1000;
-const uint32_t DELIVERY_RATE = 1000;
+const uint32_t SAMPLING_RATE = 5000;
+const uint32_t DELIVERY_RATE = 5000;
 const uint32_t DOWNSAMPLING_FACTOR = 1;
+
+
+// In case of bind failed the previous process can be terminated with the following commands on linux
+// lsof -i :8080        Find PID
+// kill -9 PID          Kill the process
 
 
 // Data simulation loop
@@ -51,7 +56,7 @@ void plottingLoop(dataHandler &handler) {
     int datapoints = handler.get_buffer_capacity();
     int dataPoints_downsampled = (datapoints + DOWNSAMPLING_FACTOR - 1) / DOWNSAMPLING_FACTOR;
 
-    std::vector<int> channels_to_display = {0};
+    std::vector<int> channels_to_display = {0, 1, 2};
 
     plt::ion(); // Enable interactive mode
     plt::figure_size(1920, 100 * (channels_to_display.size() + 2));

@@ -226,7 +226,7 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/eeg_data_with_tr_markers.csv");
+    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/eeg_data_with_tr_markers.csv");
     std::string line;
     int lineCount = 0;
 
