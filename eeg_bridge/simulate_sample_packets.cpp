@@ -29,7 +29,7 @@ const uint32_t SAMPLINGRATE = 5000;
 
 
 // Target port
-#define PORT 8080
+#define PORT 50000
 
 int32_t getRandomNumber(int32_t min, int32_t max) {
     std::random_device rd; // Obtain a random number from hardware
@@ -220,13 +220,15 @@ int main() {
 
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
 
-    sendUDP(MSdata, "127.0.0.1", PORT);
+    std::string IP_address = "192.168.0.104"; // 127.0.0.1
+
+    sendUDP(MSdata, IP_address, PORT);
 
     std::cout << "MeasurementStartPackage sent!" << '\n';
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/eeg_data_with_tr_markers.csv");
+    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/eeg_data_with_tr_markers.csv");
     std::string line;
     int lineCount = 0;
 
@@ -244,7 +246,8 @@ int main() {
         std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector);
 
         // Send the packet via UDP
-        sendUDP(samplePacket, "127.0.0.1", PORT);
+        // sendUDP(samplePacket, "127.0.0.1", PORT);
+        sendUDP(samplePacket, IP_address, PORT);
         std::cout << "Package " << lineCount << " sent!" << '\n';
 
         // Throttle sending to maintain sampling rate
