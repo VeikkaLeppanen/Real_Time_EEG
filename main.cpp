@@ -49,7 +49,7 @@ void dataAcquisitionLoop(dataHandler &handler) {
     bridge.bind_socket();
     bridge.spin(handler, signal_received);
 
-    std::cout << "Exiting dataAcquisitionLoop\n";
+    std::cout << "Exiting dataAcquisitionLoop" << '\n';
 }
 
 // Loop for matplotlibcpp graph visualization
@@ -77,7 +77,7 @@ void plottingLoop(dataHandler &handler) {
     Eigen::VectorXd yVec = Eigen::VectorXd::Zero(dataPoints_downsampled);
     Eigen::MatrixXd downSampledData = Eigen::MatrixXd::Zero(handler.get_channel_count(), dataPoints_downsampled);
 
-    while (!signal_received) { // Adjust this condition as needed
+    while (!signal_received) {
 
         plt::clf();
 
@@ -116,7 +116,28 @@ void plottingLoop(dataHandler &handler) {
     }
 
     plt::close();
-    std::cout << "Exiting plottingLoop\n";
+    std::cout << "Exiting plottingLoop" << '\n';
+}
+
+void dataProcessingLoop(dataHandler &handler) {
+
+    while (!signal_received) {
+
+        // Copy data from wanted EEG channels and CWL channels
+        Eigen::MatrixXd EEG = handler.getBlockChannelDataInOrder(0, 4, 10000);
+        Eigen::MatrixXd CWL = handler.getBlockChannelDataInOrder(8, 4, 10000);
+
+        // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
+
+
+        // DONWSAMPLINGFACTOR 10
+
+
+        // removeBCG
+
+    }
+
+    std::cout << "Exiting dataProcessingLoop" << '\n';
 }
 
 int main() {

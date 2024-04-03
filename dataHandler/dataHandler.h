@@ -48,6 +48,9 @@ public:
 
     Eigen::MatrixXd getDataInOrder(int downSamplingFactor);
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
+    Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
+    Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
+
     Eigen::VectorXd getTimeStampsInOrder(int downSamplingFactor);
     Eigen::VectorXd getTriggersInOrder(int downSamplingFactor);
 
@@ -67,7 +70,7 @@ private:
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXd trigger_buffer_;
     size_t current_data_index_ = 0;
-    int buffer_length_in_seconds_ = 5;
+    int buffer_length_in_seconds_ = 20;
     int buffer_capacity_;
     int channel_count_;
     int sampling_rate_;

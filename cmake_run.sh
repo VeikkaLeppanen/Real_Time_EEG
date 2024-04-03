@@ -5,4 +5,4 @@ mkdir build
 cd build
 cmake ..
 make
-./my_project
+./real_time_eeg

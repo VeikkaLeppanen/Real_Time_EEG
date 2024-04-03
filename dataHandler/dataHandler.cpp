@@ -161,18 +161,14 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
 // Retrieves data form all channels in chronological order
 Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
-    
-    // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
-    // DONWSAMPLINGFACTOR 10
 
-    std::lock_guard<std::mutex> (this->dataMutex);
-
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
+    if (downSamplingFactor < 1) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
     // Calculate the effective size after downsampling
     size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
     Eigen::MatrixXd downSampledData(sample_buffer_.rows(), downSampledSize);
 
+    std::lock_guard<std::mutex> (this->dataMutex);
     for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
         // Calculate the index in the circular buffer accounting for wrap-around
         size_t index = (current_data_index_ + i) % buffer_capacity_;
@@ -185,14 +181,13 @@ Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
 // Retrieves data from the specified channel in chronological order
 Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSamplingFactor) {
 
-    std::lock_guard<std::mutex> (this->dataMutex);
-
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
+    if (downSamplingFactor < 1) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
     // Calculate the effective size after downsampling
     size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
     Eigen::VectorXd downSampledData(downSampledSize);
 
+    std::lock_guard<std::mutex> (this->dataMutex);
     for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
         // Calculate the index in the circular buffer accounting for wrap-around
         size_t index = (current_data_index_ + i) % buffer_capacity_;
@@ -200,6 +195,61 @@ Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSa
     }
 
     return downSampledData;
+}
+
+// Retrieves data from the specified channels in chronological order
+Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
+
+    Eigen::MatrixXd outputData(channel_indices.size(), number_of_samples);
+    size_t channel_index = 0;
+
+
+    // Calculate the number of samples that fit before reaching the end
+    int fitToEnd = std::min(number_of_samples, (buffer_capacity_ - static_cast<int>(current_data_index_)));
+    int overflow = number_of_samples - fitToEnd;
+    
+    
+    std::lock_guard<std::mutex> (this->dataMutex);
+    for (size_t j = 0; j < channel_indices.size(); ++j) {
+        int channel_index = channel_indices[j];
+        
+        // Calculate the number of samples that fit to the end and the overflow
+        int overflow = number_of_samples - fitToEnd;
+
+        if (fitToEnd > 0) {
+            outputData.row(j).head(fitToEnd) = sample_buffer_.block(channel_index, current_data_index_, 1, fitToEnd);
+        }
+        
+        if (overflow > 0) {
+            outputData.row(j).tail(overflow) = sample_buffer_.block(channel_index, 0, 1, overflow);
+        }
+    }
+
+    return outputData;
+}
+
+// More efficient alternative to getMultipleChannelDataInOrder that can be used if the wanted channels are adjacent. Retrieves adjacent channels as a block
+Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples) {
+
+    Eigen::MatrixXd outputData(number_of_channels, number_of_samples);
+    size_t channel_index = 0;
+
+
+    // Calculate the number of samples that fit before reaching the end
+    int fitToEnd = std::min(number_of_samples, (buffer_capacity_ - static_cast<int>(current_data_index_)));
+    int overflow = number_of_samples - fitToEnd;
+    
+    
+    std::lock_guard<std::mutex> (this->dataMutex);
+    if (fitToEnd > 0) {
+        outputData.leftCols(fitToEnd) = sample_buffer_.block(first_channel_index, current_data_index_, number_of_channels, fitToEnd);
+    }
+    
+    if (overflow > 0) {
+        outputData.rightCols(overflow) = sample_buffer_.block(first_channel_index, 0, number_of_channels, overflow);
+    }
+
+    return outputData;
 }
 
 // Retrieves data from the time stamp channel in chronological order
