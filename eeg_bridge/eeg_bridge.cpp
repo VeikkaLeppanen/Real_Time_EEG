@@ -76,6 +76,17 @@ void EegBridge::spin(dataHandler &handler) {
                 handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)));
             }
 
+            int sequenceNumber = packet_info.PacketSeqNo;
+
+            // Check for dropped packets
+            if (lastSequenceNumber != -1 && sequenceNumber != (lastSequenceNumber + 1)) {
+                std::cerr << "Packet loss detected. Expected sequence: " << (lastSequenceNumber + 1) << ", but received: " << sequenceNumber << '\n';
+                // Handle packet loss (e.g., by requesting retransmission if supported)
+            }
+
+            lastSequenceNumber = sequenceNumber; // Update the last received sequence number
+
+
             // std::cout << handler.getDataInOrder(1) << '\n';
             // std::cout << handler.get_buffer_capacity() << '\n';
             break;
@@ -92,6 +103,7 @@ void EegBridge::spin(dataHandler &handler) {
             numChannels = packet_info.NumChannels;
             numDataChannels = numChannels - 1;              // Excluding trigger channel
             sampling_rate = packet_info.SamplingRateHz;
+            lastSequenceNumber = -1;
 
             // TODO: Initialize data_handler_samples
             data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 10);

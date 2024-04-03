@@ -25,7 +25,7 @@ TODO:
 
 // Simulating parameters
 const uint16_t CHANNEL_COUNT = 13;
-const uint32_t SAMPLINGRATE = 5000;
+const uint32_t SAMPLINGRATE = 1000;
 
 
 // Target port
@@ -184,9 +184,9 @@ std::vector<uint8_t> generateExampleSamplePacket_random() {
 }
 
 // Example usage
-std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample_vector) {
+std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample_vector, uint32_t SeqNo) {
     uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
-    uint32_t PacketSeqNo = 123456;
+    uint32_t PacketSeqNo = SeqNo;
     uint16_t NumChannels = CHANNEL_COUNT, NumSampleBundles = 1;
     uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
 
@@ -220,7 +220,7 @@ int main() {
 
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
 
-    std::string IP_address = "192.168.0.104"; // 127.0.0.1
+    std::string IP_address = "192.168.0.102"; // 127.0.0.1
 
     sendUDP(MSdata, IP_address, PORT);
 
@@ -230,10 +230,10 @@ int main() {
 
     std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/eeg_data_with_tr_markers.csv");
     std::string line;
-    int lineCount = 0;
+    uint32_t sequenceNumber = 0;
 
     int number_of_sample_packets_to_send = 50000000;
-    while (std::getline(csvFile, line) && lineCount < number_of_sample_packets_to_send) {
+    while (std::getline(csvFile, line) && sequenceNumber < number_of_sample_packets_to_send) {
         std::stringstream lineStream(line);
         std::string cell;
         std::vector<int32_t> sampleVector;
@@ -243,18 +243,18 @@ int main() {
         }
 
         // Generate packet from the CSV row
-        std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector);
+        std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber);
 
         // Send the packet via UDP
         // sendUDP(samplePacket, "127.0.0.1", PORT);
         sendUDP(samplePacket, IP_address, PORT);
-        std::cout << "Package " << lineCount << " sent!" << '\n';
+        std::cout << "Package " << sequenceNumber << " sent!" << '\n';
 
         // Throttle sending to maintain sampling rate
         auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
         std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
 
-        lineCount++;
+        sequenceNumber++;
     }
 
 

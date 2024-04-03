@@ -40,6 +40,7 @@ private:
     int numBundles;
     int sampling_rate = 5000;
     int delivery_rate = 5000;
+    int packet_sequence_number = -1;
     
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
