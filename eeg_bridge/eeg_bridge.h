@@ -30,7 +30,7 @@ public:
     EegBridge() {};
 
     void bind_socket();
-    void spin(dataHandler &handler);
+    void spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received);
 
 private:
     EegBridgeState eeg_bridge_state;
@@ -40,7 +40,7 @@ private:
     int numBundles;
     int sampling_rate = 5000;
     int delivery_rate = 5000;
-    int packet_sequence_number = -1;
+    int lastSequenceNumber = -1;
     
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;

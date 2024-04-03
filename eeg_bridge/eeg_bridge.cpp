@@ -7,16 +7,7 @@ const int PORT = 50000;
 const uint8_t DC_MODE_SCALE = 100;
 const uint16_t NANO_TO_MICRO_CONVERSION = 1000;
 
-// This is used to terminate the program with Ctrl+C
-volatile std::sig_atomic_t signal_received = 0;
-void signal_handler(int signal) {
-    signal_received = 1;
-}
-
 void EegBridge::bind_socket() {
-
-    // Register signal handler
-    std::signal(SIGINT, signal_handler);
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
@@ -36,6 +27,15 @@ void EegBridge::bind_socket() {
         close(sockfd); // Ensure the socket is closed on failure
         exit(EXIT_FAILURE);
     }
+
+    struct timeval timeout;
+    timeout.tv_sec = 10; // Timeout after 10 second
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+        std::cerr << "Failed to set socket timeout." << std::endl;
+    }
+
   
     // Set socket buffer size to 10 MB
     int buffer_size = 1024 * 1024 * 10;
@@ -46,8 +46,8 @@ void EegBridge::bind_socket() {
     len = sizeof(cliaddr);
 }
 
-void EegBridge::spin(dataHandler &handler) {
-    std::cout << "Waiting for packets..." << '\n';
+void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
+    std::cout << "Waiting for measurement start..." << '\n';
     eeg_bridge_state = WAITING_FOR_MEASUREMENT_START;
     while (!signal_received) {
         int n = recvfrom(sockfd, (char*)buffer, BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
@@ -114,6 +114,7 @@ void EegBridge::spin(dataHandler &handler) {
             handler.reset_handler(numDataChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
             eeg_bridge_state = WAITING_FOR_MEASUREMENT_STOP;
+            std::cout << "Waiting for packets..." << '\n';
 
             break;
 

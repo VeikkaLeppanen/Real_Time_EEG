@@ -25,7 +25,7 @@ TODO:
 
 // Simulating parameters
 const uint16_t CHANNEL_COUNT = 13;
-const uint32_t SAMPLINGRATE = 1000;
+const uint32_t SAMPLINGRATE = 5000;
 
 
 // Target port
@@ -220,7 +220,7 @@ int main() {
 
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
 
-    std::string IP_address = "192.168.0.102"; // 127.0.0.1
+    std::string IP_address = "127.0.0.1"; // 127.0.0.1
 
     sendUDP(MSdata, IP_address, PORT);
 

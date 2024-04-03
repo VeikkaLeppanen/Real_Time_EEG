@@ -3,6 +3,8 @@
 #include <mutex>
 #include <omp.h>
 #include <string>
+#include <csignal>
+
 
 #include "dataHandler/dataHandler.h"
 #include "eeg_bridge/eeg_bridge.h"
@@ -21,6 +23,11 @@ const uint32_t DOWNSAMPLING_FACTOR = 1;
 // lsof -i :8080        Find PID
 // kill -9 PID          Kill the process
 
+// This is used to terminate the program with Ctrl+C
+volatile std::sig_atomic_t signal_received = 0;
+void signal_handler(int signal) {
+    signal_received = 1;
+}
 
 // Data simulation loop
 void dataSimulationLoop(dataHandler &handler) {
@@ -40,8 +47,9 @@ void dataAcquisitionLoop(dataHandler &handler) {
 
     EegBridge bridge;
     bridge.bind_socket();
-    bridge.spin(handler);
-    
+    bridge.spin(handler, signal_received);
+
+    std::cout << "Exiting dataAcquisitionLoop\n";
 }
 
 // Loop for matplotlibcpp graph visualization
@@ -69,7 +77,7 @@ void plottingLoop(dataHandler &handler) {
     Eigen::VectorXd yVec = Eigen::VectorXd::Zero(dataPoints_downsampled);
     Eigen::MatrixXd downSampledData = Eigen::MatrixXd::Zero(handler.get_channel_count(), dataPoints_downsampled);
 
-    while (true) { // Adjust this condition as needed
+    while (!signal_received) { // Adjust this condition as needed
 
         plt::clf();
 
@@ -106,9 +114,13 @@ void plottingLoop(dataHandler &handler) {
         
         plt::pause(0.01); // Pause for a short period to allow the plot to update
     }
+
+    plt::close();
+    std::cout << "Exiting plottingLoop\n";
 }
 
 int main() {
+    std::signal(SIGINT, signal_handler);
     
     dataHandler handler;
 
@@ -117,7 +129,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     std::thread plotThread(plottingLoop, std::ref(handler));
-
+    
     dataThread.join();
     plotThread.join();
 
