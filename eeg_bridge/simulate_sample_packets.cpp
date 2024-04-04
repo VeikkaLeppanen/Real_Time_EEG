@@ -256,22 +256,6 @@ int main() {
 
         sequenceNumber++;
     }
-
-
-
-    // int number_of_sample_packets_to_send = 5000;
-    // for(int i = 0; i < number_of_sample_packets_to_send; i++) {
-    //     std::vector<uint8_t> sample_data = generateExampleSamplePacket_random();
-
-    //     sendUDP(sample_data, "127.0.0.1", PORT);
-
-    //     std::cout << "Package " << i << " sent!" << '\n';
-    
-    //     // Calculate sleep duration to maintain the sampling rate
-    //     // Cast to long long to ensure the multiplication happens correctly
-    //     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
-    //     std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
-    // }
     
     return 0;
 }
