@@ -48,7 +48,7 @@ void EegBridge::bind_socket() {
 
 void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
     std::cout << "Waiting for measurement start..." << '\n';
-    eeg_bridge_state = WAITING_FOR_MEASUREMENT_START;
+    eeg_bridge_status = WAITING_MEASUREMENT_START;
     while (!signal_received) {
         int n = recvfrom(sockfd, (char*)buffer, BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr*)&cliaddr, &len);
         if (n < 0) {
@@ -114,7 +114,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
             handler.reset_handler(numDataChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
-            eeg_bridge_state = WAITING_FOR_MEASUREMENT_STOP;
+            eeg_bridge_status = WAITING_MEASUREMENT_STOP;
             std::cout << "Waiting for packets..." << '\n';
 
             break;

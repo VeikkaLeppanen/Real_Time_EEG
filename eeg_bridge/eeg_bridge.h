@@ -15,14 +15,9 @@
 // The maximum length of the UDP packet, as mentioned in the manual of Bittium NeurOne.
 #define BUFFER_LENGTH 1472
 
-enum EegBridgeState {
-  WAITING_FOR_MEASUREMENT_START,
-  WAITING_FOR_MEASUREMENT_STOP,
-  WAITING_FOR_SESSION_STOP,
-  WAITING_FOR_SESSION_START,
-  STREAMING,
-  ERROR_OUT_OF_SYNC,
-  ERROR_SAMPLES_DROPPED
+enum EegBridgeStatus {
+  WAITING_MEASUREMENT_START,
+  WAITING_MEASUREMENT_STOP
 };
 
 class EegBridge {
@@ -33,7 +28,7 @@ public:
     void spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received);
 
 private:
-    EegBridgeState eeg_bridge_state;
+    EegBridgeStatus eeg_bridge_status;
     
     int numChannels;        // Number of total channels
     int numDataChannels;    // Number of channels storing EEG data
