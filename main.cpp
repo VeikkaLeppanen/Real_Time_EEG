@@ -4,7 +4,8 @@
 #include <omp.h>
 #include <string>
 #include <csignal>
-
+#include <QApplication>
+#include <QWidget>
 
 #include "dataHandler/dataHandler.h"
 #include "eeg_bridge/eeg_bridge.h"
@@ -140,6 +141,16 @@ void dataProcessingLoop(dataHandler &handler) {
     std::cout << "Exiting dataProcessingLoop" << '\n';
 }
 
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+    QWidget window;
+    window.resize(250, 150);
+    window.setWindowTitle("Simple example");
+    window.show();
+    return app.exec();
+}
+
+/*
 int main() {
     std::signal(SIGINT, signal_handler);
     
@@ -156,3 +167,4 @@ int main() {
 
     return 0;
 }
+*/
