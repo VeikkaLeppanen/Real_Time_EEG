@@ -12,6 +12,7 @@
 #include <Eigen/Dense>
 
 #include "GACorrection.h"
+#include "../dataProcessor/dataProcessor.h"
 
 enum HandlerState {
   WAITING_FOR_START,
@@ -21,20 +22,12 @@ enum HandlerState {
 class dataHandler {
 public:
     // Default constructor
-    dataHandler()
+    dataHandler(dataProcessor &processor)
                 :   channel_count_(0),
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
-                    GACorr_(GACorrection(0, 0, 0)) {};
-
-    dataHandler(int                  channel_count,
-                int                  sampling_rate,
-                int                  simulation_delivery_rate)
-                :   channel_count_(channel_count),
-                    sampling_rate_(sampling_rate),
-                    simulation_delivery_rate_(simulation_delivery_rate),
-                    GACorr_(GACorrection(channel_count, 25, 100))
-    { }
+                    GACorr_(GACorrection(0, 0, 0)),
+                    processor_(processor) {};
 
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
     void reset_handler(int channel_count, int sampling_rate) { reset_handler(channel_count, sampling_rate, sampling_rate); }
@@ -75,6 +68,8 @@ private:
     int channel_count_;
     int sampling_rate_;
     int simulation_delivery_rate_;
+
+    dataProcessor &processor_;
 
     GACorrection GACorr_;
 

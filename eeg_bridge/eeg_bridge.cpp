@@ -86,7 +86,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
             lastSequenceNumber = sequenceNumber; // Update the last received sequence number
 
-            std::cout << "Package " << sequenceNumber << " received!" << '\n';
+            // std::cout << "Package " << sequenceNumber << " received!" << '\n';
 
             // std::cout << handler.getDataInOrder(1) << '\n';
             // std::cout << handler.get_buffer_capacity() << '\n';

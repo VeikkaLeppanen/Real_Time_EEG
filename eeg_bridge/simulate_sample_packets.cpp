@@ -232,7 +232,7 @@ int main() {
     std::string line;
     uint32_t sequenceNumber = 0;
 
-    int number_of_sample_packets_to_send = 50000000;
+    int number_of_sample_packets_to_send = 50000;//50000000;
     while (std::getline(csvFile, line) && sequenceNumber < number_of_sample_packets_to_send) {
         std::stringstream lineStream(line);
         std::string cell;

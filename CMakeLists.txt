@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(PythonLibs 3 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-# Include numpy if you're using it
+# Include numpy
 execute_process(
     COMMAND python3 -c "import numpy; print(numpy.get_include())"
     OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
@@ -21,7 +21,7 @@ include_directories(/home/veikka/Work/Real_Time_EEG)
 include_directories(/usr/include/eigen3)
 
 # Add executable
-add_executable(real_time_eeg main.cpp eeg_bridge/eeg_bridge.cpp eeg_bridge/measurementStartPacket.cpp eeg_bridge/samplePacket.cpp eeg_bridge/networkUtils.cpp dataHandler/dataHandler.cpp dataHandler/GACorrection.cpp)
+add_executable(real_time_eeg main.cpp eeg_bridge/eeg_bridge.cpp eeg_bridge/measurementStartPacket.cpp eeg_bridge/samplePacket.cpp eeg_bridge/networkUtils.cpp dataHandler/dataHandler.cpp dataHandler/GACorrection.cpp dataProcessor/dataProcessor.cpp)
 
 # Use the flag to suppress deprecated declarations warnings
 target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations)

@@ -3,22 +3,30 @@
 // Resets the buffers for new channelcount and sampling rates
 void dataHandler::reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate) {
 
-    this->channel_count_ = channel_count;
-    this->sampling_rate_ = sampling_rate;
-    this->simulation_delivery_rate_ = simulation_delivery_rate;
+    // Stop processing
+    processor_.interrupt_processing();
 
-    this->buffer_capacity_ = buffer_length_in_seconds_ * sampling_rate;
-    this->current_data_index_ = 0;
+    channel_count_ = channel_count;
+    sampling_rate_ = sampling_rate;
+    simulation_delivery_rate_ = simulation_delivery_rate;
+
+    buffer_capacity_ = buffer_length_in_seconds_ * sampling_rate;
+    current_data_index_ = 0;
 
     {
         std::lock_guard<std::mutex> (this->dataMutex);
-        this->sample_buffer_ = Eigen::MatrixXd::Zero(channel_count, buffer_capacity_);
-        this->time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
-        this->trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
+        sample_buffer_ = Eigen::MatrixXd::Zero(channel_count, buffer_capacity_);
+        time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
+        trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
     }
 
-    this->GACorr_ = GACorrection(channel_count, this->GA_average_length, this->TA_length);
-    this->handler_state = WAITING_FOR_STOP;
+    GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
+    handler_state = WAITING_FOR_STOP;
+
+    processor_.reset_processor(channel_count, buffer_capacity_);
+
+    // Continue processing
+    processor_.continue_processing();
 }
 
 int dataHandler::simulateData_sin() {
@@ -153,6 +161,12 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         sample_buffer_.col(current_data_index_) = samples;
 
     }
+
+    {
+        std::lock_guard<std::mutex> (this->dataMutex);
+        processor_.newData(sample_buffer_.col(current_data_index_));
+    }
+
 
     time_stamp_buffer_(current_data_index_) = time_stamp;
     trigger_buffer_(current_data_index_) = trigger;
