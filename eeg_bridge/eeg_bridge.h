@@ -17,7 +17,7 @@
 
 enum EegBridgeStatus {
   WAITING_MEASUREMENT_START,
-  WAITING_MEASUREMENT_STOP
+  MEASUREMENT_IN_PROGRESS
 };
 
 class EegBridge {
