@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <string>
 #include <csignal>
+#include <chrono>
 
 #include "dataProcessor/dataProcessor.h"
 #include "dataHandler/dataHandler.h"
@@ -29,19 +30,17 @@ void signal_handler(int signal) {
     signal_received = 1;
 }
 
+
+
+
+// DATA AQUISITION AND RAW DATA PLOTTING
+
 // Loop for the data collecting and storing
 void dataAcquisitionLoop(dataHandler &handler) {
 
     EegBridge bridge;
     bridge.bind_socket();
     bridge.spin(handler, signal_received);
-
-    std::cout << "Exiting dataAcquisitionLoop" << '\n';
-}
-
-// Loop for the data collecting and storing
-void dataProcessingLoop(dataProcessor &processor) {
-
 
     std::cout << "Exiting dataAcquisitionLoop" << '\n';
 }
@@ -113,6 +112,133 @@ void rawDataPlottingLoop(dataHandler &handler) {
     std::cout << "Exiting plottingLoop" << '\n';
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// DATA PROCESSING AND PROCESSED DATA PLOTTING
+
+// Downsampling function
+void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor) {
+    if (factor <= 0) {
+        throw std::invalid_argument("Downsampling factor must be greater than zero.");
+    }
+
+    // Compute the number of columns in the downsampled matrix
+    int newCols = (input.cols() + factor - 1) / factor;
+
+    for (int j = 0, col = 0; j < input.cols() && col < newCols; j += factor, ++col) {
+        output.col(col) = input.col(j);
+    }
+}
+
+Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& CWL, int delay) {
+    int rows = CWL.rows();
+    int cols = CWL.cols();
+    Eigen::MatrixXd expandedCWL(rows, cols + 2 * delay);
+
+    // Pad columns with zeros based on delay
+    expandedCWL.block(0, delay, rows, cols) = CWL;
+
+    // Fill in zeros for padding
+    expandedCWL.block(0, 0, rows, delay).setZero();
+    expandedCWL.block(0, cols + delay, rows, delay).setZero();
+
+    return expandedCWL;
+}
+
+
+
+void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
+
+    if (delay > 0) {
+        // Flip and perform delay embedding if delay is positive
+        CWL = delayEmbed(CWL.colwise().reverse(), 1 + 2 * delay).colwise().reverse();
+    }
+    
+    
+    // EEG_corrected = EEG - (EEG * (CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL));
+
+    // Use QR decomposition to compute the pseudo-inverse of CWL
+    // Eigen::HouseholderQR<Eigen::MatrixXd> qr(CWL);
+
+    Eigen::MatrixXd squareCWL = CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL;
+
+    // Use QR decomposition to compute the pseudo-inverse of CWL
+    // Eigen::HouseholderQR<Eigen::MatrixXd> qr(CWL);
+    // Eigen::MatrixXd squareCWL = pseudoInverse * CWL;
+
+    Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
+    for(int i = 0; i < EEG.rows(); i++) {
+        EEG_fits.row(i) = EEG.row(i) * squareCWL;
+    }
+
+    EEG_corrected = EEG - EEG_fits;
+    // std::cout << EEG_corrected.row(0) << '\n';
+}
+
+// Loop for the data processing
+void dataProcessingLoop(dataHandler &handler) {
+    
+    int n_eeg_channels = 5;
+    int n_cwl_channels = 7;
+    int n_samples = 200;
+    Eigen::MatrixXd EEG = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
+    Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
+
+    Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
+    Eigen::MatrixXd CWL_filtered = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
+
+    int downsampling_factor = 10;
+    int newCols = (n_samples + downsampling_factor - 1) / downsampling_factor;
+    Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
+    Eigen::MatrixXd CWL_downsampled = Eigen::MatrixXd::Zero(n_cwl_channels, newCols);
+
+    int delay = 0;
+    Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
+
+    while (!handler.isReady()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    while (!signal_received) {
+
+        // Copy data from wanted EEG channels and CWL channels
+        EEG = handler.getBlockChannelDataInOrder(0, n_eeg_channels, n_samples);
+        CWL = handler.getBlockChannelDataInOrder(5, n_cwl_channels, n_samples);
+
+
+        // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
+        EEG_filtered = EEG;
+        CWL_filtered = CWL;
+
+        // DONWSAMPLING
+        downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
+        downsample(CWL_filtered, CWL_downsampled, downsampling_factor);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        // removeBCG
+        removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
+
+        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+        std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
+    }
+
+    std::cout << "Exiting dataProcessingLoop" << '\n';
+}
+
 // Loop for matplotlibcpp graph visualization
 void processedDataPlottingLoop(dataHandler &handler) {
     
@@ -160,12 +286,34 @@ void processedDataPlottingLoop(dataHandler &handler) {
     std::cout << "Exiting plottingLoop" << '\n';
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int main() {
     std::signal(SIGINT, signal_handler);
     
-    size_t thread_count = 6;
-    dataProcessor processor(thread_count);
-    dataHandler handler(processor);
+    // size_t thread_count = 6;
+    // dataProcessor processor(thread_count);
+    // dataHandler handler(processor);
+    dataHandler handler;
 
     // std::thread dataThread(dataSimulationLoop, std::ref(handler));
     std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
@@ -175,9 +323,11 @@ int main() {
     // std::thread plotThread(processedDataPlottingLoop, std::ref(handler));
 
     // std::thread dataProcessorThread(dataProcessingLoop, std::ref(processor));
+    std::thread dataProcessorThread(dataProcessingLoop, std::ref(handler));
 
     dataThread.join();
-    // plotThread.join();
+    plotThread.join();
+    dataProcessorThread.join();
 
     return 0;
 }
@@ -198,31 +348,3 @@ int main() {
 
 
 
-
-
-/*
-void dataProcessingLoop(dataHandler &handler) {
-
-    while (!signal_received) {
-
-        // Copy data from wanted EEG channels and CWL channels
-        Eigen::MatrixXd EEG = handler.getBlockChannelDataInOrder(0, 4, 10000);
-        Eigen::MatrixXd CWL = handler.getBlockChannelDataInOrder(8, 4, 10000);
-
-        // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
-
-
-        // DONWSAMPLING
-        int downsampling_factor = 10;
-        Eigen::MatrixXd EEG_downSampled = downsample(EEG, downsampling_factor);
-        Eigen::MatrixXd CWL_downSampled = downsample(CWL, downsampling_factor);
-
-        // removeBCG
-        int delay = 2;
-        Eigen::MatrixXd correctedEEG = removeBCG(EEG, CWL, delay);
-
-    }
-
-    std::cout << "Exiting dataProcessingLoop" << '\n';
-}
-*/

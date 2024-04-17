@@ -8,7 +8,6 @@
 #include <array>
 #include <vector>
 #include <cmath>
-// #include <matio.h>
 #include <Eigen/Dense>
 
 #include "GACorrection.h"
@@ -22,12 +21,12 @@ enum HandlerState {
 class dataHandler {
 public:
     // Default constructor
-    dataHandler(dataProcessor &processor)
+    dataHandler()  // dataProcessor &processor
                 :   channel_count_(0),
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
-                    GACorr_(GACorrection(0, 0, 0)),
-                    processor_(processor) {};
+                    GACorr_(GACorrection(0, 0, 0)) {};
+                    // processor_(processor) {};
 
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
     void reset_handler(int channel_count, int sampling_rate) { reset_handler(channel_count, sampling_rate, sampling_rate); }
@@ -69,7 +68,7 @@ private:
     int sampling_rate_;
     int simulation_delivery_rate_;
 
-    dataProcessor &processor_;
+    // dataProcessor &processor_;
 
     GACorrection GACorr_;
 

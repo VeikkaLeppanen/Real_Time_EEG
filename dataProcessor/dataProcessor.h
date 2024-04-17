@@ -46,14 +46,29 @@ public:
         last_processed_index_ = 0;
     }
 
-    void interrupt_processing() { stopProcessing(); }
-    void continue_processing() { running = true; }
+    void startProcessing() {
+        std::unique_lock<std::mutex> lock(data_mutex);
+        processing = true;
+        cv.notify_all();
+    }
+
+    void stopProcessing() {
+        std::unique_lock<std::mutex> lock(data_mutex);
+        processing = false;
+    }
+
+    void stopAll() {
+        std::unique_lock<std::mutex> lock(data_mutex);
+        running = false;
+        cv.notify_all();
+    }
 
 private:
     std::vector<std::thread> workers;
     std::mutex data_mutex;
     std::condition_variable cv;
     bool running;
+    bool processing;
 
     Eigen::MatrixXd sample_buffer_;
     int buffer_capacity_;
@@ -68,46 +83,36 @@ private:
     Eigen::MatrixXd removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd CWL, int delay);
 
     void processData() {
-    while (running) {
-        std::unique_lock<std::mutex> lock(data_mutex);
-        std::cout << "Thread waiting...\n";  // Debug statement
-        cv.wait(lock, [this] { return current_data_index_ != last_processed_index_ || !running; });
+        do {
+            while (processing && running) {
+                std::unique_lock<std::mutex> lock(data_mutex);
+                std::cout << "Thread waiting...\n";  // Debug statement
+                if (current_data_index_ == last_processed_index_) {
+                    cv.wait(lock, [this]{ return current_data_index_ != last_processed_index_ || !processing || !running; });
+                    if (!processing || !running) break;
+                }
 
-        if (!running && current_data_index_ == last_processed_index_) {
-            std::cout << "Thread stopping...\n";  // Debug statement
-            break;
-        }
+                // Suppose your actual processing requires current data
+                if (current_data_index_ == last_processed_index_) {
+                    std::cout << "No new data to process.\n";  // Debug statement
+                    continue;  // Skip processing if no new data
+                }
 
-        std::cout << "Thread processing...\n";  // Debug statement
-        // Suppose your actual processing requires current data
-        if (current_data_index_ == last_processed_index_) {
-            std::cout << "No new data to process.\n";  // Debug statement
-            continue;  // Skip processing if no new data
-        }
+                // Copy data from wanted EEG channels and CWL channels
+                // Make sure these functions are thread-safe and do not block indefinitely
+                Eigen::MatrixXd EEG = getBlockChannelDataInOrder(0, 4, 10000);
+                Eigen::MatrixXd CWL = getBlockChannelDataInOrder(8, 4, 10000);
 
-        // Copy data from wanted EEG channels and CWL channels
-        // Make sure these functions are thread-safe and do not block indefinitely
-        Eigen::MatrixXd EEG = getBlockChannelDataInOrder(0, 4, 10000);
-        Eigen::MatrixXd CWL = getBlockChannelDataInOrder(8, 4, 10000);
+                last_processed_index_ = current_data_index_;  // Update processed index
+                lock.unlock();  // Unlock early to allow other threads to access the buffer
 
-        last_processed_index_ = current_data_index_;  // Update processed index
-        lock.unlock();  // Unlock early to allow other threads to access the buffer
-
-        // Process the data
-        process(EEG, CWL);
-        }
+                // Process the data
+                process(EEG, CWL);
+            }
+        } while (running);
     }
-
 
     void process(Eigen::MatrixXd EEG, Eigen::MatrixXd CWL);
-
-    void stopProcessing() {
-        {
-            std::lock_guard<std::mutex> lock(data_mutex);
-            running = false;
-        }
-        cv.notify_all();
-    }
 };
 
 
