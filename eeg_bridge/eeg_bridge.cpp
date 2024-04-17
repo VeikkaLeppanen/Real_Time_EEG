@@ -47,6 +47,7 @@ void EegBridge::bind_socket() {
 }
 
 void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
+    running = true;
     std::cout << "Waiting for measurement start..." << '\n';
     eeg_bridge_status = WAITING_MEASUREMENT_START;
     while (!signal_received) {
@@ -138,6 +139,8 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             break;
         }
     }
+
+    running = false;
     std::cout << "Shutting down..." << '\n';
     close(sockfd);
 }

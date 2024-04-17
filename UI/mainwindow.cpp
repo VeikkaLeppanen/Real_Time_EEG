@@ -17,18 +17,20 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    signal_received = 0;
-    QThread* thread = new QThread;
-    Worker* worker = new Worker(bridge, handler, signal_received);
-    worker->moveToThread(thread);
+    if (!bridge.isRunning()) {
+        signal_received = 0;
+        QThread* thread = new QThread;
+        Worker* worker = new Worker(bridge, handler, signal_received);
+        worker->moveToThread(thread);
 
-    connect(thread, &QThread::started, worker, &Worker::process);
-    connect(worker, &Worker::finished, thread, &QThread::quit);
-    connect(worker, &Worker::error, this, &MainWindow::handleError); // Handle errors
-    connect(worker, &Worker::finished, worker, &Worker::deleteLater);
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+        connect(thread, &QThread::started, worker, &Worker::process);
+        connect(worker, &Worker::finished, thread, &QThread::quit);
+        connect(worker, &Worker::error, this, &MainWindow::handleError); // Handle errors
+        connect(worker, &Worker::finished, worker, &Worker::deleteLater);
+        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
-    thread->start();
+        thread->start();
+    }
 }
 
 void MainWindow::handleError(const QString &error)

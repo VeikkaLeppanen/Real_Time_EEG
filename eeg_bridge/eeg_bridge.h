@@ -26,8 +26,11 @@ public:
 
     void bind_socket();
     void spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received);
+    
+    bool isRunning() { return running; }
 
 private:
+    bool running = false;
     EegBridgeStatus eeg_bridge_status;
     
     int numChannels;        // Number of total channels
