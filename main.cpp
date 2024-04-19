@@ -171,14 +171,30 @@ void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd
     
     // EEG_corrected = EEG - (EEG * (CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL));
 
-    // Use QR decomposition to compute the pseudo-inverse of CWL
-    // Eigen::HouseholderQR<Eigen::MatrixXd> qr(CWL);
+    // Eigen::MatrixXd squareCWL = CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL;
 
-    Eigen::MatrixXd squareCWL = CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL;
 
-    // Use QR decomposition to compute the pseudo-inverse of CWL
-    // Eigen::HouseholderQR<Eigen::MatrixXd> qr(CWL);
-    // Eigen::MatrixXd squareCWL = pseudoInverse * CWL;
+    // Eigen::JacobiSVD<Eigen::MatrixXd> svd(CWL, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    // Eigen::VectorXd singular_values = svd.singularValues();
+    // Eigen::MatrixXd singular_values_inv = Eigen::MatrixXd::Zero(CWL.cols(), CWL.rows());
+
+    // // Invert the singular values
+    // for (int i = 0; i < singular_values.size(); ++i) {
+    //     if (singular_values(i) > 1e-10) {  // Threshold to handle very small values
+    //         singular_values_inv(i, i) = 1.0 / singular_values(i);
+    //     }
+    // }
+
+    // Eigen::MatrixXd A_pinv = svd.matrixV() * singular_values_inv * svd.matrixU().transpose();
+
+
+    // Calculate the pseudoinverse using the formula A^+ = (A^T A)^{-1} A^T
+    Eigen::MatrixXd CWLtCWL = CWL.transpose() * CWL; // Compute A^T A
+    Eigen::MatrixXd CWLtCWL_inv = CWLtCWL.inverse(); // Compute (A^T A)^{-1}
+    Eigen::MatrixXd CWL_pinv = CWLtCWL_inv * CWL.transpose(); // Compute pseudoinverse
+
+
+    Eigen::MatrixXd squareCWL = CWL_pinv * CWL;
 
     Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
     for(int i = 0; i < EEG.rows(); i++) {
@@ -194,7 +210,7 @@ void dataProcessingLoop(dataHandler &handler) {
     
     int n_eeg_channels = 5;
     int n_cwl_channels = 7;
-    int n_samples = 200;
+    int n_samples = 5000;
     Eigen::MatrixXd EEG = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
@@ -214,6 +230,7 @@ void dataProcessingLoop(dataHandler &handler) {
     }
 
     while (!signal_received) {
+        auto start = std::chrono::high_resolution_clock::now();
 
         // Copy data from wanted EEG channels and CWL channels
         EEG = handler.getBlockChannelDataInOrder(0, n_eeg_channels, n_samples);
@@ -228,9 +245,9 @@ void dataProcessingLoop(dataHandler &handler) {
         downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
         downsample(CWL_filtered, CWL_downsampled, downsampling_factor);
 
-        auto start = std::chrono::high_resolution_clock::now();
-        // removeBCG
-        removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
+        // auto start = std::chrono::high_resolution_clock::now();
+        // // removeBCG
+        // removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
 
         std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
         std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
