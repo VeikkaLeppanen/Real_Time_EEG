@@ -8,6 +8,9 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
+    ui->lineEditPort->setValidator(new QIntValidator(0, 65535, this));
+    ui->lineEditGALength->setValidator(new QIntValidator(0, 500000, this));
+    ui->lineEditGAaverage->setValidator(new QIntValidator(0, 1000, this));
 }
 
 MainWindow::~MainWindow()
@@ -19,6 +22,10 @@ void MainWindow::on_pushButton_clicked()
 {
     if (!bridge.isRunning()) {
         signal_received = 0;
+
+        bridge.setPort(port);
+        handler.seg_GAcorr_params(GALength, GAAverage);
+
         QThread* thread = new QThread;
         Worker* worker = new Worker(bridge, handler, signal_received);
         worker->moveToThread(thread);
@@ -43,4 +50,39 @@ void MainWindow::on_pushButton_2_clicked()
 {
     signal_received = 1;
 }
+
+
+void MainWindow::on_lineEditPort_editingFinished()
+{
+    bool ok;
+    int value = ui->lineEditPort->text().toInt(&ok);
+    if (ok) {
+        port = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 65535.");
+    }
+}
+
+void MainWindow::on_lineEditGALength_editingFinished()
+{
+    bool ok;
+    int value = ui->lineEditGALength->text().toInt(&ok);
+    if (ok) {
+        GALength = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 500000.");
+    }
+}
+
+void MainWindow::on_lineEditGAaverage_editingFinished()
+{
+    bool ok;
+    int value = ui->lineEditGAaverage->text().toInt(&ok);
+    if (ok) {
+        GAAverage = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 1000.");
+    }
+}
+
 

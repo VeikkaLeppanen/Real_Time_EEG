@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QThread>
 #include <QMessageBox>
+#include <QLineEdit>
+#include <QIntValidator>
 #include <iostream>
 #include "worker.h"
 #include "../dataHandler/dataHandler.h"
@@ -28,10 +30,24 @@ private slots: // Correct usage of slots here
     void handleError(const QString& error);
     void on_pushButton_2_clicked();
 
+    void on_lineEditPort_editingFinished();
+
+    void on_lineEditGALength_editingFinished();
+
+    void on_lineEditGAaverage_editingFinished();
+
 private:
     Ui::MainWindow *ui;
+
+    // Handler parameters
     dataHandler& handler;
+    int GALength = 5000;
+    int GAAverage = 25;
+
+    // eeg_bridge parameters
     EegBridge bridge;
+    int port;
+
     volatile std::sig_atomic_t &signal_received;
 };
 #endif // MAINWINDOW_H

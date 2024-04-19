@@ -26,6 +26,7 @@ public:
 
     void bind_socket();
     void spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received);
+    void setPort(int port) { PORT = port; }
     
     bool isRunning() { return running; }
 
@@ -40,6 +41,7 @@ private:
     int delivery_rate = 5000;
     int lastSequenceNumber = -1;
     
+    int PORT = 50000;
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     unsigned char buffer[BUFFER_LENGTH];

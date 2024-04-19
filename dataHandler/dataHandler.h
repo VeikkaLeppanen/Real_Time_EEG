@@ -57,6 +57,14 @@ public:
     int get_buffer_capacity() { return buffer_capacity_; }
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
+
+    void seg_GAcorr_params(int TA_length_input, int GA_average_length_input) { 
+        TA_length = TA_length_input; 
+        GA_average_length = GA_average_length_input;
+    }
+
+    int get_TA_length() { return TA_length; }
+    int get_GA_average_length() { return GA_average_length; }
     
     void printBufferSize();
 
@@ -81,7 +89,7 @@ private:
     // Set this according to the gradient length in samples
     int TA_length = 5000;
     // Set this according to the number of gradients to average over
-    int GA_average_length = 5;
+    int GA_average_length = 25;
     int stimulation_tracker = 100000;
 };
 
