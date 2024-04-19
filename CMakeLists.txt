@@ -53,3 +53,12 @@ endif()
 
 # Use the flag to suppress deprecated declarations warnings
 target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations)
+
+# Compiler optimization and OpenMP
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-mfma" COMPILER_SUPPORTS_MFMA)
+if(COMPILER_SUPPORTS_MFMA)
+    target_compile_options(real_time_eeg PRIVATE -mfma)
+endif()
+
+target_compile_options(real_time_eeg PRIVATE -O3 -fopenmp)
