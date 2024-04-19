@@ -217,13 +217,10 @@ void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int p
 }
 
 int main() {
-
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
-
-    std::string IP_address = "127.0.0.1"; // 127.0.0.1
+    std::string IP_address = "127.0.0.1"; // Localhost
 
     sendUDP(MSdata, IP_address, PORT);
-
     std::cout << "MeasurementStartPackage sent!" << '\n';
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -231,8 +228,11 @@ int main() {
     std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/eeg_data_with_tr_markers.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
+    auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
 
-    int number_of_sample_packets_to_send = 15000;//50000000;
+    auto lastTimePoint = std::chrono::steady_clock::now();
+
+    int number_of_sample_packets_to_send = 15000;
     while (std::getline(csvFile, line) && sequenceNumber < number_of_sample_packets_to_send) {
         std::stringstream lineStream(line);
         std::string cell;
@@ -242,20 +242,19 @@ int main() {
             sampleVector.push_back(std::stoi(cell));
         }
 
-        // Generate packet from the CSV row
         std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber);
 
-        // Send the packet via UDP
-        // sendUDP(samplePacket, "127.0.0.1", PORT);
         sendUDP(samplePacket, IP_address, PORT);
-        std::cout << "Package " << sequenceNumber << " sent!" << '\n';
+
+        std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - lastTimePoint;
+        std::cout << "Package " << sequenceNumber << " sent! Time since last packet: " << elapsed.count() << " seconds.\n";
 
         // Throttle sending to maintain sampling rate
-        auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
         std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
+        lastTimePoint = std::chrono::steady_clock::now();
 
         sequenceNumber++;
     }
-    
+
     return 0;
 }

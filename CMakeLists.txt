@@ -26,5 +26,24 @@ add_executable(real_time_eeg main.cpp eeg_bridge/eeg_bridge.cpp eeg_bridge/measu
 # Use the flag to suppress deprecated declarations warnings
 target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations)
 
-# Link Python libraries
-target_link_libraries(real_time_eeg ${PYTHON_LIBRARIES})
+# Link Python libraries with keyword PRIVATE
+target_link_libraries(real_time_eeg PRIVATE ${PYTHON_LIBRARIES})
+
+include(CheckCXXCompilerFlag)
+
+# Check and enable FMA instruction set if available
+CHECK_CXX_COMPILER_FLAG("-mfma" COMPILER_SUPPORTS_MFMA)
+if(COMPILER_SUPPORTS_MFMA)
+    target_compile_options(real_time_eeg PRIVATE -mfma)
+endif()
+
+# Add compiler and linker options for OpenMP
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_compile_options(real_time_eeg PRIVATE ${OpenMP_CXX_FLAGS})
+    # Linking OpenMP libraries
+    target_link_libraries(real_time_eeg PRIVATE ${OpenMP_CXX_LIBRARIES})
+endif()
+
+# Set other compiler optimizations
+target_compile_options(real_time_eeg PRIVATE -O3)
