@@ -27,6 +27,9 @@ TODO:
 const uint16_t CHANNEL_COUNT = 13;
 const uint32_t SAMPLINGRATE = 5000;
 
+const uint8_t DC_MODE_SCALE = 100;
+const uint16_t NANO_TO_MICRO_CONVERSION = 1000;
+const double DOUBLESCALINGFACTOR = 10000.0;
 
 // Target port
 #define PORT 50000
@@ -232,15 +235,17 @@ int main() {
 
     auto lastTimePoint = std::chrono::steady_clock::now();
 
-    int number_of_sample_packets_to_send = 15000;
+    int number_of_sample_packets_to_send = 40000;//14999;
     while (std::getline(csvFile, line) && sequenceNumber < number_of_sample_packets_to_send) {
         std::stringstream lineStream(line);
         std::string cell;
         std::vector<int32_t> sampleVector;
 
         while (std::getline(lineStream, cell, ',')) {
-            sampleVector.push_back(std::stoi(cell));
+            sampleVector.push_back(((std::stod(cell) * NANO_TO_MICRO_CONVERSION) / DC_MODE_SCALE));
+            // std::cout << std::stod(cell) << ' ';
         }
+        // std::cout << '\n';
 
         std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber);
 

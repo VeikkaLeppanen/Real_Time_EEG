@@ -167,52 +167,27 @@ void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd
         // Flip and perform delay embedding if delay is positive
         CWL = delayEmbed(CWL.colwise().reverse(), 1 + 2 * delay).colwise().reverse();
     }
-    
-    
-    // EEG_corrected = EEG - (EEG * (CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL));
 
-    Eigen::MatrixXd squareCWL = CWL.completeOrthogonalDecomposition().pseudoInverse() * CWL;
-
-
-    // Eigen::JacobiSVD<Eigen::MatrixXd> svd(CWL, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    // Eigen::VectorXd singular_values = svd.singularValues();
-    // Eigen::MatrixXd singular_values_inv = Eigen::MatrixXd::Zero(CWL.cols(), CWL.rows());
-
-    // // Invert the singular values
-    // for (int i = 0; i < singular_values.size(); ++i) {
-    //     if (singular_values(i) > 1e-10) {  // Threshold to handle very small values
-    //         singular_values_inv(i, i) = 1.0 / singular_values(i);
-    //     }
-    // }
-
-    // Eigen::MatrixXd A_pinv = svd.matrixV() * singular_values_inv * svd.matrixU().transpose();
-
-
-    // Calculate the pseudoinverse using the formula A^+ = (A^T A)^{-1} A^T
-    // Eigen::MatrixXd CWLtCWL = CWL.transpose() * CWL; // Compute A^T A
-    // Eigen::MatrixXd CWLtCWL_inv = CWLtCWL.inverse(); // Compute (A^T A)^{-1}
-    // Eigen::MatrixXd CWL_pinv = CWLtCWL_inv * CWL.transpose(); // Compute pseudoinverse
-
-    // Eigen::MatrixXd squareCWL = CWL_pinv * CWL;
-
-    // SVD compositon sove A = EEG, b = CWL. EEG yksi kanava kerrallaan
-
+    int num_samples = CWL.rows();
+    Eigen::MatrixXd pinvCWL = CWL.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
 
     Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
     for(int i = 0; i < EEG.rows(); i++) {
         // std::cout << "EEG.cols(): " << EEG.cols() << '\n';
+        // std::cout << "pinvCWL: " << pinvCWL.rows() << ' ' << pinvCWL.cols() << '\n';
         // std::cout << "CWL: " << CWL.rows() << ' ' << CWL.cols() << '\n';
 
-        // Eigen::MatrixXd rightSide = CWL.transpose().col(i % CWL.cols());
-        // rightSide.resize(500, 1); // Ensure rightSide has the correct dimensions
-        // Eigen::JacobiSVD<Eigen::MatrixXd> svd(EEG.row(i), Eigen::ComputeThinU | Eigen::ComputeThinV);
-        // EEG_fits.row(i) = svd.solve(rightSide);
-
-        EEG_fits.row(i) = EEG.row(i) * squareCWL;
+        Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
+        // std::cout << "Betas: " << Betas.rows() << ' ' << Betas.cols() << '\n';
+        // std::cout << "Betas: " << Betas << '\n';
+        EEG_fits.row(i) = Betas * CWL;
     }
 
     EEG_corrected = EEG - EEG_fits;
-    // std::cout << EEG_corrected.row(0) << '\n';
+    
+    // std::cout << "CWL: " << CWL.row(0) << '\n';
+    // std::cout << "EEG: " << EEG.row(0) << '\n';
+    // std::cout << "EEG_corrected: " << EEG_corrected.row(0) << '\n';
 }
 
 // Loop for the data processing
@@ -220,7 +195,7 @@ void dataProcessingLoop(dataHandler &handler) {
     
     int n_eeg_channels = 5;
     int n_cwl_channels = 7;
-    int n_samples = 15000;
+    int n_samples = 20000;
     Eigen::MatrixXd EEG = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
@@ -245,6 +220,9 @@ void dataProcessingLoop(dataHandler &handler) {
         EEG = handler.getBlockChannelDataInOrder(0, n_eeg_channels, n_samples);
         CWL = handler.getBlockChannelDataInOrder(5, n_cwl_channels, n_samples);
 
+        // Eigen::MatrixXd allChannels = handler.getDataInOrder(1);
+        // Eigen::MatrixXd allChannels = handler.getBlockChannelDataInOrder(0, 12, 1);
+        // std::cout << allChannels.col(allChannels.cols() - 1) << '\n';
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
         EEG_filtered = EEG;

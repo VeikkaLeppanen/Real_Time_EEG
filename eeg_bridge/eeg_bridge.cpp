@@ -6,6 +6,7 @@ const int PORT = 50000;
 // NANO TO MICRO /1000
 const uint8_t DC_MODE_SCALE = 100;
 const uint16_t NANO_TO_MICRO_CONVERSION = 1000;
+const double DOUBLESCALINGFACTOR = 10000.0;
 
 void EegBridge::bind_socket() {
 
@@ -70,7 +71,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
             Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
 
-            Eigen::MatrixXd data_samples = (data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION;
+            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
 
             for (int i = 0; i < packet_info.NumSampleBundles; i++) {
                 handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)));
@@ -87,6 +88,8 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             lastSequenceNumber = sequenceNumber; // Update the last received sequence number
 
             // std::cout << "Package " << sequenceNumber << " received!" << '\n';
+
+            // std::cout << "Samples: " << data_samples << '\n';
 
             // std::cout << handler.getDataInOrder(1) << '\n';
             // std::cout << handler.get_buffer_capacity() << '\n';
