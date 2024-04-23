@@ -11,8 +11,9 @@ set(CMAKE_AUTORCC ON)
 
 # Find packages
 # find_package(PythonLibs 3 REQUIRED)
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Charts)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Charts)
+find_package(OpenGL REQUIRED)  # Added OpenGL package
 
 # Define QT_NO_KEYWORDS to avoid conflicts between Qt and Python
 # add_definitions(-DQT_NO_KEYWORDS)
@@ -27,6 +28,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 # include_directories(${NUMPY_INCLUDE_DIRS})
 include_directories(/home/veikka/Work/Real_Time_EEG)
 include_directories(/usr/include/eigen3)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 
 set(SOURCES
     main.cpp
@@ -41,11 +43,17 @@ set(SOURCES
     UI/mainwindow.ui
     UI/worker.cpp
     UI/worker.h
+    UI/glwidget.cpp
+    UI/glwidget.h
 )
 
 add_executable(real_time_eeg ${SOURCES})
 
-target_link_libraries(real_time_eeg PRIVATE Qt${QT_VERSION_MAJOR}::Widgets) # ${PYTHON_LIBRARIES}
+target_link_libraries(real_time_eeg PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Charts  # Assuming you might use Qt Charts
+    OpenGL::GL  # Linking OpenGL
+) # ${PYTHON_LIBRARIES}
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(real_time_eeg)
@@ -56,9 +64,19 @@ target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations)
 
 # Compiler optimization and OpenMP
 include(CheckCXXCompilerFlag)
+# Check and enable FMA instruction set if available
 CHECK_CXX_COMPILER_FLAG("-mfma" COMPILER_SUPPORTS_MFMA)
 if(COMPILER_SUPPORTS_MFMA)
     target_compile_options(real_time_eeg PRIVATE -mfma)
 endif()
 
-target_compile_options(real_time_eeg PRIVATE -O3 -fopenmp)
+# Add compiler and linker options for OpenMP
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_compile_options(real_time_eeg PRIVATE ${OpenMP_CXX_FLAGS})
+    # Linking OpenMP libraries
+    target_link_libraries(real_time_eeg PRIVATE ${OpenMP_CXX_LIBRARIES})
+endif()
+
+# Set other compiler optimizations
+target_compile_options(real_time_eeg PRIVATE -O3)

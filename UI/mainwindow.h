@@ -8,6 +8,7 @@
 #include <QIntValidator>
 #include <iostream>
 #include "worker.h"
+#include "glwidget.h"
 #include "../dataHandler/dataHandler.h"
 #include "../eeg_bridge/eeg_bridge.h"
 
