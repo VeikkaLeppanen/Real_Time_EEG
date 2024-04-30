@@ -5,6 +5,7 @@
 #include <string>
 #include <csignal>
 #include <chrono>
+#include <fstream>
 
 #include "dataProcessor/dataProcessor.h"
 #include "dataHandler/dataHandler.h"
@@ -144,58 +145,89 @@ void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int facto
     }
 }
 
-Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& CWL, int delay) {
-    int rows = CWL.rows();
-    int cols = CWL.cols();
-    Eigen::MatrixXd expandedCWL(rows, cols + 2 * delay);
+// Function to perform delay embedding of a signal with incremental shifts and edge value padding
+Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
+    int n = X.rows();  // Number of variables in X
+    int m = X.cols();  // Length of the signal
 
-    // Pad columns with zeros based on delay
-    expandedCWL.block(0, delay, rows, cols) = CWL;
+    // Total rows in the output matrix considering shifts for each step and the original
+    int totalChannels = n * (2 * step + 1);
+    Eigen::MatrixXd Y(totalChannels, m); // Initialize matrix for the output
 
-    // Fill in zeros for padding
-    expandedCWL.block(0, 0, rows, delay).setZero();
-    expandedCWL.block(0, cols + delay, rows, delay).setZero();
+    // Fill the central part of Y with the original data
+    int originalStartRow = n * step;
+    Y.middleRows(originalStartRow, n) = X;
 
-    return expandedCWL;
-}
+    // Apply shifts to the left and right
+    for (int offset = 1; offset <= step; ++offset) {
+        int leftStartRow = originalStartRow - offset * n;
+        int rightStartRow = originalStartRow + offset * n;
 
+        // Left shifts (data moves right)
+        for (int row = 0; row < n; ++row) {
+            Y.block(leftStartRow + row, offset, 1, m - offset) = X.block(row, 0, 1, m - offset);
+            // Edge value padding on the left
+            Y.block(leftStartRow + row, 0, 1, offset).setConstant(X(row, 0));
+        }
 
-
-void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
-
-    if (delay > 0) {
-        // Flip and perform delay embedding if delay is positive
-        CWL = delayEmbed(CWL.colwise().reverse(), 1 + 2 * delay).colwise().reverse();
+        // Right shifts (data moves left)
+        for (int row = 0; row < n; ++row) {
+            Y.block(rightStartRow + row, 0, 1, m - offset) = X.block(row, offset, 1, m - offset);
+            // Edge value padding on the right
+            Y.block(rightStartRow + row, m - offset, 1, offset).setConstant(X(row, m - 1));
+        }
     }
 
-    int num_samples = CWL.rows();
-    Eigen::MatrixXd pinvCWL = CWL.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
+    return Y;
+}
+
+void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
+    Eigen::MatrixXd expCWL;
+    if (delay > 0) {
+        // Perform delay embedding if delay is positive
+        expCWL = delayEmbed(CWL, (1+2*delay));
+    } else {
+        expCWL = CWL;
+    }
+
+    int num_samples = expCWL.rows();
+    Eigen::MatrixXd pinvCWL = expCWL.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
 
     Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
     for(int i = 0; i < EEG.rows(); i++) {
-        // std::cout << "EEG.cols(): " << EEG.cols() << '\n';
-        // std::cout << "pinvCWL: " << pinvCWL.rows() << ' ' << pinvCWL.cols() << '\n';
-        // std::cout << "CWL: " << CWL.rows() << ' ' << CWL.cols() << '\n';
-
         Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
-        // std::cout << "Betas: " << Betas.rows() << ' ' << Betas.cols() << '\n';
-        // std::cout << "Betas: " << Betas << '\n';
-        EEG_fits.row(i) = Betas * CWL;
+        EEG_fits.row(i) = Betas * expCWL;
     }
 
     EEG_corrected = EEG - EEG_fits;
-    
-    // std::cout << "CWL: " << CWL.row(0) << '\n';
-    // std::cout << "EEG: " << EEG.row(0) << '\n';
-    // std::cout << "EEG_corrected: " << EEG_corrected.row(0) << '\n';
+}
+
+// Function to write Eigen matrix to CSV file
+void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+    std::ofstream file(filename);
+
+    if (file.is_open()) {
+        for (int i = 0; i < matrix.rows(); ++i) {
+            for (int j = 0; j < matrix.cols(); ++j) {
+                file << matrix(i, j);
+                if (j + 1 < matrix.cols()) file << ","; // Comma for next column
+            }
+            file << "\n"; // Newline for next row
+        }
+        file.close();
+    } else {
+        std::cerr << "Failed to open the file for writing." << std::endl;
+    }
 }
 
 // Loop for the data processing
 void dataProcessingLoop(dataHandler &handler) {
     
+    // Initializing parameters and matrices for algorithms
     int n_eeg_channels = 5;
     int n_cwl_channels = 7;
-    int n_samples = 20000;
+    int n_samples = 10000;
+    Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(handler.get_channel_count(), n_samples);
     Eigen::MatrixXd EEG = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
@@ -210,6 +242,14 @@ void dataProcessingLoop(dataHandler &handler) {
     int delay = 0;
     Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
 
+    // TESTING MATRICES
+    Eigen::VectorXd Betas_temp = Eigen::VectorXd::Zero(n_cwl_channels);
+    Eigen::MatrixXd Betas = Eigen::MatrixXd::Zero(127, n_cwl_channels);
+    Eigen::MatrixXd EEG_output = Eigen::MatrixXd::Zero(127, newCols);
+    double total_time = 0.0;
+    int count = 0;
+
+
     while (!handler.isReady()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -217,12 +257,12 @@ void dataProcessingLoop(dataHandler &handler) {
     while (!signal_received) {
 
         // Copy data from wanted EEG channels and CWL channels
-        EEG = handler.getBlockChannelDataInOrder(0, n_eeg_channels, n_samples);
-        CWL = handler.getBlockChannelDataInOrder(5, n_cwl_channels, n_samples);
+        int sequence_number = handler.getLatestDataInOrder(all_channels, n_samples);
+        EEG = all_channels.middleRows(0, n_eeg_channels);
+        CWL = all_channels.middleRows(5, n_cwl_channels);
 
-        // Eigen::MatrixXd allChannels = handler.getDataInOrder(1);
-        // Eigen::MatrixXd allChannels = handler.getBlockChannelDataInOrder(0, 12, 1);
-        // std::cout << allChannels.col(allChannels.cols() - 1) << '\n';
+        // if (sequence_number > 0 && sequence_number % 10000 == 0) {
+        // std::cout << "SeqNum: " << sequence_number << '\n';
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
         EEG_filtered = EEG;
@@ -232,14 +272,25 @@ void dataProcessingLoop(dataHandler &handler) {
         downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
         downsample(CWL_filtered, CWL_downsampled, downsampling_factor);
 
-        auto start = std::chrono::high_resolution_clock::now();
+        // auto start = std::chrono::high_resolution_clock::now();
 
         // removeBCG
         removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
 
-        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-        std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
+        // std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+        // std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
+        // total_time += elapsed.count();
+        // count++;
     }
+
+    // if (count > 0) {
+    //     double average_time = total_time / count;
+    //     std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
+    //     std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
+
+    //     writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Betas.csv", Betas);
+    //     writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
+    // }
 
     std::cout << "Exiting dataProcessingLoop" << '\n';
 }

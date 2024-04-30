@@ -63,39 +63,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         // Handle packets
         switch (firstByte)
         {
-        case 0x02: { // SamplesPacket
-        
-            // Deserialize the received data into a sample_packet instance
-            sample_packet packet_info;
-            deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
-
-            Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
-
-            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
-
-            for (int i = 0; i < packet_info.NumSampleBundles; i++) {
-                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)));
-            }
-
-            int sequenceNumber = packet_info.PacketSeqNo;
-
-            // Check for dropped packets
-            if (lastSequenceNumber != -1 && sequenceNumber != (lastSequenceNumber + 1)) {
-                std::cerr << "Packet loss detected. Expected sequence: " << (lastSequenceNumber + 1) << ", but received: " << sequenceNumber << '\n';
-                // Handle packet loss (e.g., by requesting retransmission if supported)
-            }
-
-            lastSequenceNumber = sequenceNumber; // Update the last received sequence number
-
-            // std::cout << "Package " << sequenceNumber << " received!" << '\n';
-
-            // std::cout << "Samples: " << data_samples << '\n';
-
-            // std::cout << handler.getDataInOrder(1) << '\n';
-            // std::cout << handler.get_buffer_capacity() << '\n';
-            break;
-
-        } case 0x01: { // MeasurementStartPacket
+        case 0x01: { // MeasurementStartPacket
             
             std::cout << "MeasurementStart package received!\n";
             measurement_start_packet packet_info;
@@ -110,7 +78,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             lastSequenceNumber = -1;
 
             // TODO: Initialize data_handler_samples
-            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 10);
+            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 100);
 
 
             std::cout << "MeasurementStart package processed!\n";
@@ -120,6 +88,36 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             eeg_bridge_status = WAITING_MEASUREMENT_STOP;
             std::cout << "Waiting for packets..." << '\n';
 
+            break;
+
+        } case 0x02: { // SamplesPacket
+        
+            // Deserialize the received data into a sample_packet instance
+            sample_packet packet_info;
+            deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
+            int sequenceNumber = packet_info.PacketSeqNo;
+
+            Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
+            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
+            
+            for (int i = 0; i < packet_info.NumSampleBundles; i++) {
+                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)), sequenceNumber);
+            }
+
+            // Check for dropped packets
+            if (lastSequenceNumber != -1 && sequenceNumber != (lastSequenceNumber + 1)) {
+                std::cerr << "Packet loss detected. Expected sequence: " << (lastSequenceNumber + 1) << ", but received: " << sequenceNumber << '\n';
+                // Handle packet loss
+            }
+
+            lastSequenceNumber = sequenceNumber; // Update the last received sequence number
+
+            // std::cout << "Package " << sequenceNumber << " received!" << '\n';
+
+            // std::cout << "Samples: " << data_samples << '\n';
+
+            // std::cout << handler.getDataInOrder(1) << '\n';
+            // std::cout << handler.get_buffer_capacity() << '\n';
             break;
 
         } case 0x03: { // TriggerPacket

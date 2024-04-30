@@ -61,7 +61,7 @@ int dataHandler::simulateData_sin() {
             
             time += 1.0 / sampling_rate_;
 
-            this->addData(sample, time_stamp, trigger);
+            this->addData(sample, time_stamp, trigger, 0);
 
             stimulation_tracker++;
         }
@@ -107,7 +107,7 @@ int dataHandler::simulateData_mat() {
             
             time += 1.0 / sampling_rate_;
 
-            this->addData(sample, time_stamp, trigger);
+            this->addData(sample, time_stamp, trigger, 0);
 
             stimulation_tracker++;
         }
@@ -139,7 +139,7 @@ void dataHandler::printBufferSize() {
 
 // Buffer functions
 // Add a signle sample to each channel
-void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger) {
+void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
 
     if (trigger == 1) { 
         stimulation_tracker = 0;
@@ -170,26 +170,31 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
     time_stamp_buffer_(current_data_index_) = time_stamp;
     trigger_buffer_(current_data_index_) = trigger;
+    current_sequence_number_ = SeqNo;
     current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 }
 
 // Retrieves data form all channels in chronological order
-Eigen::MatrixXd dataHandler::getDataInOrder(int downSamplingFactor) {
+int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
 
-    if (downSamplingFactor < 1) throw std::invalid_argument("downSamplingFactor must be greater than 0");
+    output.resize(channel_count_, number_of_samples);
+    size_t channel_index = 0;
 
-    // Calculate the effective size after downsampling
-    size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
-    Eigen::MatrixXd downSampledData(sample_buffer_.rows(), downSampledSize);
-
+    // Calculate the number of samples that fit before reaching the end
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
+    
+    
     std::lock_guard<std::mutex> (this->dataMutex);
-    for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
-        // Calculate the index in the circular buffer accounting for wrap-around
-        size_t index = (current_data_index_ + i) % buffer_capacity_;
-        downSampledData.col(j) = sample_buffer_.col(index);
+    if (fitToEnd > 0) {
+        output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+    }
+    
+    if (overflow > 0) {
+        output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
     }
 
-    return downSampledData;
+    return current_sequence_number_;
 }
 
 // Retrieves data from the specified channel in chronological order

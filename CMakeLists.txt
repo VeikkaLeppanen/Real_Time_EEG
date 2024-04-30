@@ -21,7 +21,15 @@ include_directories(/home/veikka/Work/Real_Time_EEG)
 include_directories(/usr/include/eigen3)
 
 # Add executable
-add_executable(real_time_eeg main.cpp eeg_bridge/eeg_bridge.cpp eeg_bridge/measurementStartPacket.cpp eeg_bridge/samplePacket.cpp eeg_bridge/networkUtils.cpp dataHandler/dataHandler.cpp dataHandler/GACorrection.cpp dataProcessor/dataProcessor.cpp)
+add_executable( real_time_eeg main.cpp 
+                eeg_bridge/eeg_bridge.cpp 
+                eeg_bridge/measurementStartPacket.cpp 
+                eeg_bridge/samplePacket.cpp 
+                eeg_bridge/networkUtils.cpp 
+                dataHandler/dataHandler.cpp 
+                dataHandler/GACorrection.cpp 
+                dataProcessor/dataProcessor.cpp
+                )
 
 # Use the flag to suppress deprecated declarations warnings
 target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations)

@@ -36,9 +36,9 @@ public:
     int simulateData_sin();
     int simulateData_mat();
 
-    void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger);
+    void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
 
-    Eigen::MatrixXd getDataInOrder(int downSamplingFactor);
+    int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
@@ -62,6 +62,7 @@ private:
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXd trigger_buffer_;
     size_t current_data_index_ = 0;
+    int current_sequence_number_ = 0;
     int buffer_length_in_seconds_ = 20;
     int buffer_capacity_;
     int channel_count_;
