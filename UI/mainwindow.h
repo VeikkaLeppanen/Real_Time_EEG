@@ -45,13 +45,13 @@ private:
     Ui::MainWindow *ui;
 
     // Handler parameters
-    dataHandler& handler;
+    dataHandler &handler;
     int GALength = 5000;
     int GAAverage = 25;
 
     // eeg_bridge parameters
     EegBridge bridge;
-    int port;
+    int port = 50000;
 
     // eeg window
     eegWindow *eegwindow = nullptr;

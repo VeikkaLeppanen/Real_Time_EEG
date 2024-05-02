@@ -39,6 +39,7 @@ public:
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
 
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
+    Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);

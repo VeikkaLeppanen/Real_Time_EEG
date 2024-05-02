@@ -90,7 +90,7 @@ void MainWindow::on_lineEditGAaverage_editingFinished()
 void MainWindow::on_EEG_clicked()
 {
     if (!eegwindow) {
-        eegwindow = new eegWindow(this);
+        eegwindow = new eegWindow(handler, signal_received, this);
         eegwindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
         connect(eegwindow, &eegWindow::destroyed, this, &MainWindow::resetEegWindowPointer);
     }

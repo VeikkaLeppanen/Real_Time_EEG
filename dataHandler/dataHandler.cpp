@@ -174,7 +174,30 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 }
 
-// Retrieves data form all channels in chronological order
+// Retrieves number_of_samples data points form all channels in chronological order
+Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
+
+    Eigen::MatrixXd output(channel_count_, number_of_samples);
+    size_t channel_index = 0;
+
+    // Calculate the number of samples that fit before reaching the end
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
+    
+    
+    std::lock_guard<std::mutex> (this->dataMutex);
+    if (fitToEnd > 0) {
+        output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+    }
+    
+    if (overflow > 0) {
+        output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+    }
+
+    return output;
+}
+
+// Retrieves number_of_samples data points form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
 
     output.resize(channel_count_, number_of_samples);
