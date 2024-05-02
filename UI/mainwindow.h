@@ -11,6 +11,7 @@
 #include "glwidget.h"
 #include "../dataHandler/dataHandler.h"
 #include "../eeg_bridge/eeg_bridge.h"
+#include "eegwindow.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -37,6 +38,9 @@ private slots: // Correct usage of slots here
 
     void on_lineEditGAaverage_editingFinished();
 
+    void on_EEG_clicked();
+    void resetEegWindowPointer();
+
 private:
     Ui::MainWindow *ui;
 
@@ -48,6 +52,9 @@ private:
     // eeg_bridge parameters
     EegBridge bridge;
     int port;
+
+    // eeg window
+    eegWindow *eegwindow = nullptr;
 
     volatile std::sig_atomic_t &signal_received;
 };

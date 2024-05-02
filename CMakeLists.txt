@@ -41,6 +41,9 @@ set(SOURCES
     UI/mainwindow.cpp
     UI/mainwindow.h
     UI/mainwindow.ui
+    UI/eegwindow.cpp
+    UI/eegwindow.h
+    UI/eegwindow.ui
     UI/worker.cpp
     UI/worker.h
     UI/glwidget.cpp

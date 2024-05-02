@@ -55,6 +55,88 @@ void dataAcquisitionLoop(dataHandler &handler) {
     std::cout << "Exiting dataAcquisitionLoop" << '\n';
 }
 
+void dataProcessingLoop(dataHandler &handler) {
+
+    while (!signal_received) {
+
+        // Copy data from wanted EEG channels and CWL channels
+        Eigen::MatrixXd EEG = handler.getBlockChannelDataInOrder(0, 4, 10000);
+        Eigen::MatrixXd CWL = handler.getBlockChannelDataInOrder(8, 4, 10000);
+
+        // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
+
+
+        // DONWSAMPLINGFACTOR 10
+
+
+        // removeBCG
+
+    }
+
+    std::cout << "Exiting dataProcessingLoop" << '\n';
+}
+
+int main(int argc, char *argv[])
+{
+    dataHandler handler;
+
+    QApplication a(argc, argv);
+    MainWindow w(handler, signal_received);
+    w.show();
+    return a.exec();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+int main() {
+    std::signal(SIGINT, signal_handler);
+    
+    dataHandler handler;
+
+    // std::thread dataThread(dataSimulationLoop, std::ref(handler));
+    std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    std::thread plotThread(plottingLoop, std::ref(handler));
+    
+    dataThread.join();
+    plotThread.join();
+
+    return 0;
+}
+*/
+
+
+
+
+
+
 // Loop for matplotlibcpp graph visualization
 // void plottingLoop(dataHandler &handler) {
     
@@ -121,54 +203,3 @@ void dataAcquisitionLoop(dataHandler &handler) {
 //     plt::close();
 //     std::cout << "Exiting plottingLoop" << '\n';
 // }
-
-void dataProcessingLoop(dataHandler &handler) {
-
-    while (!signal_received) {
-
-        // Copy data from wanted EEG channels and CWL channels
-        Eigen::MatrixXd EEG = handler.getBlockChannelDataInOrder(0, 4, 10000);
-        Eigen::MatrixXd CWL = handler.getBlockChannelDataInOrder(8, 4, 10000);
-
-        // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz
-
-
-        // DONWSAMPLINGFACTOR 10
-
-
-        // removeBCG
-
-    }
-
-    std::cout << "Exiting dataProcessingLoop" << '\n';
-}
-
-int main(int argc, char *argv[])
-{
-    dataHandler handler;
-
-    QApplication a(argc, argv);
-    MainWindow w(handler, signal_received);
-    w.show();
-    return a.exec();
-}
-
-
-/*
-int main() {
-    std::signal(SIGINT, signal_handler);
-    
-    dataHandler handler;
-
-    // std::thread dataThread(dataSimulationLoop, std::ref(handler));
-    std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    std::thread plotThread(plottingLoop, std::ref(handler));
-    
-    dataThread.join();
-    plotThread.join();
-
-    return 0;
-}
-*/

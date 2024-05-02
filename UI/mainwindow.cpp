@@ -2,7 +2,7 @@
 #include "./ui_mainwindow.h"
 
 MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
-    : QMainWindow(parent), 
+    : QMainWindow(parent),
       ui(new Ui::MainWindow),
       handler(handler),
       signal_received(signal_received)
@@ -86,3 +86,19 @@ void MainWindow::on_lineEditGAaverage_editingFinished()
 }
 
 
+
+void MainWindow::on_EEG_clicked()
+{
+    if (!eegwindow) {
+        eegwindow = new eegWindow(this);
+        eegwindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
+        connect(eegwindow, &eegWindow::destroyed, this, &MainWindow::resetEegWindowPointer);
+    }
+    eegwindow->show();
+    eegwindow->raise();
+    eegwindow->activateWindow();
+}
+
+void MainWindow::resetEegWindowPointer() {
+    eegwindow = nullptr;  // Reset the pointer after the window is destroyed
+}
