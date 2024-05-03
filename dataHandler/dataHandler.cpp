@@ -28,6 +28,13 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     // Continue processing
     // processor_.startProcessing();
 }
+    
+void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input) {
+    TA_length = TA_length_input; 
+    GA_average_length = GA_average_length_input;
+    GACorr_ = GACorrection(channel_count_, GA_average_length, TA_length);
+    stimulation_tracker = 10000000;
+}
 
 int dataHandler::simulateData_sin() {
     auto startTime = std::chrono::high_resolution_clock::now();
@@ -146,7 +153,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         // GACorr_.printTemplate();
     }
 
-    if (stimulation_tracker < TA_length) {
+    if (GACorr_running && stimulation_tracker < TA_length) {
 
         {
             std::lock_guard<std::mutex> (this->dataMutex);

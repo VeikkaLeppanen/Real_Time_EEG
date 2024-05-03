@@ -28,8 +28,10 @@ public:
                     GACorr_(GACorrection(0, 0, 0)) {};
                     // processor_(processor) {};
 
+    // Reset functions
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
     void reset_handler(int channel_count, int sampling_rate) { reset_handler(channel_count, sampling_rate, sampling_rate); }
+    void reset_GACorr(int TA_length_input, int GA_average_length_input);
 
     bool isReady() { return (handler_state == WAITING_FOR_STOP); }
 
@@ -51,11 +53,19 @@ public:
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
 
-    void seg_GAcorr_params(int TA_length_input, int GA_average_length_input) { 
-        TA_length = TA_length_input; 
-        GA_average_length = GA_average_length_input;
+    void setSourceChannels(std::vector<uint16_t> SourceChannels) {
+        source_channels_.resize(SourceChannels.size());
+        for (size_t i = 0; i < SourceChannels.size(); ++i) {
+            source_channels_(static_cast<int>(i)) = static_cast<int>(SourceChannels[i]);
+        }
     }
 
+    // Gradient artifact correction functions
+    void GACorr_off() { GACorr_running = false; }
+    void GACorr_on() {
+        int stimulation_tracker = 10000000;
+        GACorr_running = true; 
+    }
     int get_TA_length() { return TA_length; }
     int get_GA_average_length() { return GA_average_length; }
     
@@ -67,6 +77,7 @@ private:
     HandlerState handler_state = WAITING_FOR_START;
 
     std::mutex dataMutex;
+    Eigen::VectorXi source_channels_;
     Eigen::MatrixXd sample_buffer_;
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXd trigger_buffer_;
@@ -80,13 +91,11 @@ private:
 
     // dataProcessor &processor_;
 
+    bool GACorr_running = false;
     GACorrection GACorr_;
-
-    // Set this according to the gradient length in samples
     int TA_length = 5000;
-    // Set this according to the number of gradients to average over
     int GA_average_length = 25;
-    int stimulation_tracker = 100000;
+    int stimulation_tracker = 10000000;
 };
 
 #endif // DATAHANDLER_H

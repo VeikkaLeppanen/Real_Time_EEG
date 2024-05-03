@@ -5,10 +5,18 @@
 #include <QThread>
 #include <QMessageBox>
 #include <QObject>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
+#include <QStringList>
+#include <QString>
+#include <QDir>
+#include <QDebug>
+
 #include <array>
+
 #include "worker.h"
 #include "glwidget.h"
-#include "eegwindow.h"
 #include "./ui_eegwindow.h"
 #include "../eeg_bridge/eeg_bridge.h"
 #include "../dataHandler/dataHandler.h"
@@ -29,6 +37,12 @@ public:
 public slots:
     void updateData();
 
+signals:
+    void connectEegBridge(int port);
+    void applyGACorrection(int GALength, int GAAverage);
+    void stopGACorrection();
+    void updateChannelNames(QStringList channelNames);
+
 private slots:
 
     void on_connectButton_clicked();
@@ -36,11 +50,20 @@ private slots:
 
     void on_disconnectButton_clicked();
 
+    void on_lineEditPort_editingFinished();
+
+    void on_lineEditGALength_editingFinished();
+    void on_lineEditGAaverage_editingFinished();
+
+    void on_GACorrectionStart_clicked();
+    void on_GACorrectionStop_clicked();
+
+    void on_sourceChannelLoad_clicked();
+    
 private:
     Ui::EegWindow *ui;
 
     // eeg_bridge parameters
-    EegBridge bridge;
     int port = 50000;
 
     // Handler parameters
