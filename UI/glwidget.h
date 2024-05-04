@@ -29,7 +29,13 @@ protected:
 public slots:
     void updateMatrix(Eigen::MatrixXd newMatrix) { newMatrix_ = newMatrix; }
     void updateGraph();
-    void updateChannelNames(QStringList channelNames) { channelNames_ = channelNames; };
+    void updateChannelNames(std::vector<std::string> channelNames) {
+        QStringList newNames;
+        for(size_t i = 0; i < channelNames.size(); i++) {
+            newNames.append(QString::fromStdString(channelNames[i])); 
+        }
+        channelNames_ = newNames;
+    }
 
 private:
     Eigen::MatrixXd newMatrix_;  // Use Eigen::VectorXf if you need a vector of floats

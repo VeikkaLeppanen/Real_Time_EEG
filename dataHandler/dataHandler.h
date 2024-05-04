@@ -59,6 +59,10 @@ public:
             source_channels_(static_cast<int>(i)) = static_cast<int>(SourceChannels[i]);
         }
     }
+    Eigen::VectorXi getSourceChannels() { return source_channels_; }
+    
+    void setChannelNames(std::vector<std::string> channel_names) { channel_names_ = channel_names; }
+    std::vector<std::string> getChannelNames() { return channel_names_; }
 
     // Gradient artifact correction functions
     void GACorr_off() { GACorr_running = false; }
@@ -78,6 +82,7 @@ private:
 
     std::mutex dataMutex;
     Eigen::VectorXi source_channels_;
+    std::vector<std::string> channel_names_;
     Eigen::MatrixXd sample_buffer_;
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXd trigger_buffer_;

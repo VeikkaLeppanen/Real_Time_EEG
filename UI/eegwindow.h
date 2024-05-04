@@ -41,7 +41,7 @@ signals:
     void connectEegBridge(int port);
     void applyGACorrection(int GALength, int GAAverage);
     void stopGACorrection();
-    void updateChannelNames(QStringList channelNames);
+    void updateChannelNames(std::vector<std::string> channelNames);
 
 private slots:
 
@@ -71,6 +71,8 @@ private:
     int GALength = 5000;
     int GAAverage = 25;
     int samples_to_display = 30000;
+    std::vector<std::string> channelMap_;
+    Eigen::VectorXi source_channels_;
 
     volatile std::sig_atomic_t &signal_received;
 };

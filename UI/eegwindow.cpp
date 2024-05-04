@@ -15,6 +15,8 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         if (glWidget) {
             connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
             connect(this, &eegWindow::updateChannelNames, glWidget, &Glwidget::updateChannelNames);
+            
+            emit updateChannelNames(handler.getChannelNames());
         } else {
             // Error handling if glWidget is not found
             qWarning("Glwidget not found in UI!");
@@ -38,6 +40,25 @@ void eegWindow::updateData()
 void eegWindow::on_connectButton_clicked()
 {
     emit connectEegBridge(port);
+
+    while(!handler.isReady()) {
+        QThread::msleep(500);
+    }
+
+    source_channels_ = handler.getSourceChannels();
+
+    if (channelMap_.size() > 0) {
+
+        std::vector<std::string> channelNames;
+
+        for(size_t i = 0; i < source_channels_.size(); i++) {
+            channelNames.push_back(channelMap_[source_channels_(i)]);
+        }
+
+        handler.setChannelNames(channelNames);
+
+        emit updateChannelNames(channelNames);
+    }
 }
 
 void eegWindow::handleError(const QString &error)
@@ -97,7 +118,7 @@ void eegWindow::on_GACorrectionStop_clicked()
 
 void eegWindow::on_sourceChannelLoad_clicked()
 {
-    QStringList channelNames;
+    std::vector<std::string> channelMapStd;
     QString fileName = QFileDialog::getOpenFileName(
         this,                 // parent widget
         "Open Document",      // dialog caption
@@ -115,7 +136,7 @@ void eegWindow::on_sourceChannelLoad_clicked()
                 line = in.readLine();
                 QStringList fields = line.split('\t');  // assuming tab-separated values
                 if (fields.size() > 1) {  // Check if there is at least one field for input number and one for name
-                    channelNames.append(fields[1]);  // Field 1 is the 'Name'
+                    channelMapStd.push_back(fields[1].toStdString());
                 }
             }
             file.close();
@@ -124,7 +145,20 @@ void eegWindow::on_sourceChannelLoad_clicked()
             qDebug("Failed to open the file for reading.");
         }
     }
-    
-    emit updateChannelNames(channelNames);
+
+    channelMap_ = channelMapStd;
+
+    if (source_channels_.size() > 0) {
+
+        std::vector<std::string> channelNames;
+
+        for(size_t i = 0; i < source_channels_.size(); i++) {
+            channelNames.push_back(channelMap_[source_channels_(i)]);
+        }
+
+        handler.setChannelNames(channelNames);
+
+        emit updateChannelNames(channelNames);
+    }
 }
 
