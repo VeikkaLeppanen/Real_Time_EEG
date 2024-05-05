@@ -48,16 +48,7 @@ void eegWindow::on_connectButton_clicked()
     source_channels_ = handler.getSourceChannels();
 
     if (channelMap_.size() > 0) {
-
-        std::vector<std::string> channelNames;
-
-        for(size_t i = 0; i < source_channels_.size(); i++) {
-            channelNames.push_back(channelMap_[source_channels_(i)]);
-        }
-
-        handler.setChannelNames(channelNames);
-
-        emit updateChannelNames(channelNames);
+        setupChannelNames();
     }
 }
 
@@ -149,16 +140,16 @@ void eegWindow::on_sourceChannelLoad_clicked()
     channelMap_ = channelMapStd;
 
     if (source_channels_.size() > 0) {
-
-        std::vector<std::string> channelNames;
-
-        for(size_t i = 0; i < source_channels_.size(); i++) {
-            channelNames.push_back(channelMap_[source_channels_(i)]);
-        }
-
-        handler.setChannelNames(channelNames);
-
-        emit updateChannelNames(channelNames);
+        setupChannelNames();
     }
 }
 
+void eegWindow::setupChannelNames()
+{
+    std::vector<std::string> channelNames;
+    for(size_t i = 0; i < source_channels_.size(); i++) {
+        channelNames.push_back(channelMap_[source_channels_(i)]);
+    }
+    handler.setChannelNames(channelNames);
+    emit updateChannelNames(channelNames);
+}

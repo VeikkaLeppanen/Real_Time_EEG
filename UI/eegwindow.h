@@ -71,6 +71,8 @@ private:
     int GALength = 5000;
     int GAAverage = 25;
     int samples_to_display = 30000;
+
+    void setupChannelNames();
     std::vector<std::string> channelMap_;
     Eigen::VectorXi source_channels_;
 
