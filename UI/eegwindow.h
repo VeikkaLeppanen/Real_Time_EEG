@@ -13,6 +13,8 @@
 #include <QString>
 #include <QDir>
 #include <QDebug>
+#include <QStandardItemModel>
+#include <QStandardItem>
 
 #include <array>
 
@@ -40,10 +42,12 @@ public slots:
 
 signals:
     void connectEegBridge(int port, int timeout);
+    void updateChannelDisplayState(std::vector<bool> channelCheckStates);
     void applyGACorrection(int GALength, int GAAverage);
     void startGACorrection();
     void stopGACorrection();
-    void updateChannelNames(std::vector<std::string> channelNames);
+    void updateChannelNamesSTD(std::vector<std::string> channelNames);
+    void updateChannelNamesQt(QStringList channelNames);
 
 private slots:
     void handleError(const QString& error);
@@ -51,6 +55,8 @@ private slots:
     void on_connectButton_clicked();
     void on_disconnectButton_clicked();
     void on_sourceChannelLoad_clicked();
+    void setupComboBox();
+    void handleCheckboxChange(QStandardItem* item);
 
     void on_lineEditPort_editingFinished();
     void on_lineEditTimeOut_editingFinished();
@@ -82,6 +88,8 @@ private:
     void setupChannelNames();
     std::vector<std::string> channelMap_;
     Eigen::VectorXi source_channels_;
+    std::vector<bool> channelCheckStates_;
+    QStringList channelNames_;
 
     volatile std::sig_atomic_t &signal_received;
 };

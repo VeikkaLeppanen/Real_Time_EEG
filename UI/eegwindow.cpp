@@ -17,9 +17,11 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         Glwidget* glWidget = ui->openglWidget;
         if (glWidget) {
             connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
-            connect(this, &eegWindow::updateChannelNames, glWidget, &Glwidget::updateChannelNames);
+            connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
+            connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
+            connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
             
-            emit updateChannelNames(handler.getChannelNames());
+            emit updateChannelNamesSTD(handler.getChannelNames());
         } else {
             // Error handling if glWidget is not found
             qWarning("Glwidget not found in UI!");
@@ -58,6 +60,16 @@ void eegWindow::on_connectButton_clicked()
 
     if (channelMap_.size() > 0) {
         setupChannelNames();
+    } else {
+        QStringList QchannelNames;
+        for(size_t i = 0; i < source_channels_.size(); i++) {
+            QchannelNames.append("Undefined");
+        }
+
+        channelNames_ = QchannelNames;
+
+        emit updateChannelNamesQt(QchannelNames);
+        setupComboBox();
     }
 }
 
@@ -106,12 +118,47 @@ void eegWindow::on_sourceChannelLoad_clicked()
 void eegWindow::setupChannelNames()
 {
     std::vector<std::string> channelNames;
+    QStringList QchannelNames;
     for(size_t i = 0; i < source_channels_.size(); i++) {
-        channelNames.push_back(channelMap_[source_channels_(i) - 1]);       // CHECK LATER FOR CORRECT INDEXING!
+        std::string C_Name = channelMap_[source_channels_(i) - 1];              // CHECK LATER FOR CORRECT INDEXING!
+        channelNames.push_back(C_Name);
+        QchannelNames.append(QString::fromStdString(C_Name));
     }
     handler.setChannelNames(channelNames);
-    emit updateChannelNames(channelNames);
+    
+    channelNames_ = QchannelNames;
+
+    emit updateChannelNamesQt(QchannelNames);
+    setupComboBox();
 }
+
+void eegWindow::setupComboBox() {
+    QStandardItemModel* model = new QStandardItemModel(channelNames_.size(), 1, this);
+
+    channelCheckStates_.resize(channelNames_.size(), true);
+
+    for (int i = 0; i < channelNames_.size(); ++i) {
+        QStandardItem* item = new QStandardItem(channelNames_.at(i));
+        item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+        item->setData(Qt::Checked, Qt::CheckStateRole);
+        model->setItem(i, 0, item);
+    }
+
+    ui->comboBox->setModel(model);
+    connect(model, &QStandardItemModel::itemChanged, this, &eegWindow::handleCheckboxChange);
+    emit updateChannelDisplayState(channelCheckStates_);
+}
+
+
+void eegWindow::handleCheckboxChange(QStandardItem* item) {
+    int row = item->row();
+    bool isChecked = item->checkState() == Qt::Checked;
+    channelCheckStates_[row] = isChecked;  // Directly set the boolean state
+
+    // You might want to do something immediately after the change or just store the state.
+    emit updateChannelDisplayState(channelCheckStates_);
+}
+
 
 void eegWindow::on_lineEditPort_editingFinished()
 {

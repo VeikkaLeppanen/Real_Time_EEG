@@ -4,7 +4,7 @@ Glwidget::Glwidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     QTimer *timer = new QTimer(this);
-    newMatrix_ = Eigen::MatrixXd::Zero(10, 10000);
+    newMatrix_ = Eigen::MatrixXd::Zero(1, 10000);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -22,16 +22,18 @@ void Glwidget::resizeGL(int w, int h)
 
 void Glwidget::paintGL()
 {
-    if (newMatrix_.rows() == 0) return;  // Ensure there is data to draw
+    if (channelCheckStates_.size() == 0) return;  // Ensure there is data to draw
 
     int windowHeight = height();
-    int rowHeight = windowHeight / newMatrix_.rows();  // Divide the window height by the number of rows
-
+    int rowHeight = windowHeight / std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);  // Divide the window height by the number of rows
+    // std::cout << std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true) << '\n';
     glClear(GL_COLOR_BUFFER_BIT);
 
-    for (int row = 0; row < newMatrix_.rows(); ++row) {
+    int graph_index = 0;
+    for (int row = 0; row < newMatrix_.rows(); row++) {
+        if (!channelCheckStates_[row]) continue;
         // Set viewport for this row
-        glViewport(0, row * rowHeight, width(), rowHeight);
+        glViewport(0, graph_index * rowHeight, width(), rowHeight);
 
         // Set up the projection matrix
         glMatrixMode(GL_PROJECTION);
@@ -43,7 +45,7 @@ void Glwidget::paintGL()
         glLoadIdentity();
 
         // Prepare data and draw the line strip
-        Eigen::VectorXd dataVector = newMatrix_.row(row);
+        Eigen::VectorXd dataVector = newMatrix_.row(n_channels - 1 - row);
         double minVal = dataVector.minCoeff();
         double maxVal = dataVector.maxCoeff();
 
@@ -58,6 +60,7 @@ void Glwidget::paintGL()
             glVertex2f(x, y);
         }
         glEnd();
+        graph_index++;
     }
 
     // Overlay text using QPainter
@@ -65,22 +68,21 @@ void Glwidget::paintGL()
     painter.setPen(Qt::red);
     painter.setFont(QFont("Arial", 10)); // Set font here
 
-    for (int row = 0; row < newMatrix_.rows(); ++row) {
+    graph_index = 0;
+    for (int row = 0; row < newMatrix_.rows(); row++) {
+        if (!channelCheckStates_[row]) continue;
         // Calculate position for text
-        int yPos = windowHeight - (rowHeight * row + rowHeight / 2 + 10);  // Adjust vertical position
+        int yPos = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
         if (row < channelNames_.size()) {
-            name = channelNames_.at(row);
+            name = channelNames_.at(n_channels - 1 - row);
         }
         painter.drawText(10, yPos, name);
+        graph_index++;
     }
 
     painter.end(); // Ensure QPainter is properly closed
 }
-
-
-
-
 
 void Glwidget::updateGraph()
 {
