@@ -27,8 +27,9 @@ public:
     ~MainWindow();
 
 public slots:
-    void eegBridgeSpin(int port);
+    void eegBridgeSpin(int port, int timeout);
     void setGACorrection(int GALength, int GAAverage);
+    void startGACorrection();
     void stopGACorrection();
 
 private slots:

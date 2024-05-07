@@ -8,9 +8,6 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
-    ui->lineEditPort->setValidator(new QIntValidator(0, 65535, this));
-    ui->lineEditGALength->setValidator(new QIntValidator(0, 500000, this));
-    ui->lineEditGAaverage->setValidator(new QIntValidator(0, 1000, this));
 }
 
 MainWindow::~MainWindow()
@@ -18,12 +15,13 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::eegBridgeSpin(int port)
+void MainWindow::eegBridgeSpin(int port, int timeout)
 {
     if (!bridge.isRunning()) {
         signal_received = 0;
 
         bridge.setPort(port);
+        bridge.setTimeout(timeout);
 
         QThread* thread = new QThread;
         Worker* worker = new Worker(bridge, handler, signal_received);
@@ -57,7 +55,13 @@ void MainWindow::setGACorrection(int GALength, int GAAverage) {
     handler.GACorr_on();
 }
 
+void MainWindow::startGACorrection() {
+    handler.reset_GACorr_tracker();
+    handler.GACorr_on();
+}
+
 void MainWindow::stopGACorrection() {
+    handler.reset_GACorr_tracker();
     handler.GACorr_off();
 }
 
@@ -78,6 +82,7 @@ void MainWindow::on_EEG_clicked()
     eegwindow->activateWindow();
     connect(eegwindow, &eegWindow::connectEegBridge, this, &MainWindow::eegBridgeSpin);
     connect(eegwindow, &eegWindow::applyGACorrection, this, &MainWindow::setGACorrection);
+    connect(eegwindow, &eegWindow::startGACorrection, this, &MainWindow::startGACorrection);
     connect(eegwindow, &eegWindow::stopGACorrection, this, &MainWindow::stopGACorrection);
 }
 

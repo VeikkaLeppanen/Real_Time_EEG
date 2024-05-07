@@ -24,6 +24,7 @@ public:
     }
 
     void update_template(int template_index, const Eigen::VectorXd &samples);
+    void reset_index() { sample_data_index_ = 0; }
 
     Eigen::VectorXd getTemplateCol(int template_index) { return correction_template_.col(template_index); }
     Eigen::MatrixXd getTemplateCols(int template_index, int num_bundles);

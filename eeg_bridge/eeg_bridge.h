@@ -27,6 +27,7 @@ public:
     void bind_socket();
     void spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received);
     void setPort(int port) { PORT = port; }
+    void setTimeout(int timeout) { socket_timeout = timeout; }
     
     bool isRunning() { return running; }
 
@@ -42,6 +43,7 @@ private:
     int lastSequenceNumber = -1;
     
     int PORT = 50000;
+    int socket_timeout = 10;
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     unsigned char buffer[BUFFER_LENGTH];

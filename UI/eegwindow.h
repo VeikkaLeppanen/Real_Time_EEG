@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QStringList>
+#include <QIntValidator>
 #include <QString>
 #include <QDir>
 #include <QDebug>
@@ -38,39 +39,45 @@ public slots:
     void updateData();
 
 signals:
-    void connectEegBridge(int port);
+    void connectEegBridge(int port, int timeout);
     void applyGACorrection(int GALength, int GAAverage);
+    void startGACorrection();
     void stopGACorrection();
     void updateChannelNames(std::vector<std::string> channelNames);
 
 private slots:
-
-    void on_connectButton_clicked();
     void handleError(const QString& error);
 
+    void on_connectButton_clicked();
     void on_disconnectButton_clicked();
+    void on_sourceChannelLoad_clicked();
 
     void on_lineEditPort_editingFinished();
+    void on_lineEditTimeOut_editingFinished();
+
+    void on_lineEditGraphSamples_editingFinished();
 
     void on_lineEditGALength_editingFinished();
     void on_lineEditGAaverage_editingFinished();
-
+    void on_HandlerApplyButton_clicked();
     void on_GACorrectionStart_clicked();
     void on_GACorrectionStop_clicked();
 
-    void on_sourceChannelLoad_clicked();
     
 private:
     Ui::EegWindow *ui;
 
     // eeg_bridge parameters
     int port = 50000;
+    int bridge_timeout = 10;
+
+    // Graph parameters
+    int samples_to_display = 30000;
 
     // Handler parameters
     dataHandler &handler;
     int GALength = 5000;
     int GAAverage = 25;
-    int samples_to_display = 30000;
 
     void setupChannelNames();
     std::vector<std::string> channelMap_;

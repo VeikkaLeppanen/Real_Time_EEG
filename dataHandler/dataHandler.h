@@ -31,7 +31,6 @@ public:
     // Reset functions
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
     void reset_handler(int channel_count, int sampling_rate) { reset_handler(channel_count, sampling_rate, sampling_rate); }
-    void reset_GACorr(int TA_length_input, int GA_average_length_input);
 
     bool isReady() { return (handler_state == WAITING_FOR_STOP); }
 
@@ -69,6 +68,12 @@ public:
     void GACorr_on() {
         int stimulation_tracker = 10000000;
         GACorr_running = true; 
+    }
+
+    void reset_GACorr(int TA_length_input, int GA_average_length_input);
+    void reset_GACorr_tracker() { 
+        stimulation_tracker = 10000000;
+        GACorr_.reset_index();
     }
     int get_TA_length() { return TA_length; }
     int get_GA_average_length() { return GA_average_length; }

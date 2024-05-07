@@ -28,7 +28,7 @@ void EegBridge::bind_socket() {
     }
 
     struct timeval timeout;
-    timeout.tv_sec = 10; // Timeout after 10 second
+    timeout.tv_sec = socket_timeout; // Timeout after 10 second
     timeout.tv_usec = 0;
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
