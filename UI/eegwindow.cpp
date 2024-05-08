@@ -20,6 +20,7 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
             connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
             connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
+            connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
             
             emit updateChannelNamesSTD(handler.getChannelNames());
         } else {
@@ -134,7 +135,7 @@ void eegWindow::setupChannelNames()
 
 void eegWindow::setupComboBox() {
     QStandardItemModel* model = new QStandardItemModel(channelNames_.size(), 1, this);
-
+    
     channelCheckStates_.resize(channelNames_.size(), true);
 
     for (int i = 0; i < channelNames_.size(); ++i) {
@@ -231,3 +232,10 @@ void eegWindow::on_GACorrectionStop_clicked()
 {
     emit stopGACorrection();
 }
+
+void eegWindow::on_checkBox_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit scaleDrawStateChanged(isChecked);
+}
+

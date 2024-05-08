@@ -76,6 +76,8 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             sampling_rate = packet_info.SamplingRateHz;
             lastSequenceNumber = -1;
 
+            handler.setTriggerSource(SourceChannels.back());
+            SourceChannels.pop_back();
             handler.setSourceChannels(SourceChannels);
 
             // TODO: Initialize data_handler_samples

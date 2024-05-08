@@ -52,6 +52,7 @@ public:
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
 
+    void setTriggerSource(uint16_t source) { triggerSource = source; }
     void setSourceChannels(std::vector<uint16_t> SourceChannels) {
         source_channels_.resize(SourceChannels.size());
         for (size_t i = 0; i < SourceChannels.size(); ++i) {
@@ -86,6 +87,7 @@ private:
     HandlerState handler_state = WAITING_FOR_START;
 
     std::mutex dataMutex;
+    int triggerSource;
     Eigen::VectorXi source_channels_;
     std::vector<std::string> channel_names_;
     Eigen::MatrixXd sample_buffer_;

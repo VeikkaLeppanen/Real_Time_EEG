@@ -44,10 +44,12 @@ public slots:
         }
         channelNames_ = newNames;
     }
+    void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
 
 private:
     Eigen::MatrixXd newMatrix_;
     std::vector<bool> channelCheckStates_;
+    bool draw_channel_scales = false;
     QStringList channelNames_;
 
     int matrixCapasity;

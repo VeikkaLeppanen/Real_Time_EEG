@@ -48,6 +48,7 @@ signals:
     void stopGACorrection();
     void updateChannelNamesSTD(std::vector<std::string> channelNames);
     void updateChannelNamesQt(QStringList channelNames);
+    void scaleDrawStateChanged(bool isChecked);
 
 private slots:
     void handleError(const QString& error);
@@ -68,7 +69,7 @@ private slots:
     void on_HandlerApplyButton_clicked();
     void on_GACorrectionStart_clicked();
     void on_GACorrectionStop_clicked();
-
+    void on_checkBox_stateChanged(int arg1);
     
 private:
     Ui::EegWindow *ui;

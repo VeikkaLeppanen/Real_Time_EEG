@@ -24,14 +24,22 @@ void Glwidget::paintGL()
 {
     if (channelCheckStates_.size() == 0) return;  // Ensure there is data to draw
 
+    // Initializing positional parameters
     int windowHeight = height();
-    int rowHeight = windowHeight / std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);  // Divide the window height by the number of rows
-    // std::cout << std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true) << '\n';
+    int enabled_channel_count = std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);
+    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
+
+    // min max values for y axis
+    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
+    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
+    
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // Draw graphs for enabled channels
     int graph_index = 0;
     for (int row = 0; row < newMatrix_.rows(); row++) {
         if (!channelCheckStates_[row]) continue;
+        
         // Set viewport for this row
         glViewport(0, graph_index * rowHeight, width(), rowHeight);
 
@@ -47,7 +55,9 @@ void Glwidget::paintGL()
         // Prepare data and draw the line strip
         Eigen::VectorXd dataVector = newMatrix_.row(n_channels - 1 - row);
         double minVal = dataVector.minCoeff();
+        min_coeffs(row) = minVal;
         double maxVal = dataVector.maxCoeff();
+        max_coeffs(row) = maxVal;
 
         glColor3f(1.0, 1.0, 1.0); // Set the color to white for the lines
         glBegin(GL_LINE_STRIP);
@@ -63,7 +73,7 @@ void Glwidget::paintGL()
         graph_index++;
     }
 
-    // Overlay text using QPainter
+    // QPainter for text overlays
     QPainter painter(this);
     painter.setPen(Qt::red);
     painter.setFont(QFont("Arial", 10)); // Set font here
@@ -71,17 +81,31 @@ void Glwidget::paintGL()
     graph_index = 0;
     for (int row = 0; row < newMatrix_.rows(); row++) {
         if (!channelCheckStates_[row]) continue;
-        // Calculate position for text
-        int yPos = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
+
+        // Draw channel name for each channel
+        int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
         if (row < channelNames_.size()) {
             name = channelNames_.at(n_channels - 1 - row);
         }
-        painter.drawText(10, yPos, name);
+        painter.drawText(10, yPos_name, name);
+
+        // Draw channel scales
+        if (draw_channel_scales) {
+            int yPos_min = windowHeight - (rowHeight * graph_index + 10);
+            int yPos_max = windowHeight - (rowHeight * graph_index + rowHeight - 10);
+            
+            QString min_value = QString::number(min_coeffs(row));
+            QString max_value = QString::number(max_coeffs(row));
+            painter.drawText(width() - 50, yPos_min, min_value);
+            painter.drawText(width() - 50, yPos_max, max_value);
+        }
+
+
         graph_index++;
     }
 
-    painter.end(); // Ensure QPainter is properly closed
+    painter.end();
 }
 
 void Glwidget::updateGraph()
