@@ -134,11 +134,12 @@ void eegWindow::setupChannelNames()
 }
 
 void eegWindow::setupComboBox() {
-    QStandardItemModel* model = new QStandardItemModel(channelNames_.size(), 1, this);
+    int n_channels = channelNames_.size();
+    QStandardItemModel* model = new QStandardItemModel(n_channels, 1, this);
     
-    channelCheckStates_.resize(channelNames_.size(), true);
+    channelCheckStates_.resize(n_channels, true);
 
-    for (int i = 0; i < channelNames_.size(); ++i) {
+    for (int i = 0; i < n_channels; ++i) {
         QStandardItem* item = new QStandardItem(channelNames_.at(i));
         item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
         item->setData(Qt::Checked, Qt::CheckStateRole);
@@ -154,7 +155,7 @@ void eegWindow::setupComboBox() {
 void eegWindow::handleCheckboxChange(QStandardItem* item) {
     int row = item->row();
     bool isChecked = item->checkState() == Qt::Checked;
-    channelCheckStates_[row] = isChecked;  // Directly set the boolean state
+    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;  // Directly set the boolean state
 
     // You might want to do something immediately after the change or just store the state.
     emit updateChannelDisplayState(channelCheckStates_);
