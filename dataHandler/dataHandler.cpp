@@ -14,7 +14,7 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     current_data_index_ = 0;
 
     {
-        std::lock_guard<std::mutex> (this->dataMutex);
+        std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_ = Eigen::MatrixXd::Zero(channel_count, buffer_capacity_);
         time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
         trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
@@ -156,7 +156,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     if (GACorr_running && stimulation_tracker < TA_length) {
 
         {
-            std::lock_guard<std::mutex> (this->dataMutex);
+            std::lock_guard<std::mutex> lock(this->dataMutex);
             sample_buffer_.col(current_data_index_) = samples - GACorr_.getTemplateCol(stimulation_tracker);
         }
         
@@ -164,13 +164,13 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         stimulation_tracker++;
     } else {
 
-        std::lock_guard<std::mutex> (this->dataMutex);
+        std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_.col(current_data_index_) = samples;
 
     }
 
     // {
-    //     std::lock_guard<std::mutex> (this->dataMutex);
+    //     std::lock_guard<std::mutex> lock(this->dataMutex);
     //     processor_.newData(sample_buffer_.col(current_data_index_));
     // }
 
@@ -192,7 +192,7 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
     }
@@ -215,7 +215,7 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
     }
@@ -236,7 +236,7 @@ Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSa
     size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
     Eigen::VectorXd downSampledData(downSampledSize);
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
         // Calculate the index in the circular buffer accounting for wrap-around
         size_t index = (current_data_index_ + i) % buffer_capacity_;
@@ -258,7 +258,7 @@ Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> chan
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     for (size_t j = 0; j < channel_indices.size(); ++j) {
         int channel_index = channel_indices[j];
         
@@ -288,7 +288,7 @@ Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index,
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         outputData.rightCols(fitToEnd) = sample_buffer_.block(first_channel_index, current_data_index_ - fitToEnd, number_of_channels, fitToEnd);
     }
@@ -303,7 +303,7 @@ Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index,
 // Retrieves data from the time stamp channel in chronological order
 Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
 
     if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
@@ -323,7 +323,7 @@ Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
 // Retrieves data from the trigger channel in chronological order
 Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
 
     if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
