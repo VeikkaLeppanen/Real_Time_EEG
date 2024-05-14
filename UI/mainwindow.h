@@ -9,6 +9,7 @@
 #include <iostream>
 #include "worker.h"
 #include "glwidget.h"
+#include "mainglwidget.h"
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow.h"
 
@@ -27,6 +28,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void updateData();
     void eegBridgeSpin(int port, int timeout);
     void setGACorrection(int GALength, int GAAverage);
     void startGACorrection();
@@ -44,6 +46,12 @@ private:
 
     // eeg_bridge parameters
     EegBridge bridge;
+
+    // Graph parameters
+    int samples_to_display = 10000;
+
+    // Filtering parameters
+    std::vector<double> filterCoeffs_;
 
     // Handler parameters
     dataHandler &handler;

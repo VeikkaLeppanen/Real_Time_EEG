@@ -27,6 +27,7 @@ set(SOURCES
     dataHandler/dataHandler.cpp
     dataHandler/GACorrection.cpp 
     dataProcessor/dataProcessor.cpp
+    dataProcessor/processingFunctions.h
     UI/mainwindow.cpp
     UI/mainwindow.h
     UI/mainwindow.ui
@@ -37,6 +38,8 @@ set(SOURCES
     UI/worker.h
     UI/glwidget.cpp
     UI/glwidget.h
+    UI/mainglwidget.cpp
+    UI/mainglwidget.h
 )
 
 add_executable(real_time_eeg ${SOURCES})

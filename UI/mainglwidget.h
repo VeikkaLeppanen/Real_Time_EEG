@@ -1,5 +1,5 @@
-#ifndef GLWIDGET_H
-#define GLWIDGET_H
+#ifndef MAINGLWIDGET_H
+#define MAINGLWIDGET_H
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
@@ -13,12 +13,12 @@
 
 #include <algorithm>
 
-class Glwidget : public QOpenGLWidget, protected QOpenGLFunctions
+class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
-    explicit Glwidget(QWidget *parent = nullptr);
+    explicit MainGlWidget(QWidget *parent = nullptr);
 
 signals:
     void fetchData();
@@ -31,8 +31,8 @@ protected:
 public slots:
     void updateMatrix(Eigen::MatrixXd &newMatrix) { 
         dataMatrix_ = newMatrix;
-        matrixCapasity = newMatrix.cols(); 
-        n_channels = newMatrix.rows();
+        matrixCapasity_ = newMatrix.cols(); 
+        n_channels_ = newMatrix.rows();
     }
     void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
     void updateGraph();
@@ -52,8 +52,8 @@ private:
     bool draw_channel_scales = false;
     QStringList channelNames_;
 
-    int matrixCapasity;
-    int n_channels;
+    int matrixCapasity_;
+    int n_channels_;
 };
 
-#endif // GLWIDGET_H
+#endif // MAINGLWIDGET_H

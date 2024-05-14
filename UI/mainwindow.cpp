@@ -1,6 +1,8 @@
 #include "./mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include "../dataProcessor/processingFunctions.h"
+
 MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
@@ -8,6 +10,27 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
+
+    MainGlWidget* mainglWidget = ui->mainGlWidget;
+    if (mainglWidget) {
+
+        connect(mainglWidget, &MainGlWidget::fetchData, this, &MainWindow::updateData);
+        // connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
+        // connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
+        // connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
+        // connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
+
+        // emit updateChannelNamesSTD(handler.getChannelNames());
+    } else {
+        // Error handling if glWidget is not found
+        qWarning("Glwidget not found in UI!");
+    }
+
+    // Filtering
+    double Fs = 5000;  // Sampling frequency
+    double Fc = 120;   // Desired cutoff frequency
+    int numTaps = 51;  // Length of the FIR filter
+    filterCoeffs_ = designLowPassFilter(numTaps, Fs, Fc);
 }
 
 MainWindow::~MainWindow()
@@ -15,6 +38,30 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::updateData()
+{
+    MainGlWidget* mainglWidget = ui->mainGlWidget;
+    if (mainglWidget && handler.isReady()) {
+        
+        Eigen::MatrixXd all_channels = handler.returnLatestDataInOrder(samples_to_display);
+
+        // Initializing parameters and matrices for algorithms
+        int n_eeg_channels = handler.get_channel_count();
+    
+        // Filtering
+        Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
+    
+        EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
+
+        mainglWidget->updateMatrix(EEG_filtered);
+    }
+}
+
+
+
+
+
+// eeg window utilities
 void MainWindow::eegBridgeSpin(int port, int timeout)
 {
     if (!bridge.isRunning()) {
