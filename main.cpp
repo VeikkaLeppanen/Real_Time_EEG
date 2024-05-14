@@ -58,6 +58,49 @@ void dataAcquisitionLoop(dataHandler &handler) {
 
 // DATA PROCESSING AND PROCESSED DATA PLOTTING
 
+// Filtering
+// Function to design a simple FIR low-pass filter using the window method
+std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc) {
+    std::vector<double> h(numTaps);
+    double r = Fc / (Fs / 2);  // Normalized cutoff frequency
+
+    // Apply the window method (Hann window) and sinc function
+    for (int i = 0; i < numTaps; ++i) {
+        double M = numTaps - 1;
+        double n = i - M / 2;
+        if (n == 0.0)
+            h[i] = 2 * r;
+        else
+            h[i] = sin(2 * M_PI * r * n) / (M_PI * n) * (0.5 - 0.5 * cos(2 * M_PI * i / M));
+
+        // Apply the window
+        h[i] *= 0.54 - 0.46 * cos(2 * M_PI * i / M);
+    }
+
+    return h;
+}
+
+// Function to apply a simple FIR filter
+Eigen::VectorXd applyFIRFilter(const Eigen::VectorXd& data, const std::vector<double>& b) {
+    int n = data.size();
+    int nb = b.size();
+    Eigen::VectorXd result(n);
+
+    // Zero-padding is not considered here for simplicity and speed
+    for (int i = 0; i < n; ++i) {
+        double sum = 0.0;
+        for (int j = 0; j < nb; ++j) {
+            if (i - j >= 0) {
+                sum += b[j] * data[i - j];
+            }
+        }
+        result[i] = sum;
+    }
+
+    return result;
+}
+
+
 // Downsampling function
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor) {
     if (factor <= 0) {
@@ -158,14 +201,21 @@ void dataProcessingLoop(dataHandler &handler) {
     Eigen::MatrixXd EEG = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
+    // Filtering
+    double Fs = 1000;  // Sampling frequency
+    double Fc = 120;   // Desired cutoff frequency
+    int numTaps = 51;  // Length of the FIR filter
+    std::vector<double> filterCoeffs = designLowPassFilter(numTaps, Fs, Fc);
     Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL_filtered = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
+    // Downsampling
     int downsampling_factor = 10;
     int newCols = (n_samples + downsampling_factor - 1) / downsampling_factor;
     Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
     Eigen::MatrixXd CWL_downsampled = Eigen::MatrixXd::Zero(n_cwl_channels, newCols);
 
+    // BCG correction
     int delay = 0;
     Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
 
@@ -192,8 +242,8 @@ void dataProcessingLoop(dataHandler &handler) {
         // std::cout << "SeqNum: " << sequence_number << '\n';
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
-        EEG_filtered = EEG;
-        CWL_filtered = CWL;
+        EEG_filtered = applyFIRFilter(EEG, filterCoeffs);
+        CWL_filtered = applyFIRFilter(CWL, filterCoeffs);
 
         // DONWSAMPLING
         downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
@@ -229,28 +279,19 @@ void dataProcessingLoop(dataHandler &handler) {
 
 
 
-int main(int argc, char *argv[])
-{
-    dataHandler handler;
+// int main(int argc, char *argv[])
+// {
+//     dataHandler handler;
 
-    QApplication a(argc, argv);
-    MainWindow w(handler, signal_received);
-    w.show();
-    return a.exec();
-}
-
-
+//     QApplication a(argc, argv);
+//     MainWindow w(handler, signal_received);
+//     w.show();
+//     return a.exec();
+// }
 
 
 
 
-
-
-
-
-
-
-/*
 int main() {
     std::signal(SIGINT, signal_handler);
     
@@ -263,16 +304,15 @@ int main() {
     std::thread dataThread(dataAcquisitionLoop, std::ref(handler));
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
-    std::thread plotThread(rawDataPlottingLoop, std::ref(handler));
+    // std::thread plotThread(rawDataPlottingLoop, std::ref(handler));
     // std::thread plotThread(processedDataPlottingLoop, std::ref(handler));
 
     // std::thread dataProcessorThread(dataProcessingLoop, std::ref(processor));
     std::thread dataProcessorThread(dataProcessingLoop, std::ref(handler));
 
     dataThread.join();
-    plotThread.join();
+    // plotThread.join();
     dataProcessorThread.join();
 
     return 0;
 }
-*/
