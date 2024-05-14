@@ -100,6 +100,34 @@ Eigen::VectorXd applyFIRFilter(const Eigen::VectorXd& data, const std::vector<do
     return result;
 }
 
+// Function to apply a simple FIR filter to each row of an Eigen matrix
+Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b) {
+    int numRows = dataMatrix.rows();
+    int numCols = dataMatrix.cols();
+    int nb = b.size();
+    Eigen::MatrixXd result(numRows, numCols);
+
+    // Process each row with the FIR filter
+    for (int i = 0; i < numRows; ++i) {
+        Eigen::VectorXd currentRow = dataMatrix.row(i);
+        Eigen::VectorXd filteredRow(numCols);
+
+        // Zero-padding is not considered here for simplicity and speed
+        for (int j = 0; j < numCols; ++j) {
+            double sum = 0.0;
+            for (int k = 0; k < nb; ++k) {
+                if (j - k >= 0) {
+                    sum += b[k] * currentRow[j - k];
+                }
+            }
+            filteredRow[j] = sum;
+        }
+        result.row(i) = filteredRow;
+    }
+
+    return result;
+}
+
 
 // Downsampling function
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor) {
@@ -202,7 +230,7 @@ void dataProcessingLoop(dataHandler &handler) {
     Eigen::MatrixXd CWL = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
     // Filtering
-    double Fs = 1000;  // Sampling frequency
+    double Fs = 5000;  // Sampling frequency
     double Fc = 120;   // Desired cutoff frequency
     int numTaps = 51;  // Length of the FIR filter
     std::vector<double> filterCoeffs = designLowPassFilter(numTaps, Fs, Fc);
@@ -242,8 +270,8 @@ void dataProcessingLoop(dataHandler &handler) {
         // std::cout << "SeqNum: " << sequence_number << '\n';
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
-        EEG_filtered = applyFIRFilter(EEG, filterCoeffs);
-        CWL_filtered = applyFIRFilter(CWL, filterCoeffs);
+        EEG_filtered = applyFIRFilterToMatrix(EEG, filterCoeffs);
+        CWL_filtered = applyFIRFilterToMatrix(CWL, filterCoeffs);
 
         // DONWSAMPLING
         downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
