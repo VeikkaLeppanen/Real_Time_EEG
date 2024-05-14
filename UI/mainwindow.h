@@ -52,6 +52,8 @@ private:
 
     // Filtering parameters
     std::vector<double> filterCoeffs_;
+    std::vector<double> b; 
+    std::vector<double> a;
 
     // Handler parameters
     dataHandler &handler;

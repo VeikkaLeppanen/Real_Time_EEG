@@ -5,6 +5,105 @@
 #include <string>
 #include <Eigen/Dense>
 
+// Helper function to precompute the Butterworth filter coefficients
+void computeButterworthCoefficients(int order, double Fs, double Fc, std::vector<double>& b, std::vector<double>& a) {
+    int N = order;
+    double Wn = 2 * Fc / Fs;
+    std::vector<double> A(order + 1), B(order + 1);
+
+    // Precompute the poles of the Butterworth filter
+    for (int i = 0; i < N; ++i) {
+        double theta = (double)(2 * i + 1) / (2 * N) * M_PI;
+        double pole_real = -sin(theta) * sinh(log(2.0) / 2.0 * N * Wn);
+        double pole_imag = cos(theta) * cosh(log(2.0) / 2.0 * N * Wn);
+
+        // Update polynomial coefficients based on complex conjugate roots
+        A[0] = 1;
+        B[0] = 1;
+        for (int j = N; j >= 1; --j) {
+            A[j] += A[j - 1] * pole_real;
+            if (j >= 2) A[j] += A[j - 2] * (pole_real * pole_real + pole_imag * pole_imag);
+        }
+        B[0] = 1;
+        for (int j = 1; j <= N; ++j) B[j] = B[j - 1] * Wn;
+    }
+
+    // Normalize the coefficients
+    double A0 = A[N];
+    for (int i = 0; i <= N; ++i) A[i] /= A0;
+
+    // Set the coefficients to output vectors
+    b.assign(B.begin(), B.end());
+    a.assign(A.begin(), A.end());
+}
+
+// Function to apply a forward and backward IIR filter on each row of an Eigen matrix
+Eigen::MatrixXd applyIIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b, const std::vector<double>& a) {
+    int numRows = dataMatrix.rows();
+    int numCols = dataMatrix.cols();
+    int na = a.size();
+    int nb = b.size();
+    
+    Eigen::MatrixXd result(numRows, numCols);
+
+    // Process each row with the IIR filter
+    for (int row = 0; row < numRows; ++row) {
+        Eigen::VectorXd x(numCols), y(numCols);
+        Eigen::VectorXd currentRow = dataMatrix.row(row);
+        x.setZero();
+        y.setZero();
+
+        // Forward filter
+        for (int i = 0; i < numCols; ++i) {
+            x[i] = currentRow[i];
+            for (int j = 1; j < nb; ++j) {
+                if (i - j >= 0) {
+                    x[i] -= a[j] * y[i - j];
+                }
+            }
+            y[i] = x[i];
+            for (int j = 1; j < nb; ++j) {
+                if (i - j >= 0) {
+                    y[i] += b[j] * x[i - j];
+                }
+            }
+            y[i] /= a[0];
+        }
+
+        // Reverse the data for backward filtering
+        Eigen::VectorXd reversed = y.reverse();
+        Eigen::VectorXd x_rev(numCols), y_rev(numCols);
+        x_rev.setZero();
+        y_rev.setZero();
+
+        // Backward filter
+        for (int i = 0; i < numCols; ++i) {
+            x_rev[i] = reversed[i];
+            for (int j = 1; j < nb; ++j) {
+                if (i - j >= 0) {
+                    x_rev[i] -= a[j] * y_rev[i - j];
+                }
+            }
+            y_rev[i] = x_rev[i];
+            for (int j = 1; j < nb; ++j) {
+                if (i - j >= 0) {
+                    y_rev[i] += b[j] * x_rev[i - j];
+                }
+            }
+            y_rev[i] /= a[0];
+        }
+
+        // Store the result
+        result.row(row) = y_rev.reverse();
+    }
+
+    return result;
+}
+
+
+
+
+
 // Function to design a simple FIR low-pass filter using the window method
 std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc) {
     std::vector<double> h(numTaps);

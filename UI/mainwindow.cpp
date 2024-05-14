@@ -27,10 +27,12 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     }
 
     // Filtering
+    int order = 4;
     double Fs = 5000;  // Sampling frequency
     double Fc = 120;   // Desired cutoff frequency
     int numTaps = 51;  // Length of the FIR filter
     filterCoeffs_ = designLowPassFilter(numTaps, Fs, Fc);
+    computeButterworthCoefficients(order, Fs, Fc, b, a);
 }
 
 MainWindow::~MainWindow()
@@ -51,7 +53,8 @@ void MainWindow::updateData()
         // Filtering
         Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
     
-        EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
+        // EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
+        EEG_filtered = applyIIRFilterToMatrix(all_channels, b, a);
 
         mainglWidget->updateMatrix(EEG_filtered);
     }
