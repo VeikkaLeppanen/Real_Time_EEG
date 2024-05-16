@@ -27,13 +27,15 @@ set(SOURCES
     dataHandler/dataHandler.cpp
     dataHandler/GACorrection.cpp 
     dataProcessor/dataProcessor.cpp
-    dataProcessor/processingFunctions.h
+    dataProcessor/processingFunctions.cpp
     UI/mainwindow.cpp
     UI/mainwindow.h
     UI/mainwindow.ui
     UI/eegwindow.cpp
     UI/eegwindow.h
     UI/eegwindow.ui
+    UI/processingworker.cpp
+    UI/processingworker.h
     UI/worker.cpp
     UI/worker.h
     UI/glwidget.cpp

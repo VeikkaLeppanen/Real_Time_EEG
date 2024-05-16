@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include "dataProcessor/dataProcessor.h"
+#include "dataProcessor/processingFunctions.h"
 #include "dataHandler/dataHandler.h"
 #include "eeg_bridge/eeg_bridge.h"
 
@@ -25,7 +26,7 @@ const uint32_t DOWNSAMPLING_FACTOR = 1;
 
 
 // In case of bind failed the previous process can be terminated with the following commands on linux
-// lsof -i :8080        Find PID
+// lsof -i :50000       Find PID
 // kill -9 PID          Kill the process
 
 // This is used to terminate the program with Ctrl+C
@@ -57,24 +58,24 @@ void dataAcquisitionLoop(dataHandler &handler) {
 
 
 // Function to write Eigen matrix to CSV file
-void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
-    std::ofstream file(filename);
+// void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+//     std::ofstream file(filename);
 
-    if (file.is_open()) {
-        for (int i = 0; i < matrix.rows(); ++i) {
-            for (int j = 0; j < matrix.cols(); ++j) {
-                file << matrix(i, j);
-                if (j + 1 < matrix.cols()) file << ","; // Comma for next column
-            }
-            file << "\n"; // Newline for next row
-        }
-        file.close();
-    } else {
-        std::cerr << "Failed to open the file for writing." << std::endl;
-    }
-}
+//     if (file.is_open()) {
+//         for (int i = 0; i < matrix.rows(); ++i) {
+//             for (int j = 0; j < matrix.cols(); ++j) {
+//                 file << matrix(i, j);
+//                 if (j + 1 < matrix.cols()) file << ","; // Comma for next column
+//             }
+//             file << "\n"; // Newline for next row
+//         }
+//         file.close();
+//     } else {
+//         std::cerr << "Failed to open the file for writing." << std::endl;
+//     }
+// }
 
-/*
+
 // Loop for the data processing
 void dataProcessingLoop(dataHandler &handler) {
     
@@ -88,9 +89,11 @@ void dataProcessingLoop(dataHandler &handler) {
 
     // Filtering
     double Fs = 5000;  // Sampling frequency
-    double Fc = 120;   // Desired cutoff frequency
-    int numTaps = 51;  // Length of the FIR filter
-    std::vector<double> filterCoeffs = designLowPassFilter(numTaps, Fs, Fc);
+    double Fc1 = 0.33;   // Desired cutoff frequency
+    double Fc2 = 135;   // Desired cutoff frequency
+    int numTaps = 301;  // Length of the FIR filter
+    // std::vector<double> filterCoeffs = designLowPassFilter(numTaps, Fs, Fc1);
+    std::vector<double> filterCoeffs = designBandPassFilter(numTaps, Fs, Fc1, Fc2);
     Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL_filtered = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
@@ -107,7 +110,7 @@ void dataProcessingLoop(dataHandler &handler) {
     // TESTING MATRICES
     Eigen::VectorXd Betas_temp = Eigen::VectorXd::Zero(n_cwl_channels);
     Eigen::MatrixXd Betas = Eigen::MatrixXd::Zero(127, n_cwl_channels);
-    Eigen::MatrixXd EEG_output = Eigen::MatrixXd::Zero(127, newCols);
+    Eigen::MatrixXd EEG_output = Eigen::MatrixXd::Zero(127, n_samples);
     double total_time = 0.0;
     int count = 0;
 
@@ -116,6 +119,9 @@ void dataProcessingLoop(dataHandler &handler) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    handler.reset_GACorr(10000, 25);
+    handler.GACorr_on();
+
     while (!signal_received) {
 
         // Copy data from wanted EEG channels and CWL channels
@@ -123,40 +129,41 @@ void dataProcessingLoop(dataHandler &handler) {
         EEG = all_channels.middleRows(0, n_eeg_channels);
         CWL = all_channels.middleRows(5, n_cwl_channels);
 
-        // if (sequence_number > 0 && sequence_number % 10000 == 0) {
-        // std::cout << "SeqNum: " << sequence_number << '\n';
+        if (sequence_number > 0 && sequence_number % 10000 == 0) {
+        std::cout << "SeqNum: " << sequence_number << '\n';
+
+        auto start = std::chrono::high_resolution_clock::now();
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
-        EEG_filtered = applyFIRFilterToMatrix(EEG, filterCoeffs);
-        CWL_filtered = applyFIRFilterToMatrix(CWL, filterCoeffs);
+        EEG_filtered = applyBandFIRFilterToMatrix(EEG, filterCoeffs);
+        CWL_filtered = applyBandFIRFilterToMatrix(CWL, filterCoeffs);
 
         // DONWSAMPLING
-        downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
-        downsample(CWL_filtered, CWL_downsampled, downsampling_factor);
-
-        // auto start = std::chrono::high_resolution_clock::now();
+        // downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
+        // downsample(CWL_filtered, CWL_downsampled, downsampling_factor);
 
         // removeBCG
-        removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
-
-        // std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-        // std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
-        // total_time += elapsed.count();
-        // count++;
+        // removeBCG(EEG_downsampled, CWL_downsampled, EEG_corrected, delay);
+        EEG_output.row(count) = EEG_filtered.row(0);
+        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+        std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
+        total_time += elapsed.count();
+        count++;
+        }
     }
 
-    // if (count > 0) {
-    //     double average_time = total_time / count;
-    //     std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
-    //     std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
+    if (count > 0) {
+        double average_time = total_time / count;
+        std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
+        std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
 
-    //     writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Betas.csv", Betas);
-    //     writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
-    // }
+        // writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Betas.csv", Betas);
+        writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
+    }
 
     std::cout << "Exiting dataProcessingLoop" << '\n';
 }
-*/
+
 
 
 

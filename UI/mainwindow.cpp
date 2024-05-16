@@ -1,8 +1,6 @@
 #include "./mainwindow.h"
 #include "./ui_mainwindow.h"
 
-#include "../dataProcessor/processingFunctions.h"
-
 MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
@@ -25,14 +23,6 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
     }
-
-    // Filtering
-    int order = 4;
-    double Fs = 5000;  // Sampling frequency
-    double Fc = 120;   // Desired cutoff frequency
-    int numTaps = 51;  // Length of the FIR filter
-    filterCoeffs_ = designLowPassFilter(numTaps, Fs, Fc);
-    computeButterworthCoefficients(order, Fs, Fc, b, a);
 }
 
 MainWindow::~MainWindow()
@@ -43,20 +33,9 @@ MainWindow::~MainWindow()
 void MainWindow::updateData()
 {
     MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget && handler.isReady()) {
-        
-        Eigen::MatrixXd all_channels = handler.returnLatestDataInOrder(samples_to_display);
+    if (mainglWidget && processingWorkerRunning && processed_data.size() > 0) {
 
-        // Initializing parameters and matrices for algorithms
-        int n_eeg_channels = handler.get_channel_count();
-    
-        // Filtering
-        Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
-    
-        // EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
-        EEG_filtered = applyIIRFilterToMatrix(all_channels, b, a);
-
-        mainglWidget->updateMatrix(EEG_filtered);
+        mainglWidget->updateMatrix(processed_data);
     }
 }
 
@@ -117,7 +96,13 @@ void MainWindow::stopGACorrection() {
 
 void MainWindow::on_pushButton_2_clicked()
 {
-    signal_received = 1;
+    if (count > 0) {
+        double average_time = total_time / count;
+        std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
+        std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
+
+        writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
+    }
 }
 
 void MainWindow::on_EEG_clicked()
@@ -134,8 +119,54 @@ void MainWindow::on_EEG_clicked()
     connect(eegwindow, &eegWindow::applyGACorrection, this, &MainWindow::setGACorrection);
     connect(eegwindow, &eegWindow::startGACorrection, this, &MainWindow::startGACorrection);
     connect(eegwindow, &eegWindow::stopGACorrection, this, &MainWindow::stopGACorrection);
+    
+    MainGlWidget* mainglWidget = ui->mainGlWidget;
+    if (mainglWidget) {
+        connect(eegwindow, &eegWindow::updateChannelNamesQt, mainglWidget, &MainGlWidget::updateChannelNamesQt);
+        // emit updateChannelNamesSTD(handler.getChannelNames());
+    } else {
+        qWarning("Glwidget not found in UI!");
+    }
 }
 
 void MainWindow::resetEegWindowPointer() {
     eegwindow = nullptr;  // Reset the pointer after the window is destroyed
 }
+
+void MainWindow::on_processingStart_clicked()
+{
+    if (!processingWorkerRunning && handler.isReady()) {
+        processingWorkerRunning = 1;
+
+        QThread* thread = new QThread;
+        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning);
+        worker->moveToThread(thread);
+
+        connect(thread, &QThread::started, worker, &ProcessingWorker::process);
+        connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
+        connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
+        connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
+        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+
+        connect(thread, &QThread::finished, this, [=]() {
+            processingWorkerRunning = 0;
+            qDebug("Thread and Worker cleaned up properly");
+        });
+
+        thread->start();
+    }
+}
+
+
+void MainWindow::on_processingStop_clicked()
+{
+    processingWorkerRunning = 0;
+    if (count > 0) {
+        double average_time = total_time / count;
+        std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
+        std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
+
+        writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
+    }
+}
+
