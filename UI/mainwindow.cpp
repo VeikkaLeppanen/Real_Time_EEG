@@ -33,7 +33,7 @@ MainWindow::~MainWindow()
 void MainWindow::updateData()
 {
     MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget && processingWorkerRunning && processed_data.size() > 0) {
+    if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
         mainglWidget->updateMatrix(processed_data);
     }
@@ -94,17 +94,6 @@ void MainWindow::stopGACorrection() {
     handler.GACorr_off();
 }
 
-void MainWindow::on_pushButton_2_clicked()
-{
-    if (count > 0) {
-        double average_time = total_time / count;
-        std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
-        std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
-
-        writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
-    }
-}
-
 void MainWindow::on_EEG_clicked()
 {
     if (!eegwindow) {
@@ -142,7 +131,7 @@ void MainWindow::on_processingStart_clicked()
         ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning);
         worker->moveToThread(thread);
 
-        connect(thread, &QThread::started, worker, &ProcessingWorker::process);
+        connect(thread, &QThread::started, worker, &ProcessingWorker::process_testing);       // Switch between processing and testing functions here
         connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
@@ -154,6 +143,8 @@ void MainWindow::on_processingStart_clicked()
         });
 
         thread->start();
+    } else {
+        std::cout << "Processing start failed" << '\n';
     }
 }
 

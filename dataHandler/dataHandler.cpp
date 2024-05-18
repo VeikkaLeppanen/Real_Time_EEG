@@ -23,10 +23,14 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
     handler_state = WAITING_FOR_STOP;
 
-    // processor_.reset_processor(channel_count, buffer_capacity_);
 
-    // Continue processing
-    // processor_.startProcessing();
+    // Filter design parameters
+    double fc_low = 0.33;  // Lower cutoff frequency
+    double fc_high = 135;  // Upper cutoff frequency
+    int M = 51;  // Number of filter coefficients (kernel size)
+
+    filterCoeffs_ = createBandPassFilter(M, fc_low, fc_high, sampling_rate);
+    RTfilter_.reset_filter(filterCoeffs_, channel_count);
 }
     
 void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input) {
@@ -158,6 +162,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         {
             std::lock_guard<std::mutex> lock(this->dataMutex);
             sample_buffer_.col(current_data_index_) = samples - GACorr_.getTemplateCol(stimulation_tracker);
+            // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples - GACorr_.getTemplateCol(stimulation_tracker));
         }
         
         GACorr_.update_template(stimulation_tracker, samples);
@@ -166,13 +171,10 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
         std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_.col(current_data_index_) = samples;
+        // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples);
 
     }
 
-    // {
-    //     std::lock_guard<std::mutex> lock(this->dataMutex);
-    //     processor_.newData(sample_buffer_.col(current_data_index_));
-    // }
 
 
     time_stamp_buffer_(current_data_index_) = time_stamp;

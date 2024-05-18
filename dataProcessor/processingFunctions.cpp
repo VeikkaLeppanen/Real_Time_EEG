@@ -21,6 +21,9 @@ void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix
 
 
 
+
+// FILTERING FUNCTIONS
+
 // Helper function to precompute the Butterworth filter coefficients
 void computeButterworthCoefficients(int order, double Fs, double Fc, std::vector<double>& b, std::vector<double>& a) {
     int N = order;
@@ -117,9 +120,6 @@ Eigen::MatrixXd applyIIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const 
 }
 
 
-
-
-
 // Function to design a simple FIR low-pass filter using the window method
 std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc) {
     std::vector<double> h(numTaps);
@@ -139,26 +139,6 @@ std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc) {
     }
 
     return h;
-}
-
-// Function to apply a simple FIR filter
-Eigen::VectorXd applyFIRFilter(const Eigen::VectorXd& data, const std::vector<double>& b) {
-    int n = data.size();
-    int nb = b.size();
-    Eigen::VectorXd result(n);
-
-    // Zero-padding is not considered here for simplicity and speed
-    for (int i = 0; i < n; ++i) {
-        double sum = 0.0;
-        for (int j = 0; j < nb; ++j) {
-            if (i - j >= 0) {
-                sum += b[j] * data[i - j];
-            }
-        }
-        result[i] = sum;
-    }
-
-    return result;
 }
 
 // Function to apply a simple FIR filter to each row of an Eigen matrix
@@ -238,6 +218,123 @@ Eigen::MatrixXd applyBandFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, co
 
     return result;
 }
+
+// Function to create a low-pass windowed-sinc filter kernel
+std::vector<double> createLowPassFilter(int M, double fc) {
+    std::vector<double> h(M + 1);
+    double sum = 0.0;
+    int halfM = M / 2;
+
+    // Compute filter kernel using windowed-sinc formula
+    for (int i = 0; i <= M; ++i) {
+        int n = i - halfM;
+        if (n == 0) {
+            h[i] = 2 * M_PI * fc;
+        } else {
+            h[i] = std::sin(2 * M_PI * fc * n) / n;
+        }
+        // Apply Hamming window
+        h[i] *= (0.54 - 0.46 * std::cos(2 * M_PI * i / M));
+        sum += h[i];
+    }
+
+    // Normalize the kernel for unity gain at DC
+    for (int i = 0; i <= M; ++i) {
+        h[i] /= sum;
+    }
+
+    return h;
+}
+
+// Function to apply the filter to each row of a matrix
+Eigen::MatrixXd applyFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& h) {
+    int numRows = dataMatrix.rows();
+    int numCols = dataMatrix.cols();
+    int M = h.size();
+    Eigen::MatrixXd result = Eigen::MatrixXd::Zero(numRows, numCols);
+
+    // Process each row with the FIR filter
+    for (int row = 0; row < numRows; ++row) {
+        for (int j = M; j < numCols; ++j) {
+            double sum = 0.0;
+            for (int i = 0; i < M; ++i) {
+                sum += dataMatrix(row, j - i) * h[i];
+            }
+            result(row, j) = sum;
+        }
+    }
+
+    return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// REAL-TIME FILTERING
+
+// Function to create a low-pass windowed-sinc filter kernel
+std::vector<double> createLowPassFilter(int M, double fc, double fs) {
+    std::vector<double> h(M + 1);
+    double sum = 0.0;
+    int halfM = M / 2;
+    double PI = M_PI;
+
+    for (int i = 0; i <= M; ++i) {
+        int n = i - halfM;
+        if (n == 0) {
+            h[i] = 2 * fc / fs;
+        } else {
+            h[i] = std::sin(2 * PI * fc / fs * n) / (n * PI);
+        }
+        // Apply Hamming window
+        h[i] *= (0.54 - 0.46 * std::cos(2 * PI * i / M));
+        sum += h[i];
+    }
+
+    // Normalize the kernel for unity gain at DC
+    for (int i = 0; i <= M; ++i) {
+        h[i] /= sum;
+    }
+
+    return h;
+}
+
+// Function to create a bandpass filter using the difference of two low-pass filters
+std::vector<double> createBandPassFilter(int M, double fc_low, double fc_high, double fs) {
+    auto h_low = createLowPassFilter(M, fc_low, fs);
+    auto h_high = createLowPassFilter(M, fc_high, fs);
+    std::vector<double> h_band(M + 1);
+
+    for (int i = 0; i <= M; ++i) {
+        h_band[i] = h_high[i] - h_low[i];
+    }
+
+    return h_band;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// OTHER FUNCTIONS
 
 // Downsampling function
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor) {

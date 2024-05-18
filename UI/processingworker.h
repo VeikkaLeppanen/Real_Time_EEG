@@ -21,6 +21,7 @@ signals:
 
 public slots:
     void process();
+    void process_testing();
 
 private:
     dataHandler &handler;

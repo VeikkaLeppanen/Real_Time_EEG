@@ -38,7 +38,6 @@ public slots:
 
 private slots:
     void handleError(const QString& error);
-    void on_pushButton_2_clicked();
 
     void on_EEG_clicked();
     void resetEegWindowPointer();

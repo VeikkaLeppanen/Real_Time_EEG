@@ -12,13 +12,54 @@
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
 void computeButterworthCoefficients(int order, double Fs, double Fc, std::vector<double>& b, std::vector<double>& a);
 Eigen::MatrixXd applyIIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b, const std::vector<double>& a);
-std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc);
-Eigen::VectorXd applyFIRFilter(const Eigen::VectorXd& data, const std::vector<double>& b);
+Eigen::VectorXd applyFIRFilterToVector(const Eigen::VectorXd& data, const std::vector<double>& b);
 Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b);
 std::vector<double> designBandPassFilter(int numTaps, double Fs, double Fc1, double Fc2);
 Eigen::MatrixXd applyBandFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b);
+std::vector<double> createLowPassFilter(int M, double fc);
+Eigen::MatrixXd applyFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& h);
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step);
 void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
+
+
+
+std::vector<double> createLowPassFilter(int M, double fc, double fs);
+std::vector<double> createBandPassFilter(int M, double fc_low, double fc_high, double fs);
+
+// Real-time filter processor class for multiple channels
+class MultiChannelRealTimeFilter {
+private:
+    std::vector<double> filterCoeffs;
+    std::vector<std::vector<double>> buffers;  // Buffer for each channel
+    int M;
+
+public:
+    MultiChannelRealTimeFilter() { }
+
+    void reset_filter(const std::vector<double>& coeffs, int numChannels) {
+        filterCoeffs = coeffs;
+        M = coeffs.size();
+        buffers.resize(numChannels, std::vector<double>(M, 0.0));
+    }
+
+    // Process a new sample vector where each element is the current sample for a channel
+    Eigen::VectorXd processSample(const Eigen::VectorXd& newSamples) {
+        Eigen::VectorXd filteredSamples(newSamples.size());
+        for (int ch = 0; ch < newSamples.size(); ++ch) {
+            // Shift buffer contents to make room for the new sample
+            std::rotate(buffers[ch].rbegin(), buffers[ch].rbegin() + 1, buffers[ch].rend());
+            buffers[ch][0] = newSamples[ch];
+
+            // Apply the filter
+            double filteredSample = 0.0;
+            for (int i = 0; i < M; ++i) {
+                filteredSample += filterCoeffs[i] * buffers[ch][i];
+            }
+            filteredSamples[ch] = filteredSample;
+        }
+        return filteredSamples;
+    }
+};
 
 #endif // PROCESSINGFUNCTIONS_H
