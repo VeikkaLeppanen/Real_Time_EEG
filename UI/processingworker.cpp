@@ -9,13 +9,11 @@ ProcessingWorker::ProcessingWorker(dataHandler &handler, Eigen::MatrixXd &proces
     // Filtering
     int order = 4;
     double Fs = 5000;  // Sampling frequency
-    double Fc1 = 8;   // Desired cutoff frequency
-    double Fc2 = 120;   // Desired cutoff frequency
-    int numTaps = 101;  // Length of the FIR filter
+    double Fc1 = 0.33;   // Desired cutoff frequency
+    double Fc2 = 135;   // Desired cutoff frequency
+    int numTaps = 301;  // Length of the FIR filter
     // filterCoeffs_ = designLowPassFilter(numTaps, Fs, Fc2);
-    // filterCoeffs_ = designBandPassFilter(numTaps, Fs, Fc1, Fc2);
-    filterCoeffs_ = createLowPassFilter(numTaps, Fc2);
-    // computeButterworthCoefficients(order, Fs, Fc, b, a);
+    filterCoeffs_ = designBandPassFilter(numTaps, Fs, Fc1, Fc2);
 }
 
 ProcessingWorker::~ProcessingWorker()
@@ -27,46 +25,35 @@ void ProcessingWorker::process()
     try {
         std::cout << "Pworker start" << '\n';
         int seq_num_tracker = 0;
-        int count = 0;
-        double total_time = 0.0;
-        Eigen::MatrixXd EEG_output = Eigen::MatrixXd::Zero(127, samples_to_display);
+
+        int n_eeg_channels = handler.get_channel_count();
+        Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
+        Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
+
+        int downsampling_factor = 10;
+        int newCols = (samples_to_display + downsampling_factor - 1) / downsampling_factor;
+        Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
 
         while(processingWorkerRunning) {
             // Initializing parameters and matrices for algorithms
             int n_eeg_channels = handler.get_channel_count();
 
             // Eigen::MatrixXd all_channels = handler.returnLatestDataInOrder(samples_to_display);
-            Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_display);
 
-            // Check how many samples skipped
-            if(false && sequence_number > seq_num_tracker + 1) { 
-                std::cout << "Number of samples skipped during processing: " << sequence_number - seq_num_tracker << '\n';
-            }
+            // Check how many samples skipped. REMOVE false in order to use
+            // if(false && sequence_number > seq_num_tracker + 1) { 
+            //     std::cout << "Number of samples skipped during processing: " << sequence_number - seq_num_tracker << '\n';
+            // }
 
+            // Filtering
+            EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
 
-            std::cout << "SeqNum: " << sequence_number << '\n';
-            if (sequence_number > 1 && sequence_number % 10000 == 0 && sequence_number != seq_num_tracker) {
+            // Downsampling
+            downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
 
-                // Filtering
-                Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_display);
-
-                // EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
-                // EEG_filtered = applyBandFIRFilterToMatrix(all_channels, filterCoeffs_);
-                // EEG_filtered = applyFilterToMatrix(all_channels, filterCoeffs_);                   <---
-                // EEG_filtered = applyIIRFilterToMatrix(all_channels, b, a);
-
-                // Downsampling
-                // int downsampling_factor = 10;
-                // int newCols = (samples_to_display + downsampling_factor - 1) / downsampling_factor;
-                // Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
-                // downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
-
-                EEG_output.row(count) = all_channels.row(0);
-
-                processed_data = all_channels;
-            }
             seq_num_tracker = sequence_number;
+            processed_data = EEG_downsampled;
         }
         
         emit finished();
@@ -101,14 +88,10 @@ void ProcessingWorker::process_testing()
             // std::cout << "SeqNum: " << sequence_number << '\n';
             if (sequence_number > 1 && sequence_number % 10000 == 0 && sequence_number != seq_num_tracker) {
 
-
                 std::cout << "SeqNum: " << sequence_number << '\n';
                 auto start = std::chrono::high_resolution_clock::now();
 
-                // EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
-                // EEG_filtered = applyBandFIRFilterToMatrix(all_channels, filterCoeffs_);
-                // EEG_filtered = applyFilterToMatrix(all_channels, filterCoeffs_);                   <---
-                // EEG_filtered = applyIIRFilterToMatrix(all_channels, b, a);
+                EEG_filtered = applyFIRFilterToMatrix(all_channels, filterCoeffs_);
 
                 // Downsampling
                 // int downsampling_factor = 10;
@@ -116,14 +99,13 @@ void ProcessingWorker::process_testing()
                 // Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, newCols);
                 // downsample(EEG_filtered, EEG_downsampled, downsampling_factor);
 
-                EEG_output.row(count) = all_channels.row(0);
+                EEG_output.row(count) = EEG_filtered.row(0);
                 std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
                 std::cout << "Time taken: " << elapsed.count() << " seconds." << std::endl;
                 total_time += elapsed.count();
                 count++;
-
-                processed_data = all_channels;
             }
+            processed_data = EEG_filtered;
 
             seq_num_tracker = sequence_number;
             QThread::usleep(1); // Short sleep to prevent a tight loop, adjust as needed

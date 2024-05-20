@@ -91,9 +91,11 @@ void dataProcessingLoop(dataHandler &handler) {
     double Fs = 5000;  // Sampling frequency
     double Fc1 = 0.33;   // Desired cutoff frequency
     double Fc2 = 135;   // Desired cutoff frequency
-    int numTaps = 301;  // Length of the FIR filter
+    int numTaps = 51;  // Length of the FIR filter
+
     // std::vector<double> filterCoeffs = designLowPassFilter(numTaps, Fs, Fc1);
     std::vector<double> filterCoeffs = designBandPassFilter(numTaps, Fs, Fc1, Fc2);
+
     Eigen::MatrixXd EEG_filtered = Eigen::MatrixXd::Zero(n_eeg_channels, n_samples);
     Eigen::MatrixXd CWL_filtered = Eigen::MatrixXd::Zero(n_cwl_channels, n_samples);
 
@@ -135,8 +137,8 @@ void dataProcessingLoop(dataHandler &handler) {
         auto start = std::chrono::high_resolution_clock::now();
 
         // LOWPASS filter 120Hz   BANDPASS 0.33-125Hz FIR
-        EEG_filtered = applyBandFIRFilterToMatrix(EEG, filterCoeffs);
-        CWL_filtered = applyBandFIRFilterToMatrix(CWL, filterCoeffs);
+        EEG_filtered = applyFIRFilterToMatrix(EEG, filterCoeffs);
+        CWL_filtered = applyFIRFilterToMatrix(CWL, filterCoeffs);
 
         // DONWSAMPLING
         // downsample(EEG_filtered, EEG_downsampled, downsampling_factor);

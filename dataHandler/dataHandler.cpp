@@ -21,6 +21,9 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     }
 
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
+
+    baseline_average = Eigen::VectorXd(channel_count);
+
     handler_state = WAITING_FOR_STOP;
 
 
@@ -157,6 +160,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         // GACorr_.printTemplate();
     }
 
+    // Gradient artifact correction
     if (GACorr_running && stimulation_tracker < TA_length) {
 
         {
@@ -175,8 +179,15 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
     }
 
+    // Baseline average
+    if (Apply_baseline) {
+        int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
+        baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
+        sample_buffer_.col(current_data_index_) = sample_buffer_.col(current_data_index_).cwiseQuotient(baseline_average);
+    }
 
 
+    // Timestamp, triggers and buffer index update
     time_stamp_buffer_(current_data_index_) = time_stamp;
     trigger_buffer_(current_data_index_) = trigger;
     current_sequence_number_ = SeqNo;

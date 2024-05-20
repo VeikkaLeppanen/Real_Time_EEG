@@ -105,11 +105,15 @@ private:
 
     // dataProcessor &processor_;
 
-    bool GACorr_running = false;
+    bool GACorr_running = true;
     GACorrection GACorr_;
-    int TA_length = 5000;
+    int TA_length = 10000;
     int GA_average_length = 25;
     int stimulation_tracker = 10000000;
+
+    bool Apply_baseline = false;
+    Eigen::VectorXd baseline_average;
+    int baseline_length = 2500;
 
     // Filter
     std::vector<double> filterCoeffs_;
