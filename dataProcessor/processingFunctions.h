@@ -7,9 +7,17 @@
 #include <fstream>
 #include <iostream>
 #include <Eigen/Dense>
+#include <fftw3.h>
+#include <complex>
+#include <cmath>
 
 // Function declarations
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
+Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec);
+Eigen::MatrixXd complexVectorToMatrix(const std::vector<std::complex<double>>& complexVec);
+Eigen::MatrixXd phaseAngleToMatrix(const std::vector<std::complex<double>>& complexVec);
+
+
 std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc);
 std::vector<double> designBandPassFilter(int numTaps, double Fs, double Fc1, double Fc2);
 
@@ -18,10 +26,9 @@ Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const 
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 
 Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
 
-
-
+// RT filtering (work in progress)
 std::vector<double> createLowPassFilter(int M, double fc, double fs);
 std::vector<double> createBandPassFilter(int M, double fc_low, double fc_high, double fs);
 
@@ -59,5 +66,13 @@ public:
         return filteredSamples;
     }
 };
+
+
+std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data);
+std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data);
+std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
+
+
+
 
 #endif // PROCESSINGFUNCTIONS_H

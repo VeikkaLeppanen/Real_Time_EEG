@@ -50,6 +50,7 @@ target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Charts  # Assuming you might use Qt Charts
     OpenGL::GL  # Linking OpenGL
+    fftw3
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
