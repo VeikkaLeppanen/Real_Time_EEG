@@ -39,7 +39,6 @@ void MainGlWidget::paintGL()
     // Draw graphs for enabled channels
     int graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        
         // Set viewport for this row
         glViewport(0, graph_index * rowHeight, width(), rowHeight);
 

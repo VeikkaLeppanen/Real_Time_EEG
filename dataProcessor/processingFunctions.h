@@ -7,16 +7,18 @@
 #include <fstream>
 #include <iostream>
 #include <Eigen/Dense>
-#include <fftw3.h>
 #include <complex>
 #include <cmath>
+
+#include <fftw3.h>
+#include <armadillo>
 
 // Function declarations
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
 Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec);
+Eigen::MatrixXd vectorToColumnMatrix(const std::vector<double>& vec);
 Eigen::MatrixXd complexVectorToMatrix(const std::vector<std::complex<double>>& complexVec);
 Eigen::MatrixXd phaseAngleToMatrix(const std::vector<std::complex<double>>& complexVec);
-
 
 std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc);
 std::vector<double> designBandPassFilter(int numTaps, double Fs, double Fc1, double Fc2);
@@ -67,9 +69,25 @@ public:
     }
 };
 
+void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd& coeffs);
+Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
+Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
 
+void butterLP(int order, double cutoff, double sampleRate, std::vector<double>& a, std::vector<double>& b);
+void getBWCoeffs_8Hz_12Hz(Eigen::VectorXd& a, Eigen::VectorXd& b);
+Eigen::VectorXd applyFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& a, const Eigen::VectorXd& b);
+Eigen::VectorXd zeroPhaseBW(const Eigen::VectorXd& data, const Eigen::VectorXd& a, const Eigen::VectorXd& b);
+
+std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
+std::vector<double> fitAndPredictAR_Burg(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
+std::vector<double> fitAndPredictAR_YuleWalker(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
+
+Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag);
+
+std::vector<std::complex<double>> performFFT(const std::vector<double>& data);
 std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data);
 std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data);
+std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& signal);
 std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
 
 
