@@ -44,6 +44,21 @@ public slots:
         n_channels_ = newMatrix.rows();
     }
 
+    void updateMatrix(Eigen::VectorXd &newVector) {
+        // Check if dimensions differ
+        if (dataMatrix_.rows() != newVector.rows() || dataMatrix_.cols() != newVector.cols()) {
+            // Resize dataMatrix_ to match the dimensions of newMatrix
+            dataMatrix_.resize(newVector.rows(), newVector.cols());
+        }
+
+        // Assign the new matrix
+        dataMatrix_.row(0) = newVector;
+
+        // Update other attributes based on the new matrix
+        matrixCapasity_ = newVector.cols(); 
+        n_channels_ = newVector.rows();
+    }
+
     void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
     void updateGraph();
     void updateChannelNamesQt(QStringList channelNames) { channelNames_ = channelNames; }

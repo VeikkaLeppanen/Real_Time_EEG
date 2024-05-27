@@ -310,6 +310,49 @@ void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd&
     coeffs = A.colPivHouseholderQr().solve(b);
 }
 
+// Function that returns fixed butterworth coefficients for a band pass of 0-80Hz
+void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs) {
+    coeffs.resize(81);
+
+    coeffs << 0.00044545,  0.00066975,  0.00091198,  0.00115233,  0.00136596,  0.00152421,
+              0.00159619,  0.00155095,  0.00136009,  0.00100044,  0.00045701, -0.00027433,
+             -0.00118445, -0.00224915, -0.00342807, -0.00466456, -0.00588655, -0.00700854,
+             -0.00793465, -0.00856266, -0.00878893, -0.00851389, -0.00764786, -0.00611694,
+             -0.00386845, -0.00087577,  0.00285786,  0.00729689,  0.01237248,  0.01798326,
+              0.02399777,  0.03025859,  0.03658803,  0.04279503,  0.04868311,  0.05405879,
+              0.05874021,  0.06256537,  0.06539963,  0.06714197,  0.06772982,  0.06714197,
+              0.06539963,  0.06256537,  0.05874021,  0.05405879,  0.04868311,  0.04279503,
+              0.03658803,  0.03025859,  0.02399777,  0.01798326,  0.01237248,  0.00729689,
+              0.00285786, -0.00087577, -0.00386845, -0.00611694, -0.00764786, -0.00851389,
+             -0.00878893, -0.00856266, -0.00793465, -0.00700854, -0.00588655, -0.00466456,
+             -0.00342807, -0.00224915, -0.00118445, -0.00027433,  0.00045701,  0.00100044,
+              0.00136009,  0.00155095,  0.00159619,  0.00152421,  0.00136596,  0.00115233,
+              0.00091198,  0.00066975,  0.00044545;
+}
+
+void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs) {
+    coeffs.resize(71);
+
+    coeffs << -5.76355265e-05, -2.21522410e-03, -4.51913817e-03, -6.92228910e-03,
+              -9.37181651e-03, -1.18102996e-02, -1.41771575e-02, -1.64102027e-02,
+              -1.84473056e-02, -2.02281241e-02, -2.16958482e-02, -2.27989068e-02,
+              -2.34925868e-02, -2.37405117e-02, -2.35159328e-02, -2.28027908e-02,
+              -2.15965092e-02, -1.99044896e-02, -1.77462891e-02, -1.51534650e-02,
+              -1.21690857e-02, -8.84691437e-03, -5.25028185e-03, -1.45067670e-03,
+               2.47391390e-03,  6.44086819e-03,  1.03649495e-02,  1.41604263e-02,
+               1.77432351e-02,  2.10331238e-02,  2.39557176e-02,  2.64444474e-02,
+               2.84422856e-02,  2.99032408e-02,  3.07935666e-02,  3.10926524e-02,
+               3.07935666e-02,  2.99032408e-02,  2.84422856e-02,  2.64444474e-02,
+               2.39557176e-02,  2.10331238e-02,  1.77432351e-02,  1.41604263e-02,
+               1.03649495e-02,  6.44086819e-03,  2.47391390e-03, -1.45067670e-03,
+              -5.25028185e-03, -8.84691437e-03, -1.21690857e-02, -1.51534650e-02,
+              -1.77462891e-02, -1.99044896e-02, -2.15965092e-02, -2.28027908e-02,
+              -2.35159328e-02, -2.37405117e-02, -2.34925868e-02, -2.27989068e-02,
+              -2.16958482e-02, -2.02281241e-02, -1.84473056e-02, -1.64102027e-02,
+              -1.41771575e-02, -1.18102996e-02, -9.37181651e-03, -6.92228910e-03,
+              -4.51913817e-03, -2.21522410e-03, -5.76355265e-05;
+}
+
 // Function to apply FIR filter using Eigen
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
     int dataSize = data.size();
@@ -330,21 +373,60 @@ Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::Vecto
 
 // Zero-phase filtering equivalent to MATLAB's filtfilt
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
+                 
     // Forward filter pass
     Eigen::VectorXd forwardFiltered = applyLSFIRFilter(data, coeffs);
-    
+                 
     // Reverse the data for the backward pass
     Eigen::VectorXd reversedData = forwardFiltered.reverse();
-    
+                  
     // Backward filter pass
     Eigen::VectorXd backwardFiltered = applyLSFIRFilter(reversedData, coeffs);
-    
+                 
     // Reverse the result to get the final output
     return backwardFiltered.reverse();
 }
 
+Eigen::MatrixXd applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
+    int numRows = data.rows();
+    int numCols = data.cols();
+    int filterSize = coeffs.size();
+    Eigen::MatrixXd filteredData = Eigen::MatrixXd::Zero(numRows, numCols);
 
+    // Perform convolution for each row
+    for (int row = 0; row < numRows; ++row) {
+        for (int i = 0; i < numCols; ++i) {
+            for (int j = 0; j < filterSize; ++j) {
+                if (i - j >= 0) {
+                    filteredData(row, i) += data(row, i - j) * coeffs(j);
+                }
+            }
+        }
+    }
 
+    return filteredData;
+}
+
+Eigen::MatrixXd zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
+    // Forward filter pass
+    Eigen::MatrixXd forwardFiltered = applyLSFIRFilterMatrix(data, coeffs);
+
+    // Reverse the data for the backward pass
+    Eigen::MatrixXd reversedData = forwardFiltered;
+    for (int row = 0; row < reversedData.rows(); ++row) {
+        reversedData.row(row) = reversedData.row(row).reverse();
+    }
+
+    // Backward filter pass
+    Eigen::MatrixXd backwardFiltered = applyLSFIRFilterMatrix(reversedData, coeffs);
+
+    // Reverse the result to get the final output
+    for (int row = 0; row < backwardFiltered.rows(); ++row) {
+        backwardFiltered.row(row) = backwardFiltered.row(row).reverse();
+    }
+
+    return backwardFiltered;
+}
 
 
 

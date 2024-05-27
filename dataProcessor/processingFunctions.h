@@ -69,9 +69,15 @@ public:
     }
 };
 
+void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs);
+void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs);
 void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd& coeffs);
+
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
+
+Eigen::MatrixXd applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs);
+Eigen::MatrixXd zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs);
 
 void butterLP(int order, double cutoff, double sampleRate, std::vector<double>& a, std::vector<double>& b);
 void getBWCoeffs_8Hz_12Hz(Eigen::VectorXd& a, Eigen::VectorXd& b);

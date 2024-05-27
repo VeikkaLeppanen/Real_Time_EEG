@@ -39,6 +39,10 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             // Error handling if glWidget is not found
             qWarning("Glwidget not found in UI!");
         }
+        
+        if(handler.isReady()) {
+            checkHandlerTimer->start(100);  // Check every 500 ms
+        }
     }
 
 eegWindow::~eegWindow() {
