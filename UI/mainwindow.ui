@@ -140,9 +140,16 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_4">
+           <widget class="QPushButton" name="connectTrigger">
             <property name="text">
-             <string>PushButton</string>
+             <string>Connect Trigger</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="testTrigger">
+            <property name="text">
+             <string>TestTrigger</string>
             </property>
            </widget>
           </item>

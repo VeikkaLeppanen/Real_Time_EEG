@@ -46,6 +46,10 @@ private slots:
 
     void on_processingStop_clicked();
 
+    void on_connectTrigger_clicked();
+
+    void on_testTrigger_clicked();
+
 private:
     Ui::MainWindow *ui;
 

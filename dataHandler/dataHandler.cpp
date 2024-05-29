@@ -186,6 +186,10 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         sample_buffer_.col(current_data_index_) = sample_buffer_.col(current_data_index_).cwiseQuotient(baseline_average);
     }
 
+    if (getTriggerPortStatus() && shouldTrigger(SeqNo)) {
+        trig();
+        removeTrigger(SeqNo);
+    }
 
     // Timestamp, triggers and buffer index update
     time_stamp_buffer_(current_data_index_) = time_stamp;
@@ -351,4 +355,79 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
     }
 
     return downSampledData;
+}
+
+
+
+
+
+
+
+
+// Trigger sending
+
+int dataHandler::connectTriggerPort() {
+
+    // Check if the port exists
+    std::string port = "/dev/ttyUSB0";
+    if (!std::ifstream(port)) {
+        std::cerr << "Error: Port " << port << " not found." << std::endl;
+        return 1; // Return error if port does not exist
+    }
+
+    // Create a serial port object
+    serial.open(port);  // Specify the serial port to connect to
+
+    try {
+        // Set the baud rate
+        serial.set_option(boost::asio::serial_port_base::baud_rate(38400));
+
+        // Set parity (none)
+        serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+
+        // Set stop bits (one)
+        serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+
+        // Set character size (8 bits)
+        serial.set_option(boost::asio::serial_port_base::character_size(8));
+
+        std::cout << "Serial port configured and opened." << std::endl;
+    } catch (const boost::system::system_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;  // Return success
+}
+
+void dataHandler::trig() {
+    auto cmd = createTrigCmdByteStr();
+    boost::asio::write(serial, boost::asio::buffer(cmd));
+}
+
+std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
+    std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
+    uint8_t crc = crc8(cmd);
+    std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
+    fullCmd.insert(fullCmd.end(), cmd.begin(), cmd.end());
+    fullCmd.push_back(crc);
+    fullCmd.push_back(0xff);
+    return fullCmd;
+}
+
+uint8_t dataHandler::crc8(const std::vector<uint8_t>& data) {
+    uint8_t crc = 0x00; // Initial value
+    uint8_t poly = 0x31; // Example polynomial: x^8 + x^5 + x^4 + 1
+
+    for (auto byte : data) {
+        crc ^= byte;
+        for (unsigned int i = 0; i < 8; i++) {
+            if (crc & 0x80)
+                crc = (crc << 1) ^ poly;
+            else
+                crc <<= 1;
+        }
+    }
+
+    return crc;
 }

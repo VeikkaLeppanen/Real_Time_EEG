@@ -5,6 +5,8 @@
 #include <csignal>
 #include <chrono>
 #include <fstream>
+#include <malloc.h>
+#include <sys/mman.h> // For mlockall
 
 #include "dataProcessor/dataProcessor.h"
 #include "dataProcessor/processingFunctions.h"
@@ -175,6 +177,22 @@ void dataProcessingLoop(dataHandler &handler) {
 
 int main(int argc, char *argv[])
 {
+    // Lock all current and future memory pages into RAM
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        std::cerr << "Failed to lock memory" << std::endl;
+        return -1; // or handle the error appropriately
+    }
+
+    // Disable memory trimming
+    if (mallopt(M_TRIM_THRESHOLD, -1) != 1) {
+        std::cerr << "Failed to set M_TRIM_THRESHOLD" << std::endl;
+    }
+
+    // Prevent mmap from being used for memory allocation
+    if (mallopt(M_MMAP_MAX, 0) != 1) {
+        std::cerr << "Failed to set M_MMAP_MAX" << std::endl;
+    }
+
     dataHandler handler;
 
     QApplication a(argc, argv);

@@ -13,6 +13,8 @@ set(CMAKE_AUTORCC ON)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Charts)
 find_package(OpenGL REQUIRED)  # Added OpenGL package
+find_package(Threads REQUIRED)
+find_package(Boost 1.65 REQUIRED COMPONENTS system)
 find_package(Armadillo REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -20,6 +22,7 @@ find_package(LAPACK REQUIRED)
 include_directories(/home/veikka/Work/Real_Time_EEG)
 include_directories(/usr/include/eigen3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 
 set(SOURCES
@@ -54,6 +57,8 @@ target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Charts  # Assuming you might use Qt Charts
     OpenGL::GL  # Linking OpenGL
+    Threads::Threads
+    ${Boost_LIBRARIES}
     fftw3
     ${ARMADILLO_LIBRARIES} 
     ${LAPACK_LIBRARIES} 

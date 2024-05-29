@@ -2,6 +2,10 @@
 #define WORKER_H
 
 #include <QObject>
+#include <iostream>
+#include <pthread.h>
+#include <sched.h>
+
 #include "../dataHandler/dataHandler.h"
 #include "../eeg_bridge/eeg_bridge.h"
 

@@ -32,7 +32,7 @@ private:
     std::vector<double> filterCoeffs_;
     std::vector<double> b; 
     std::vector<double> a;
-    int samples_to_display = 10000;
+    int samples_to_process = 10000;
 };
 
 #endif // PROCESSINGWORKER_H
