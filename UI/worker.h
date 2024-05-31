@@ -30,6 +30,8 @@ private:
     EegBridge &bridge;
     dataHandler &handler;
     volatile std::sig_atomic_t &signal_received;
+
+    void set_thread_affinity();
 };
 
 #endif // WORKER_H

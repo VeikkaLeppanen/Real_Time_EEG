@@ -1,6 +1,6 @@
 #include "processingFunctions.h"
 
-// Function to write Eigen matrix to CSV file
+// Function for writing Eigen matrix to CSV file
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
     std::ofstream file(filename);
 
@@ -16,6 +16,52 @@ void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix
     } else {
         std::cerr << "Failed to open the file for writing." << std::endl;
     }
+}
+
+// Function for reading matrix form a CSV file
+Eigen::MatrixXd readCSV(const std::string &file_path) {
+    std::ifstream file(file_path);
+
+    // Check if the file stream is valid
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file");
+    }
+
+    std::vector<double> matrix_entries;
+    std::string line;
+    int num_rows = 0;
+    int num_cols = 0;
+
+    // Read each line from the CSV file
+    while (getline(file, line)) {
+        std::stringstream line_stream(line);
+        std::string cell;
+        int current_row_cols = 0;
+
+        // Split the line into comma-delimited elements
+        while (getline(line_stream, cell, ',')) {
+            matrix_entries.push_back(std::stod(cell)); // Convert string to double
+            ++current_row_cols;
+        }
+
+        if (num_rows == 0) {
+            num_cols = current_row_cols; // Set number of columns based on the first row
+        }
+
+        ++num_rows;
+    }
+
+    file.close();
+
+    // Create an Eigen matrix from the vector of values
+    Eigen::MatrixXd matrix(num_rows, num_cols);
+    for (int i = 0; i < num_rows; ++i) {
+        for (int j = 0; j < num_cols; ++j) {
+            matrix(i, j) = matrix_entries[i * num_cols + j];
+        }
+    }
+
+    return matrix;
 }
 
 // Function to convert Eigen::VectorXd to Eigen::MatrixXd for CSV writing
@@ -221,7 +267,7 @@ void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int facto
 }
 
 // Function to perform delay embedding of a signal with incremental shifts and edge value padding
-Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
+void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& expCWL, int step) {
     int n = X.rows();  // Number of variables in X
     int m = X.cols();  // Length of the signal
 
@@ -234,6 +280,7 @@ Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
     Y.middleRows(originalStartRow, n) = X;
 
     // Apply shifts to the left and right
+    #pragma omp parallel for
     for (int offset = 1; offset <= step; ++offset) {
         int leftStartRow = originalStartRow - offset * n;
         int rightStartRow = originalStartRow + offset * n;
@@ -252,15 +299,12 @@ Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
             Y.block(rightStartRow + row, m - offset, 1, offset).setConstant(X(row, m - 1));
         }
     }
-
-    return Y;
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
-    Eigen::MatrixXd expCWL;
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay) {
     if (delay > 0) {
         // Perform delay embedding if delay is positive
-        expCWL = delayEmbed(CWL, (1+2*delay));
+        delayEmbed(CWL, expCWL, (1+2*delay));
     } else {
         expCWL = CWL;
     }
@@ -269,6 +313,8 @@ void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::Ma
     Eigen::MatrixXd pinvCWL = expCWL.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
 
     Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
+    
+    #pragma omp parallel for
     for(int i = 0; i < EEG.rows(); i++) {
         Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
         EEG_fits.row(i) = Betas * expCWL;
@@ -394,6 +440,7 @@ Eigen::MatrixXd applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen:
     Eigen::MatrixXd filteredData = Eigen::MatrixXd::Zero(numRows, numCols);
 
     // Perform convolution for each row
+    #pragma omp parallel for
     for (int row = 0; row < numRows; ++row) {
         for (int i = 0; i < numCols; ++i) {
             for (int j = 0; j < filterSize; ++j) {
@@ -682,6 +729,20 @@ Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag) 
     }
     return autocorrelations;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

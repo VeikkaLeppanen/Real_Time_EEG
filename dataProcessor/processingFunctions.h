@@ -9,12 +9,15 @@
 #include <Eigen/Dense>
 #include <complex>
 #include <cmath>
+#include <omp.h>
 
 #include <fftw3.h>
 #include <armadillo>
 
 // Function declarations
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
+Eigen::MatrixXd readCSV(const std::string &file_path);
+
 Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec);
 Eigen::MatrixXd vectorToColumnMatrix(const std::vector<double>& vec);
 Eigen::MatrixXd complexVectorToMatrix(const std::vector<std::complex<double>>& complexVec);
@@ -27,8 +30,8 @@ Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const 
 
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 
-Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
+void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& expCWL, int step);
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay);
 
 // RT filtering (work in progress)
 std::vector<double> createLowPassFilter(int M, double fc, double fs);

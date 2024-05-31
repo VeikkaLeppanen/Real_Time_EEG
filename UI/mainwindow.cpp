@@ -131,7 +131,7 @@ void MainWindow::on_processingStart_clicked()
         ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning);
         worker->moveToThread(thread);
 
-        connect(thread, &QThread::started, worker, &ProcessingWorker::process_testing);       // Switch between processing and testing functions here
+        connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between processing and testing functions here
         connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);

@@ -19,6 +19,9 @@ void Worker::process()
     } else {
         qDebug("Thread set to real-time successfully");
     }
+
+    // Isolate the thread to core 0
+    set_thread_affinity();
     
     // Ensure this code is thread-safe and does not interfere with the GUI thread
     try {
@@ -28,4 +31,14 @@ void Worker::process()
     } catch (std::exception& e) {
         emit error(QString("An error occurred: %1").arg(e.what()));
     }
+}
+
+void Worker::set_thread_affinity() {
+    cpu_set_t cpuset;
+    pthread_t thread = pthread_self();
+
+    CPU_ZERO(&cpuset);
+    CPU_SET(0, &cpuset);  // Assuming core 0 is reserved for the packet receiving thread
+
+    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 }

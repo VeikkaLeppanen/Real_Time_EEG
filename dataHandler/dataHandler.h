@@ -44,6 +44,7 @@ public:
     // Data handling
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
 
+    int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
@@ -153,7 +154,6 @@ private:
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;
-
 };
 
 #endif // DATAHANDLER_H
