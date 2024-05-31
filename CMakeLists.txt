@@ -41,6 +41,11 @@ set(SOURCES
     UI/eegwindow.cpp
     UI/eegwindow.h
     UI/eegwindow.ui
+    UI/processingwindow.h 
+    UI/processingwindow.cpp 
+    UI/processingwindow.ui
+    UI/processingglwidget.cpp 
+    UI/processingglwidget.h
     UI/processingworker.cpp
     UI/processingworker.h
     UI/worker.cpp

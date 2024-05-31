@@ -13,6 +13,7 @@
 #include "mainglwidget.h"
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow.h"
+#include "processingwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -50,6 +51,9 @@ private slots:
 
     void on_testTrigger_clicked();
 
+    void on_processing_clicked();
+    void resetProcessingWindowPointer();
+
 private:
     Ui::MainWindow *ui;
 
@@ -68,8 +72,9 @@ private:
     // Handler parameters
     dataHandler &handler;
 
-    // eeg window
+    // windows
     eegWindow *eegwindow = nullptr;
+    ProcessingWindow *processingWindow = nullptr;
 
     volatile std::sig_atomic_t &signal_received;
     volatile std::sig_atomic_t processingWorkerRunning = 0;

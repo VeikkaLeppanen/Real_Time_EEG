@@ -12,4 +12,4 @@ mkdir build
 cd build
 cmake ..
 make
-./real_time_eeg
+sudo ./real_time_eeg

@@ -13,12 +13,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     if (mainglWidget) {
 
         connect(mainglWidget, &MainGlWidget::fetchData, this, &MainWindow::updateData);
-        // connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
-        // connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
-        // connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
-        // connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
 
-        // emit updateChannelNamesSTD(handler.getChannelNames());
     } else {
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
@@ -183,3 +178,20 @@ void MainWindow::on_testTrigger_clicked()
     }
 }
 
+
+void MainWindow::on_processing_clicked()
+{
+    if (!processingWindow) {
+        processingWindow = new ProcessingWindow(handler, signal_received, this);
+        processingWindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
+        connect(processingWindow, &ProcessingWindow::destroyed, this, &MainWindow::resetProcessingWindowPointer);
+    }
+    processingWindow->show();
+    processingWindow->raise();
+    processingWindow->activateWindow();
+    // connect(eegwindow, &ProcessingWindow::connectEegBridge, this, &MainWindow::eegBridgeSpin);
+}
+
+void MainWindow::resetProcessingWindowPointer() {
+    eegwindow = nullptr;  // Reset the pointer after the window is destroyed
+}
