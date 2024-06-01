@@ -3,15 +3,18 @@
 
 #include <mutex>
 #include <cstddef> // For size_t
+#include <boost/asio.hpp>
 #include <iostream>
 #include <chrono>
 #include <array>
 #include <vector>
+#include <unordered_set>
 #include <cmath>
 #include <Eigen/Dense>
 
 #include "GACorrection.h"
 #include "../dataProcessor/dataProcessor.h"
+#include "../dataProcessor/processingFunctions.h"
 
 enum HandlerState {
   WAITING_FOR_START,
@@ -25,8 +28,9 @@ public:
                 :   channel_count_(0),
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
-                    GACorr_(GACorrection(0, 0, 0)) {};
-                    // processor_(processor) {};
+                    GACorr_(GACorrection(0, 0, 0)),
+                    serial(io)
+    { };
 
     // Reset functions
     void reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate);
@@ -37,8 +41,10 @@ public:
     int simulateData_sin();
     int simulateData_mat();
 
+    // Data handling
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
 
+    int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
     Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
@@ -51,6 +57,7 @@ public:
     int get_buffer_capacity() { return buffer_capacity_; }
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
+    int get_current_data_index() { return current_data_index_; }
 
     void setTriggerSource(uint16_t source) { triggerSource = source; }
     void setSourceChannels(std::vector<uint16_t> SourceChannels) {
@@ -59,12 +66,12 @@ public:
             source_channels_(static_cast<int>(i)) = static_cast<int>(SourceChannels[i]);
         }
     }
-    Eigen::VectorXi getSourceChannels() { return source_channels_; }
+    Eigen::VectorXi getSourceChannels() const { return source_channels_; }
     
     void setChannelNames(std::vector<std::string> channel_names) { channel_names_ = channel_names; }
     std::vector<std::string> getChannelNames() { return channel_names_; }
 
-    // Gradient artifact correction functions
+    // Gradient artifact correction
     void GACorr_off() { GACorr_running = false; }
     void GACorr_on() {
         int stimulation_tracker = 10000000;
@@ -81,7 +88,30 @@ public:
     
     void printBufferSize();
 
-    // Eigen::MatrixXd readMatFile(const std::string& fileName);
+    // Triggering
+    int connectTriggerPort();
+
+    void trig();
+    std::vector<uint8_t> createTrigCmdByteStr();
+    uint8_t crc8(const std::vector<uint8_t>& data);
+
+    void setTriggerPortStatus(bool value) { triggerPortState = value; }
+    bool getTriggerPortStatus() { return triggerPortState; }
+
+    void insertTrigger(int seqNum) {
+        std::lock_guard<std::mutex> lock(triggerMutex);
+        triggerSet.insert(seqNum);
+    }
+
+    bool shouldTrigger(int seqNum) {
+        std::lock_guard<std::mutex> lock(triggerMutex);
+        return triggerSet.find(seqNum) != triggerSet.end();
+    }
+
+    void removeTrigger(int seqNum) {
+        std::lock_guard<std::mutex> lock(triggerMutex);
+        triggerSet.erase(seqNum);
+    }
 
 private:
     HandlerState handler_state = WAITING_FOR_START;
@@ -103,11 +133,27 @@ private:
 
     // dataProcessor &processor_;
 
-    bool GACorr_running = false;
+    bool GACorr_running = true;
     GACorrection GACorr_;
-    int TA_length = 5000;
+    int TA_length = 10000;
     int GA_average_length = 25;
     int stimulation_tracker = 10000000;
+
+    bool Apply_baseline = false;
+    Eigen::VectorXd baseline_average;
+    int baseline_length = 2500;
+
+    // Filter
+    std::vector<double> filterCoeffs_;
+    MultiChannelRealTimeFilter RTfilter_;
+
+    // Sending triggers
+    boost::asio::io_service io;
+    boost::asio::serial_port serial;
+    bool triggerPortState = false;
+
+    std::mutex triggerMutex;
+    std::unordered_set<int> triggerSet;
 };
 
 #endif // DATAHANDLER_H

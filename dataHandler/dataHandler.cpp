@@ -14,19 +14,26 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
     current_data_index_ = 0;
 
     {
-        std::lock_guard<std::mutex> (this->dataMutex);
+        std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_ = Eigen::MatrixXd::Zero(channel_count, buffer_capacity_);
         time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
         trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
     }
 
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
+
+    baseline_average = Eigen::VectorXd(channel_count);
+
     handler_state = WAITING_FOR_STOP;
 
-    // processor_.reset_processor(channel_count, buffer_capacity_);
 
-    // Continue processing
-    // processor_.startProcessing();
+    // Filter design parameters
+    double fc_low = 0.33;  // Lower cutoff frequency
+    double fc_high = 135;  // Upper cutoff frequency
+    int M = 51;  // Number of filter coefficients (kernel size)
+
+    filterCoeffs_ = createBandPassFilter(M, fc_low, fc_high, sampling_rate);
+    RTfilter_.reset_filter(filterCoeffs_, channel_count);
 }
     
 void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input) {
@@ -153,28 +160,38 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         // GACorr_.printTemplate();
     }
 
+    // Gradient artifact correction
     if (GACorr_running && stimulation_tracker < TA_length) {
 
         {
-            std::lock_guard<std::mutex> (this->dataMutex);
+            std::lock_guard<std::mutex> lock(this->dataMutex);
             sample_buffer_.col(current_data_index_) = samples - GACorr_.getTemplateCol(stimulation_tracker);
+            // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples - GACorr_.getTemplateCol(stimulation_tracker));
         }
         
         GACorr_.update_template(stimulation_tracker, samples);
         stimulation_tracker++;
     } else {
 
-        std::lock_guard<std::mutex> (this->dataMutex);
+        std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_.col(current_data_index_) = samples;
+        // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples);
 
     }
 
-    // {
-    //     std::lock_guard<std::mutex> (this->dataMutex);
-    //     processor_.newData(sample_buffer_.col(current_data_index_));
-    // }
+    // Baseline average
+    if (Apply_baseline) {
+        int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
+        baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
+        sample_buffer_.col(current_data_index_) = sample_buffer_.col(current_data_index_).cwiseQuotient(baseline_average);
+    }
 
+    if (getTriggerPortStatus() && shouldTrigger(SeqNo)) {
+        trig();
+        removeTrigger(SeqNo);
+    }
 
+    // Timestamp, triggers and buffer index update
     time_stamp_buffer_(current_data_index_) = time_stamp;
     trigger_buffer_(current_data_index_) = trigger;
     current_sequence_number_ = SeqNo;
@@ -192,7 +209,7 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
     }
@@ -215,7 +232,7 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
     }
@@ -236,7 +253,7 @@ Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSa
     size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
     Eigen::VectorXd downSampledData(downSampledSize);
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
         // Calculate the index in the circular buffer accounting for wrap-around
         size_t index = (current_data_index_ + i) % buffer_capacity_;
@@ -258,7 +275,7 @@ Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> chan
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     for (size_t j = 0; j < channel_indices.size(); ++j) {
         int channel_index = channel_indices[j];
         
@@ -288,7 +305,7 @@ Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index,
     int overflow = number_of_samples - fitToEnd;
     
     
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     if (fitToEnd > 0) {
         outputData.rightCols(fitToEnd) = sample_buffer_.block(first_channel_index, current_data_index_ - fitToEnd, number_of_channels, fitToEnd);
     }
@@ -303,7 +320,7 @@ Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index,
 // Retrieves data from the time stamp channel in chronological order
 Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
 
     if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
@@ -323,7 +340,7 @@ Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
 // Retrieves data from the trigger channel in chronological order
 Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
-    std::lock_guard<std::mutex> (this->dataMutex);
+    std::lock_guard<std::mutex> lock(this->dataMutex);
 
     if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
 
@@ -338,4 +355,79 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
     }
 
     return downSampledData;
+}
+
+
+
+
+
+
+
+
+// Trigger sending
+
+int dataHandler::connectTriggerPort() {
+
+    // Check if the port exists
+    std::string port = "/dev/ttyUSB0";
+    if (!std::ifstream(port)) {
+        std::cerr << "Error: Port " << port << " not found." << std::endl;
+        return 1; // Return error if port does not exist
+    }
+
+    // Create a serial port object
+    serial.open(port);  // Specify the serial port to connect to
+
+    try {
+        // Set the baud rate
+        serial.set_option(boost::asio::serial_port_base::baud_rate(38400));
+
+        // Set parity (none)
+        serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+
+        // Set stop bits (one)
+        serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+
+        // Set character size (8 bits)
+        serial.set_option(boost::asio::serial_port_base::character_size(8));
+
+        std::cout << "Serial port configured and opened." << std::endl;
+    } catch (const boost::system::system_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;  // Return success
+}
+
+void dataHandler::trig() {
+    auto cmd = createTrigCmdByteStr();
+    boost::asio::write(serial, boost::asio::buffer(cmd));
+}
+
+std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
+    std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
+    uint8_t crc = crc8(cmd);
+    std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
+    fullCmd.insert(fullCmd.end(), cmd.begin(), cmd.end());
+    fullCmd.push_back(crc);
+    fullCmd.push_back(0xff);
+    return fullCmd;
+}
+
+uint8_t dataHandler::crc8(const std::vector<uint8_t>& data) {
+    uint8_t crc = 0x00; // Initial value
+    uint8_t poly = 0x31; // Example polynomial: x^8 + x^5 + x^4 + 1
+
+    for (auto byte : data) {
+        crc ^= byte;
+        for (unsigned int i = 0; i < 8; i++) {
+            if (crc & 0x80)
+                crc = (crc << 1) ^ poly;
+            else
+                crc <<= 1;
+        }
+    }
+
+    return crc;
 }

@@ -7,12 +7,24 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
       signal_received(signal_received)
     {
         ui->setupUi(this);
+
+        // Setting validators for lineEdits
         ui->lineEditPort->setValidator(new QIntValidator(0, 65535, this));
         ui->lineEditTimeOut->setValidator(new QIntValidator(0, 1000, this));
         ui->lineEditGALength->setValidator(new QIntValidator(0, 500000, this));
         ui->lineEditGAaverage->setValidator(new QIntValidator(0, 1000, this));
+
+        // Initialize values for lineEdits
+        ui->lineEditPort->setText(QString::number(port));  // Example port number
+        ui->lineEditTimeOut->setText(QString::number(bridge_timeout)); // Example timeout in milliseconds
+        ui->lineEditGALength->setText(QString::number(GALength)); // Example genetic algorithm length
+        ui->lineEditGAaverage->setText(QString::number(GAAverage)); // Example genetic algorithm average
+
         setWindowTitle("EEG Window");
         // Optional: resize(800, 600); // Set a more appropriate default size
+
+        checkHandlerTimer = new QTimer(this);
+        connect(checkHandlerTimer, &QTimer::timeout, this, &eegWindow::checkHandlerReady);
 
         Glwidget* glWidget = ui->openglWidget;
         if (glWidget) {
@@ -26,6 +38,10 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         } else {
             // Error handling if glWidget is not found
             qWarning("Glwidget not found in UI!");
+        }
+        
+        if(handler.isReady()) {
+            checkHandlerTimer->start(100);  // Check every 500 ms
         }
     }
 
@@ -53,26 +69,31 @@ void eegWindow::on_connectButton_clicked()
 {
     emit connectEegBridge(port, bridge_timeout);
 
-    while(!handler.isReady()) {
-        QThread::msleep(500);
-    }
+    checkHandlerTimer->start(100);  // Check every 500 ms
+}
 
-    source_channels_ = handler.getSourceChannels();
+void eegWindow::checkHandlerReady() {
+    if (handler.isReady()) {
+        checkHandlerTimer->stop();  // Stop the timer as we don't need to check anymore
 
-    if (channelMap_.size() > 0) {
-        setupChannelNames();
-    } else {
-        QStringList QchannelNames;
-        for(size_t i = 0; i < source_channels_.size(); i++) {
-            QchannelNames.append("Undefined");
+        source_channels_ = handler.getSourceChannels();
+
+        if (channelMap_.size() > 0) {
+            setupChannelNames();
+        } else {
+            QStringList QchannelNames;
+            for (size_t i = 0; i < source_channels_.size(); i++) {
+                QchannelNames.append("Undefined");
+            }
+
+            channelNames_ = QchannelNames;
+
+            emit updateChannelNamesQt(QchannelNames);
+            setupComboBox();
         }
-
-        channelNames_ = QchannelNames;
-
-        emit updateChannelNamesQt(QchannelNames);
-        setupComboBox();
     }
 }
+
 
 void eegWindow::on_disconnectButton_clicked()
 {

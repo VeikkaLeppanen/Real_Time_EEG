@@ -15,6 +15,7 @@
 #include <QDebug>
 #include <QStandardItemModel>
 #include <QStandardItem>
+#include <QTimer>
 
 #include <array>
 
@@ -54,6 +55,8 @@ private slots:
     void handleError(const QString& error);
 
     void on_connectButton_clicked();
+    void checkHandlerReady();  // Slot to periodically check the handler's readiness
+
     void on_disconnectButton_clicked();
     void on_sourceChannelLoad_clicked();
     void setupComboBox();
@@ -73,6 +76,7 @@ private slots:
     
 private:
     Ui::EegWindow *ui;
+    QTimer *checkHandlerTimer;
 
     // eeg_bridge parameters
     int port = 50000;
@@ -83,7 +87,7 @@ private:
 
     // Handler parameters
     dataHandler &handler;
-    int GALength = 5000;
+    int GALength = 10000;
     int GAAverage = 25;
 
     void setupChannelNames();

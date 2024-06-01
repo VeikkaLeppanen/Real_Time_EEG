@@ -1,45 +1,44 @@
-#include "glwidget.h"
+#include "mainglwidget.h"
 
-Glwidget::Glwidget(QWidget *parent)
+MainGlWidget::MainGlWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     QTimer *timer = new QTimer(this);
-    dataMatrix_ = Eigen::MatrixXd::Zero(1, 10000);
-    connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
+    matrixCapasity_ = 30000;
+    n_channels_ = 1;
+    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
+
+    connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
 
-void Glwidget::initializeGL()
+void MainGlWidget::initializeGL()
 {
     initializeOpenGLFunctions();
     glClearColor(0.0, 0.0, 0.0, 1.0); // Set the clearing color to black
 }
 
-void Glwidget::resizeGL(int w, int h)
+void MainGlWidget::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h); // Set the viewport to cover the entire widget
 }
 
-void Glwidget::paintGL()
+void MainGlWidget::paintGL()
 {
-    if (channelCheckStates_.size() == 0) return;  // Ensure there is data to draw
-
     // Initializing positional parameters
     int windowHeight = height();
-    int enabled_channel_count = std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);
+    int enabled_channel_count = n_channels_;
     int rowHeight = windowHeight / std::max(1, enabled_channel_count);
 
     // min max values for y axis
-    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
-    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
+    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels_);
+    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels_);
     
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Draw graphs for enabled channels
     int graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
-        
         // Set viewport for this row
         glViewport(0, graph_index * rowHeight, width(), rowHeight);
 
@@ -53,7 +52,7 @@ void Glwidget::paintGL()
         glLoadIdentity();
 
         // Prepare data and draw the line strip
-        Eigen::VectorXd dataVector = dataMatrix_.row(n_channels - 1 - row);
+        Eigen::VectorXd dataVector = dataMatrix_.row(n_channels_ - 1 - row);
         double minVal = dataVector.minCoeff();
         min_coeffs(row) = minVal;
         double maxVal = dataVector.maxCoeff();
@@ -80,13 +79,11 @@ void Glwidget::paintGL()
 
     graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
-
         // Draw channel name for each channel
         int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
         if (row < channelNames_.size()) {
-            name = channelNames_.at(n_channels - 1 - row);
+            name = channelNames_.at(n_channels_ - 1 - row);
         }
         painter.drawText(10, yPos_name, name);
 
@@ -108,7 +105,7 @@ void Glwidget::paintGL()
     painter.end();
 }
 
-void Glwidget::updateGraph()
+void MainGlWidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
     emit fetchData();

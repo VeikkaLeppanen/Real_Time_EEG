@@ -29,8 +29,8 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(Eigen::MatrixXd newMatrix) { 
-        newMatrix_ = newMatrix;
+    void updateMatrix(Eigen::MatrixXd &newMatrix) { 
+        dataMatrix_ = newMatrix;
         matrixCapasity = newMatrix.cols(); 
         n_channels = newMatrix.rows();
     }
@@ -47,7 +47,7 @@ public slots:
     void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
 
 private:
-    Eigen::MatrixXd newMatrix_;
+    Eigen::MatrixXd dataMatrix_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = false;
     QStringList channelNames_;

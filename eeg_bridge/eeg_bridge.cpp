@@ -95,7 +95,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
         } case 0x02: { // SamplesPacket
             
-            if (eeg_bridge_status == WAITING_MEASUREMENT_START) break;
+            if (eeg_bridge_status == WAITING_MEASUREMENT_START || !handler.isReady()) break;
 
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
