@@ -30,8 +30,8 @@ Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const 
 
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 
-void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& expCWL, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay);
+Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step);
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
 
 // RT filtering (work in progress)
 std::vector<double> createLowPassFilter(int M, double fc, double fs);

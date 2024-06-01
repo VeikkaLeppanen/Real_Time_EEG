@@ -3,8 +3,8 @@
 #include <QThread>
 
 
-ProcessingWorker::ProcessingWorker(dataHandler &handler, Eigen::MatrixXd &processed_data, volatile std::sig_atomic_t &processingWorkerRunning, QObject* parent)
-    : QObject(parent), handler(handler), processed_data(processed_data), processingWorkerRunning(processingWorkerRunning)
+ProcessingWorker::ProcessingWorker(dataHandler &handler, Eigen::MatrixXd &processed_data, volatile std::sig_atomic_t &processingWorkerRunning, const processingParameters& params, QObject* parent)
+    : QObject(parent), handler(handler), processed_data(processed_data), processingWorkerRunning(processingWorkerRunning), params(params)
 {
     // Filtering
     int order = 4;
@@ -23,10 +23,10 @@ void ProcessingWorker::process()
 {
     // Set the current thread to use SCHED_RR
     pthread_t this_thread = pthread_self();
-    struct sched_param params;
-    params.sched_priority = sched_get_priority_max(SCHED_RR);
+    struct sched_param ch_params;
+    ch_params.sched_priority = sched_get_priority_max(SCHED_RR);
     
-    if (pthread_setschedparam(this_thread, SCHED_RR, &params) != 0) {
+    if (pthread_setschedparam(this_thread, SCHED_RR, &ch_params) != 0) {
         qDebug("Failed to set thread to real-time");
     } else {
         qDebug("Thread set to real-time successfully");
@@ -36,16 +36,14 @@ void ProcessingWorker::process()
 
     try {
         std::cout << "Pworker start" << '\n';
+        std::cout << "params: " << params << '\n';
 
         //  downsampling
-        int downsampling_factor = 10;
+        int downsampling_factor = params.downsampling_factor;
         int downsampled_cols = (samples_to_process + downsampling_factor - 1) / downsampling_factor;
 
         // removeBCG
-        int delay = 6; //6;
-        int number_of_CWL_channels = 7;
-        int step = (1+2*delay);
-        int totalChannels = number_of_CWL_channels * (2 * step + 1);
+        int delay = params.delay;
 
         // phase estimate
         Eigen::VectorXd LSFIR_coeffs_1;
@@ -53,14 +51,14 @@ void ProcessingWorker::process()
         getLSFIRCoeffs_0_80Hz(LSFIR_coeffs_1);
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
 
-        size_t edge = 35;
+        size_t edge = params.edge;
         int edge_cut_cols = downsampled_cols - 2 * edge;
-        size_t modelOrder = 15;
-        size_t hilbertWinLength = 64;
+        size_t modelOrder = params.modelOrder;
+        size_t hilbertWinLength = params.hilbertWinLength;
         size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
 
-        int stimulation_target = M_PI * 0.5;
-        int phase_shift = 0;                        // for 5000Hz
+        double stimulation_target = params.stimulation_target;
+        int phase_shift = params.phase_shift;
 
         // Initializing parameters and matrices for algorithms
         int n_eeg_channels = handler.get_channel_count();
@@ -68,7 +66,6 @@ void ProcessingWorker::process()
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_process);
         Eigen::MatrixXd EEG_filter1 = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_process);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, downsampled_cols);
-        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(totalChannels, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_eeg_channels, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
@@ -93,7 +90,7 @@ void ProcessingWorker::process()
             downsample(EEG_filter1, EEG_downsampled, downsampling_factor);
 
             // CWL
-            removeBCG(EEG_downsampled.middleRows(0, 5), EEG_downsampled.middleRows(5, 7), expCWL, EEG_corrected, delay);
+            removeBCG(EEG_downsampled.middleRows(0, 5), EEG_downsampled.middleRows(5, 7), EEG_corrected, delay);
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // Phase estimate
@@ -103,12 +100,12 @@ void ProcessingWorker::process()
             EEG_predicted = fitAndPredictAR_LeastSquares(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             EEG_hilbert = hilbertTransform(EEG_predicted);
             for (std::size_t i = edge; i < estimationLength; ++i) {
-                    phaseAngles(i) = std::arg(EEG_hilbert[i]);
-                    if (phaseAngles(i - 1) < stimulation_target && phaseAngles(i) >= stimulation_target) {
-                        int trigger_seqNum = sequence_number + (i - edge) * downsampling_factor + phase_shift;
-                        handler.insertTrigger(trigger_seqNum);
-                    }
+                phaseAngles(i) = std::arg(EEG_hilbert[i]);
+                if (phaseAngles(i - 1) < stimulation_target && phaseAngles(i) >= stimulation_target) {
+                    int trigger_seqNum = sequence_number + (i - edge) * downsampling_factor + phase_shift;
+                    handler.insertTrigger(trigger_seqNum);
                 }
+            }
 
             // Save displayed data
             Data_to_display.row(0) = phaseAngles;
@@ -141,10 +138,10 @@ void ProcessingWorker::process_testing()
 {
     // Set the current thread to use SCHED_RR
     pthread_t this_thread = pthread_self();
-    struct sched_param params;
-    params.sched_priority = sched_get_priority_max(SCHED_RR);
+    struct sched_param ch_params;
+    ch_params.sched_priority = sched_get_priority_max(SCHED_RR);
     
-    if (pthread_setschedparam(this_thread, SCHED_RR, &params) != 0) {
+    if (pthread_setschedparam(this_thread, SCHED_RR, &ch_params) != 0) {
         qDebug("Failed to set thread to real-time");
     } else {
         qDebug("Thread set to real-time successfully");
@@ -169,9 +166,6 @@ void ProcessingWorker::process_testing()
 
         // removeBCG
         int delay = 6;
-        int number_of_CWL_channels = 7;
-        int step = (1+2*delay);
-        int totalChannels = number_of_CWL_channels * (2 * step + 1);
 
         // filters
         Eigen::VectorXd LSFIR_coeffs_1;
@@ -188,7 +182,7 @@ void ProcessingWorker::process_testing()
         size_t hilbertWinLength = 64;
         size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
 
-        int stimulation_target = M_PI * 0.5;
+        double stimulation_target = M_PI * 0.5;
         int phase_shift = 0;                        // for 5000Hz
 
         // Initializing parameters and matrices for algorithms
@@ -197,7 +191,6 @@ void ProcessingWorker::process_testing()
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_process);
         Eigen::MatrixXd EEG_filter1 = Eigen::MatrixXd::Zero(n_eeg_channels, samples_to_process);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_eeg_channels, downsampled_cols);
-        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(totalChannels, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_eeg_channels, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
@@ -235,7 +228,7 @@ void ProcessingWorker::process_testing()
                 downsampling_total_time += downsampling_time.count();
 
                 // CWL
-                removeBCG(EEG_downsampled.middleRows(0, 5), EEG_downsampled.middleRows(5, 7), expCWL, EEG_corrected, delay);
+                removeBCG(EEG_downsampled.middleRows(0, 5), EEG_downsampled.middleRows(5, 7), EEG_corrected, delay);
                 EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
                 std::chrono::duration<double> removeBCG_time = std::chrono::high_resolution_clock::now() - downsampling_time - filtering_time - start;

@@ -178,10 +178,10 @@ void dataProcessingLoop(dataHandler &handler) {
 int main(int argc, char *argv[])
 {
     // Lock all current and future memory pages into RAM
-    // if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
-    //     std::cerr << "Failed to lock memory" << std::endl;
-    //     return -1; // or handle the error appropriately
-    // }
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        std::cerr << "Failed to lock memory" << std::endl;
+        return -1; // or handle the error appropriately
+    }
 
     // Disable memory trimming
     if (mallopt(M_TRIM_THRESHOLD, -1) != 1) {

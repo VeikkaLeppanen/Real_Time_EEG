@@ -37,15 +37,13 @@ public slots:
     void startGACorrection();
     void stopGACorrection();
 
+    void startProcessing(processingParameters& parameters);
+
 private slots:
     void handleError(const QString& error);
 
     void on_EEG_clicked();
     void resetEegWindowPointer();
-
-    void on_processingStart_clicked();
-
-    void on_processingStop_clicked();
 
     void on_connectTrigger_clicked();
 

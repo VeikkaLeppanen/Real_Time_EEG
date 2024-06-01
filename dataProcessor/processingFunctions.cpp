@@ -267,7 +267,7 @@ void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int facto
 }
 
 // Function to perform delay embedding of a signal with incremental shifts and edge value padding
-void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& expCWL, int step) {
+Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
     int n = X.rows();  // Number of variables in X
     int m = X.cols();  // Length of the signal
 
@@ -299,12 +299,14 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& expCWL, int step) {
             Y.block(rightStartRow + row, m - offset, 1, offset).setConstant(X(row, m - 1));
         }
     }
+    return Y;
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay) {
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
+    Eigen::MatrixXd expCWL;
     if (delay > 0) {
         // Perform delay embedding if delay is positive
-        delayEmbed(CWL, expCWL, (1+2*delay));
+        expCWL = delayEmbed(CWL, (1+2*delay));
     } else {
         expCWL = CWL;
     }

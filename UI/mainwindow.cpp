@@ -10,7 +10,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     ui->setupUi(this);
 
     MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget) {
+    if (false && mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET
 
         connect(mainglWidget, &MainGlWidget::fetchData, this, &MainWindow::updateData);
 
@@ -117,22 +117,40 @@ void MainWindow::resetEegWindowPointer() {
     eegwindow = nullptr;  // Reset the pointer after the window is destroyed
 }
 
-void MainWindow::on_processingStart_clicked()
+void MainWindow::on_processing_clicked()
 {
+    if (!processingWindow) {
+        processingWindow = new ProcessingWindow(handler, processingWorkerRunning, processed_data, this);
+        processingWindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
+        connect(processingWindow, &ProcessingWindow::destroyed, this, &MainWindow::resetProcessingWindowPointer);
+    }
+    processingWindow->show();
+    processingWindow->raise();
+    processingWindow->activateWindow();
+    connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startProcessing);
+}
+
+void MainWindow::resetProcessingWindowPointer() {
+    processingWindow = nullptr;  // Reset the pointer after the window is destroyed
+}
+
+void MainWindow::startProcessing(processingParameters& parameters)
+{
+    std::cout << "Processing start" << '\n';
     if (!processingWorkerRunning && handler.isReady()) {
         processingWorkerRunning = 1;
 
         QThread* thread = new QThread;
-        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning);
+        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, parameters);
         worker->moveToThread(thread);
 
-        connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between processing and testing functions here
-        connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
-        connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
-        connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
-        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between processing and testing functions here
+        QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
+        QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
+        QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
+        QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
-        connect(thread, &QThread::finished, this, [=]() {
+        QObject::connect(thread, &QThread::finished, this, [=]() {
             processingWorkerRunning = 0;
             qDebug("Thread and Worker cleaned up properly");
         });
@@ -142,20 +160,6 @@ void MainWindow::on_processingStart_clicked()
         std::cout << "Processing start failed" << '\n';
     }
 }
-
-
-void MainWindow::on_processingStop_clicked()
-{
-    processingWorkerRunning = 0;
-    if (count > 0) {
-        double average_time = total_time / count;
-        std::cout << "Total time taken: " << total_time << " seconds." << std::endl;
-        std::cout << "Average time taken: " << average_time << " seconds." << std::endl;
-
-        writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", EEG_output);
-    }
-}
-
 
 void MainWindow::on_connectTrigger_clicked()
 {
@@ -178,20 +182,3 @@ void MainWindow::on_testTrigger_clicked()
     }
 }
 
-
-void MainWindow::on_processing_clicked()
-{
-    if (!processingWindow) {
-        processingWindow = new ProcessingWindow(handler, signal_received, this);
-        processingWindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
-        connect(processingWindow, &ProcessingWindow::destroyed, this, &MainWindow::resetProcessingWindowPointer);
-    }
-    processingWindow->show();
-    processingWindow->raise();
-    processingWindow->activateWindow();
-    // connect(eegwindow, &ProcessingWindow::connectEegBridge, this, &MainWindow::eegBridgeSpin);
-}
-
-void MainWindow::resetProcessingWindowPointer() {
-    eegwindow = nullptr;  // Reset the pointer after the window is destroyed
-}
