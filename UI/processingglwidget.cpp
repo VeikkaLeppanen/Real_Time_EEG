@@ -5,7 +5,7 @@ ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
 {
     QTimer *timer = new QTimer(this);
     matrixCapasity_ = 30000;
-    n_channels_ = 1;
+    n_channels_ = 0;
     dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
 
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);

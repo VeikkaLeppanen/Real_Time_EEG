@@ -267,13 +267,9 @@ void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int facto
 }
 
 // Function to perform delay embedding of a signal with incremental shifts and edge value padding
-Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
+void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
     int n = X.rows();  // Number of variables in X
     int m = X.cols();  // Length of the signal
-
-    // Total rows in the output matrix considering shifts for each step and the original
-    int totalChannels = n * (2 * step + 1);
-    Eigen::MatrixXd Y(totalChannels, m); // Initialize matrix for the output
 
     // Fill the central part of Y with the original data
     int originalStartRow = n * step;
@@ -299,27 +295,23 @@ Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step) {
             Y.block(rightStartRow + row, m - offset, 1, offset).setConstant(X(row, m - 1));
         }
     }
-    return Y;
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay) {
-    Eigen::MatrixXd expCWL;
-    if (delay > 0) {
-        // Perform delay embedding if delay is positive
-        expCWL = delayEmbed(CWL, (1+2*delay));
-    } else {
-        expCWL = CWL;
-    }
-
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay/*, Eigen::VectorXd& betas*/) {
     int num_samples = expCWL.rows();
-    Eigen::MatrixXd pinvCWL = expCWL.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
 
-    Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
+    // auto start = std::chrono::high_resolution_clock::now();
+    Eigen::MatrixXd pinvCWL = expCWL.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
+    // std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
+    // std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
     
+    Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
+
     #pragma omp parallel for
     for(int i = 0; i < EEG.rows(); i++) {
-        Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
-        EEG_fits.row(i) = Betas * expCWL;
+        // Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
+        // if (i == 0) {betas = Betas.row(0);}
+        EEG_fits.row(i) = (EEG.row(i) * pinvCWL) * expCWL;
     }
 
     EEG_corrected = EEG - EEG_fits;
@@ -462,6 +454,7 @@ Eigen::MatrixXd zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::V
 
     // Reverse the data for the backward pass
     Eigen::MatrixXd reversedData = forwardFiltered;
+    #pragma omp parallel for
     for (int row = 0; row < reversedData.rows(); ++row) {
         reversedData.row(row) = reversedData.row(row).reverse();
     }
@@ -470,6 +463,7 @@ Eigen::MatrixXd zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::V
     Eigen::MatrixXd backwardFiltered = applyLSFIRFilterMatrix(reversedData, coeffs);
 
     // Reverse the result to get the final output
+    #pragma omp parallel for
     for (int row = 0; row < backwardFiltered.rows(); ++row) {
         backwardFiltered.row(row) = backwardFiltered.row(row).reverse();
     }

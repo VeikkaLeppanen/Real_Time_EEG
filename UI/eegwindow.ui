@@ -78,19 +78,25 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <property name="leftMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="bottomMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <item alignment="Qt::AlignTop">
            <widget class="QFrame" name="frame_6">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
             </property>
@@ -112,6 +118,12 @@
              </property>
              <item row="0" column="0">
               <widget class="QPushButton" name="connectButton">
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Connect</string>
                </property>
@@ -119,6 +131,12 @@
              </item>
              <item row="0" column="1">
               <widget class="QPushButton" name="disconnectButton">
+               <property name="maximumSize">
+                <size>
+                 <width>100</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Disconnect</string>
                </property>
@@ -265,7 +283,7 @@
          </layout>
         </widget>
        </item>
-       <item alignment="Qt::AlignBottom">
+       <item alignment="Qt::AlignHCenter|Qt::AlignBottom">
         <widget class="QFrame" name="frame_3">
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -321,24 +339,48 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QPushButton" name="HandlerApplyButton">
+          <item row="4" column="0">
+           <widget class="QPushButton" name="GACorrectionStart">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
             <property name="text">
-             <string>Apply</string>
+             <string>Start</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="4" column="1">
            <widget class="QPushButton" name="GACorrectionStop">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>16777215</height>
+             </size>
+            </property>
             <property name="text">
              <string>Stop</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QPushButton" name="GACorrectionStart">
+          <item row="3" column="0" colspan="2">
+           <widget class="QPushButton" name="HandlerApplyButton">
             <property name="text">
-             <string>Start</string>
+             <string>Apply</string>
             </property>
            </widget>
           </item>

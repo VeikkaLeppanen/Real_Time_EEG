@@ -10,6 +10,8 @@
 #include <complex>
 #include <cmath>
 #include <omp.h>
+#include <numeric>
+#include <algorithm>
 
 #include <fftw3.h>
 #include <armadillo>
@@ -30,8 +32,8 @@ Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const 
 
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 
-Eigen::MatrixXd delayEmbed(const Eigen::MatrixXd& X, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& CWL, Eigen::MatrixXd& EEG_corrected, int delay);
+void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step);
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay/*, Eigen::VectorXd& betas*/);
 
 // RT filtering (work in progress)
 std::vector<double> createLowPassFilter(int M, double fc, double fs);

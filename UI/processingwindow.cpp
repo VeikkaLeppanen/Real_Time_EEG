@@ -1,5 +1,6 @@
 #include "processingwindow.h"
 #include "ui_processingwindow.h"
+#include <QThread>
 
 ProcessingWindow::ProcessingWindow(dataHandler &handler, volatile std::sig_atomic_t &processingWorkerRunning, Eigen::MatrixXd &processed_data, QWidget *parent)
     : QMainWindow(parent), 
@@ -20,6 +21,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler, volatile std::sig_atomi
     ui->phaseShift->setText(QString::number(params.phase_shift));
 
     setWindowTitle("Processing Window");
+    resize(1280, 720);
 
     ProcessingGlWidget* processingglWidget = ui->processingGlWidget;
     if (processingglWidget) {
@@ -48,6 +50,8 @@ ProcessingWindow::~ProcessingWindow()
 
 void ProcessingWindow::on_startButton_clicked()
 {
+    processingWorkerRunning = 0;
+    QThread::msleep(10);
     std::cout << "ProcessingWindow start" << '\n';
     emit startProcessing(params);
 }
