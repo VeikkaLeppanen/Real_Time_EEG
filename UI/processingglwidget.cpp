@@ -7,6 +7,8 @@ ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     matrixCapasity_ = 30000;
     n_channels_ = 0;
     dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
+    channelNames_ = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
+
 
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
