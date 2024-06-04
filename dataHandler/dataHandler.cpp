@@ -409,6 +409,7 @@ std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
     std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
     uint8_t crc = crc8(cmd);
     std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
+    fullCmd.reserve(4 + cmd.size()); // 4 extra for {0xfe, size, crc, 0xff}
     fullCmd.insert(fullCmd.end(), cmd.begin(), cmd.end());
     fullCmd.push_back(crc);
     fullCmd.push_back(0xff);
