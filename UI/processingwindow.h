@@ -31,6 +31,8 @@ public slots:
 private slots:
     void on_downsampling_editingFinished();
 
+    void on_numberOfSamples_editingFinished();
+
     void on_delay_editingFinished();
 
     void on_edge_editingFinished();

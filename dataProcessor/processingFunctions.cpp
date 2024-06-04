@@ -281,6 +281,10 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
         int leftStartRow = originalStartRow - offset * n;
         int rightStartRow = originalStartRow + offset * n;
 
+        if (leftStartRow < 0 || rightStartRow + n > Y.rows()) {
+            std::cerr << "Error: Invalid input matrix dimensions." << std::endl;
+        }
+
         // Left shifts (data moves right)
         for (int row = 0; row < n; ++row) {
             Y.block(leftStartRow + row, offset, 1, m - offset) = X.block(row, 0, 1, m - offset);
@@ -297,13 +301,14 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
     }
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected, int delay/*, Eigen::VectorXd& betas*/) {
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/) {
     int num_samples = expCWL.rows();
-
+    
     // auto start = std::chrono::high_resolution_clock::now();
     Eigen::MatrixXd pinvCWL = expCWL.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
     // std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
-    // std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
+    // std::cout << "Pinv time taken: " << total_elapsed.count() << " seconds." << std::endl;
+    // std::cout << "Pinv: " << pinvCWL.rows() << ", " << pinvCWL.cols() << std::endl;
     
     Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
 
@@ -313,6 +318,7 @@ void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen:
         // if (i == 0) {betas = Betas.row(0);}
         EEG_fits.row(i) = (EEG.row(i) * pinvCWL) * expCWL;
     }
+    // EEG_fits = (EEG * pinvCWL) * expCWL;
 
     EEG_corrected = EEG - EEG_fits;
 }

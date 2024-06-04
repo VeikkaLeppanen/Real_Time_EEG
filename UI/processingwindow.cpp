@@ -12,6 +12,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler, volatile std::sig_atomi
     ui->setupUi(this);
 
     // Initialize values for lineEdits
+    ui->numberOfSamples->setText(QString::number(params.numberOfSamples));
     ui->downsampling->setText(QString::number(params.downsampling_factor));
     ui->delay->setText(QString::number(params.delay));
     ui->edge->setText(QString::number(params.edge));
@@ -50,10 +51,12 @@ ProcessingWindow::~ProcessingWindow()
 
 void ProcessingWindow::on_startButton_clicked()
 {
-    processingWorkerRunning = 0;
-    QThread::msleep(10);
-    std::cout << "ProcessingWindow start" << '\n';
-    emit startProcessing(params);
+    if(processingWorkerRunning) {
+        QMessageBox::warning(this, "Error", "Processing is already running.");
+    } else {
+        std::cout << "ProcessingWindow start" << '\n';
+        emit startProcessing(params);
+    }
 }
 
 
@@ -62,6 +65,16 @@ void ProcessingWindow::on_stopButton_clicked()
     processingWorkerRunning = 0;
 }
 
+void ProcessingWindow::on_numberOfSamples_editingFinished()
+{
+    bool ok;
+    int value = ui->numberOfSamples->text().toInt(&ok);
+    if (ok) {
+        params.numberOfSamples = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
 
 void ProcessingWindow::on_downsampling_editingFinished()
 {
@@ -145,4 +158,6 @@ void ProcessingWindow::on_phaseShift_editingFinished()
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
 }
+
+
 
