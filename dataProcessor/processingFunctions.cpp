@@ -301,26 +301,27 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
     }
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/) {
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& pinvCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/) {
     int num_samples = expCWL.rows();
     
     // auto start = std::chrono::high_resolution_clock::now();
-    Eigen::MatrixXd pinvCWL = expCWL.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
+    pinvCWL = expCWL.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
     // std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
     // std::cout << "Pinv time taken: " << total_elapsed.count() << " seconds." << std::endl;
     // std::cout << "Pinv: " << pinvCWL.rows() << ", " << pinvCWL.cols() << std::endl;
     
-    Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
+    // Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
 
     #pragma omp parallel for
     for(int i = 0; i < EEG.rows(); i++) {
         // Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
         // if (i == 0) {betas = Betas.row(0);}
-        EEG_fits.row(i) = (EEG.row(i) * pinvCWL) * expCWL;
+        // EEG_fits.row(i) = (EEG.row(i) * pinvCWL) * expCWL;
+        EEG_corrected.row(i) = EEG.row(i) - (EEG.row(i) * pinvCWL) * expCWL;
     }
     // EEG_fits = (EEG * pinvCWL) * expCWL;
 
-    EEG_corrected = EEG - EEG_fits;
+    // EEG_corrected = EEG - EEG_fits;
 }
 
 

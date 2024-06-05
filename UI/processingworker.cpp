@@ -30,6 +30,7 @@ void ProcessingWorker::process()
         // removeBCG
         int delay = params.delay;
         int step = (1+2*delay);
+        int n_CWL_channels_to_use = 7;
 
         // FIR filters
         Eigen::VectorXd LSFIR_coeffs_1;
@@ -50,12 +51,12 @@ void ProcessingWorker::process()
 
         // Initializing parameters and matrices for algorithms
         int n_channels = handler.get_channel_count();
-        int n_CWL_channels = 7;
 
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
         Eigen::MatrixXd EEG_filter1 = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
-        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels * step, downsampled_cols); // Initialize matrix for the output
+        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
+        Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
@@ -82,11 +83,11 @@ void ProcessingWorker::process()
             // CWL
             if (delay > 0) {
                 // Perform delay embedding if delay is positive
-                delayEmbed(EEG_downsampled.middleRows(5, 7), expCWL, delay);
+                delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
             } else {
-                expCWL = EEG_downsampled.middleRows(5, 7);
+                expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
             }
-            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, EEG_corrected);
+            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // Phase estimate
@@ -178,6 +179,7 @@ void ProcessingWorker::process_testing()
         // removeBCG
         int delay = params.delay;
         int step = (1+2*delay);
+        int n_CWL_channels_to_use = 7;
 
         // FIR filters
         Eigen::VectorXd LSFIR_coeffs_1;
@@ -201,7 +203,8 @@ void ProcessingWorker::process_testing()
 
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
         Eigen::MatrixXd EEG_filter1 = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
-        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_channels * step, downsampled_cols); // Initialize matrix for the output
+        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
+        Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
@@ -242,11 +245,11 @@ void ProcessingWorker::process_testing()
                 // CWL
                 if (delay > 0) {
                     // Perform delay embedding if delay is positive
-                    delayEmbed(EEG_downsampled.middleRows(5, 7), expCWL, delay);
+                    delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
                 } else {
-                    expCWL = EEG_downsampled.middleRows(5, 7);
+                    expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
                 }
-                removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, EEG_corrected);
+                removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
                 EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
                 std::chrono::duration<double> removeBCG_time = std::chrono::high_resolution_clock::now() - downsampling_time - filtering_time - start;
