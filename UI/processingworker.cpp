@@ -12,20 +12,9 @@ ProcessingWorker::~ProcessingWorker()
 
 void ProcessingWorker::process()
 {
-    // Set the current thread to use SCHED_RR
-    pthread_t this_thread = pthread_self();
-    struct sched_param ch_params;
-    ch_params.sched_priority = sched_get_priority_max(SCHED_RR);
-    
-    if (pthread_setschedparam(this_thread, SCHED_RR, &ch_params) != 0) {
-        qDebug("Failed to set thread to real-time");
-    } else {
-        qDebug("Thread set to real-time successfully");
-    }
+    omp_set_num_threads(10);
 
-    omp_set_num_threads(5);
-
-    Eigen::setNbThreads(std::thread::hardware_concurrency());
+    // Eigen::setNbThreads(std::thread::hardware_concurrency());
 
     try {
         std::cout << "Pworker start" << '\n';
