@@ -108,7 +108,7 @@ void ProcessingWorker::process()
             EEG_hilbert = hilbertTransform(EEG_predicted);
             for (std::size_t i = edge; i < estimationLength; ++i) {
                 phaseAngles(i) = std::arg(EEG_hilbert[i]);
-                if (phaseAngles(i - 1) < stimulation_target && phaseAngles(i) >= stimulation_target) {
+                if (phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target ) {
                     int trigger_seqNum = sequence_number + (i - edge) * downsampling_factor + phase_shift;
                     handler.insertTrigger(trigger_seqNum);
                 }
