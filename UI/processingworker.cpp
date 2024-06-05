@@ -75,7 +75,8 @@ void ProcessingWorker::process()
             auto start = std::chrono::high_resolution_clock::now();
 
             // Filtering
-            EEG_filter1 = applyLSFIRFilterMatrix(all_channels, LSFIR_coeffs_1);
+            // EEG_filter1 = applyLSFIRFilterMatrix_ret(all_channels, LSFIR_coeffs_1);
+            applyLSFIRFilterMatrix(all_channels, LSFIR_coeffs_1, EEG_filter1);
 
             // Downsampling
             downsample(EEG_filter1, EEG_downsampled, downsampling_factor);
@@ -230,8 +231,7 @@ void ProcessingWorker::process_testing()
                 auto start = std::chrono::high_resolution_clock::now();
 
                 // Filtering
-                // EEG_filter1 = applyFIRFilterToMatrix(all_channels * 10, filterCoeffs_);                        // Testing scaling here
-                EEG_filter1 = applyLSFIRFilterMatrix(all_channels * 10, LSFIR_coeffs_1);
+                applyLSFIRFilterMatrix(all_channels * 10, LSFIR_coeffs_1, EEG_filter1);
            
                 std::chrono::duration<double> filtering_time = std::chrono::high_resolution_clock::now() - start;
                 filtering_total_time += filtering_time.count();

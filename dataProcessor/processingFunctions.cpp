@@ -434,7 +434,7 @@ Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorX
     return backwardFiltered.reverse();
 }
 
-Eigen::MatrixXd applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
+Eigen::MatrixXd applyLSFIRFilterMatrix_ret(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
     int numRows = data.rows();
     int numCols = data.cols();
     int filterSize = coeffs.size();
@@ -455,27 +455,45 @@ Eigen::MatrixXd applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen:
     return filteredData;
 }
 
-Eigen::MatrixXd zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
+void applyLSFIRFilterMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs, Eigen::MatrixXd& filteredData) {
+    int numRows = data.rows();
+    int numCols = data.cols();
+    int filterSize = coeffs.size();
+    filteredData.setZero();
+
+    // Perform convolution for each row
+    #pragma omp parallel for
+    for (int row = 0; row < numRows; ++row) {
+        for (int i = 0; i < numCols; ++i) {
+            for (int j = 0; j < filterSize; ++j) {
+                if (i - j >= 0) {
+                    filteredData(row, i) += data(row, i - j) * coeffs(j);
+                }
+            }
+        }
+    }
+}
+
+void zeroPhaseLSFIRMatrix(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs, Eigen::MatrixXd& filteredData) {
     // Forward filter pass
-    Eigen::MatrixXd forwardFiltered = applyLSFIRFilterMatrix(data, coeffs);
+    applyLSFIRFilterMatrix(data, coeffs, filteredData);
 
     // Reverse the data for the backward pass
-    Eigen::MatrixXd reversedData = forwardFiltered;
+    Eigen::MatrixXd reversedData = filteredData;
     #pragma omp parallel for
     for (int row = 0; row < reversedData.rows(); ++row) {
         reversedData.row(row) = reversedData.row(row).reverse();
     }
 
     // Backward filter pass
-    Eigen::MatrixXd backwardFiltered = applyLSFIRFilterMatrix(reversedData, coeffs);
+    Eigen::MatrixXd backwardFiltered = Eigen::MatrixXd::Zero(data.rows(), data.cols());
+    applyLSFIRFilterMatrix(reversedData, coeffs, backwardFiltered);
 
     // Reverse the result to get the final output
     #pragma omp parallel for
     for (int row = 0; row < backwardFiltered.rows(); ++row) {
-        backwardFiltered.row(row) = backwardFiltered.row(row).reverse();
+        filteredData.row(row) = backwardFiltered.row(row).reverse();
     }
-
-    return backwardFiltered;
 }
 
 
