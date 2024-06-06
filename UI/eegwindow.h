@@ -74,6 +74,8 @@ private slots:
     void on_GACorrectionStop_clicked();
     void on_checkBox_stateChanged(int arg1);
     
+    void on_filter1_stateChanged(int arg1);
+
 private:
     Ui::EegWindow *ui;
     QTimer *checkHandlerTimer;

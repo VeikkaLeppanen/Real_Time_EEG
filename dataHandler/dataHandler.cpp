@@ -20,6 +20,8 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
         trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
     }
 
+    processing_sample_vector = Eigen::VectorXd::Zero(channel_count);
+
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
 
     baseline_average = Eigen::VectorXd(channel_count);
@@ -158,8 +160,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
         {
             std::lock_guard<std::mutex> lock(this->dataMutex);
-            // sample_buffer_.col(current_data_index_) = samples - GACorr_.getTemplateCol(stimulation_tracker);
-            sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples - GACorr_.getTemplateCol(stimulation_tracker));
+            processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
         }
         
         GACorr_.update_template(stimulation_tracker, samples);
@@ -167,8 +168,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     } else {
 
         std::lock_guard<std::mutex> lock(this->dataMutex);
-        // sample_buffer_.col(current_data_index_) = samples;
-        sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples);
+        processing_sample_vector = samples;
 
     }
 
@@ -176,8 +176,15 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     if (Apply_baseline) {
         int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
         baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
-        sample_buffer_.col(current_data_index_) = sample_buffer_.col(current_data_index_).cwiseQuotient(baseline_average);
+        processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
     }
+
+    // Filtering
+    if (Apply_filter) {
+        processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
+    }
+
+    sample_buffer_.col(current_data_index_) = processing_sample_vector;
 
     if (getTriggerPortStatus() && shouldTrigger(SeqNo)) {
         trig();

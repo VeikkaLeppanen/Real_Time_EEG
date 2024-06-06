@@ -87,6 +87,10 @@ public:
     int get_GA_average_length() { return GA_average_length; }
     
     void printBufferSize();
+    
+    // Filtering
+    void setFilterState(bool state) { Apply_filter = state; }
+    bool getFilterState() { return state; }
 
     // Triggering
     int connectTriggerPort();
@@ -133,11 +137,15 @@ private:
 
     // dataProcessor &processor_;
 
+    Eigen::VectorXd processing_sample_vector;
+
     bool GACorr_running = true;
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;
     int stimulation_tracker = 10000000;
+
+    bool Apply_filter = true;
 
     bool Apply_baseline = false;
     Eigen::VectorXd baseline_average;

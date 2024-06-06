@@ -17,8 +17,9 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         // Initialize values for lineEdits
         ui->lineEditPort->setText(QString::number(port));  // Example port number
         ui->lineEditTimeOut->setText(QString::number(bridge_timeout)); // Example timeout in milliseconds
-        ui->lineEditGALength->setText(QString::number(GALength)); // Example genetic algorithm length
-        ui->lineEditGAaverage->setText(QString::number(GAAverage)); // Example genetic algorithm average
+        ui->lineEditGALength->setText(QString::number(GALength));
+        ui->lineEditGAaverage->setText(QString::number(GAAverage));
+        ui->filter1->setChecked(handler.getFilterState());
 
         setWindowTitle("EEG Window");
         resize(1280, 720);
@@ -259,5 +260,12 @@ void eegWindow::on_checkBox_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit scaleDrawStateChanged(isChecked);
+}
+
+
+void eegWindow::on_filter1_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    handler.setFilterState(isChecked);
 }
 
