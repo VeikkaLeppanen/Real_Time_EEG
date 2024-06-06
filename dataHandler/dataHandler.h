@@ -90,7 +90,7 @@ public:
     
     // Filtering
     void setFilterState(bool state) { Apply_filter = state; }
-    bool getFilterState() { return state; }
+    bool getFilterState() { return Apply_filter; }
 
     // Triggering
     int connectTriggerPort();
