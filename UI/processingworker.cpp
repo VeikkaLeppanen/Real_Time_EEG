@@ -30,6 +30,7 @@ void ProcessingWorker::process()
         // removeBCG
         int delay = params.delay;
         int step = (1+2*delay);
+        int n_EEG_channels_to_use = 5;
         int n_CWL_channels_to_use = 7;
 
         // FIR filters
@@ -57,13 +58,14 @@ void ProcessingWorker::process()
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
         Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
         Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
-        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
+        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
         std::vector<double> EEG_predicted(estimationLength, 0.0);
         std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
         Eigen::VectorXd phaseAngles(estimationLength);
 
+        Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
 
         int seq_num_tracker = 0;
@@ -76,7 +78,8 @@ void ProcessingWorker::process()
 
             // Filtering
             // EEG_filter1 = applyLSFIRFilterMatrix_ret(all_channels, LSFIR_coeffs_1);
-            applyLSFIRFilterMatrix(all_channels, LSFIR_coeffs_1, EEG_filter1);
+            // applyLSFIRFilterMatrix(all_channels, LSFIR_coeffs_1, EEG_filter1);
+            EEG_filter1 = all_channels;
 
             // Downsampling
             downsample(EEG_filter1, EEG_downsampled, downsampling_factor);
@@ -117,8 +120,8 @@ void ProcessingWorker::process()
             Data_to_display.row(2).head(downsampled_cols) = EEG_spatial;
             Data_to_display.row(3).head(downsampled_cols - edge) = EEG_filter2.head(downsampled_cols - edge);
 
-            Eigen::VectorXd EEG_predicted_EIGEN = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
-            Data_to_display.row(3).tail(estimationLength) = EEG_predicted_EIGEN;
+            // EEG_predicted_EIGEN = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            Data_to_display.row(3).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             Data_to_display.row(4).tail(estimationLength) = phaseAngles.tail(estimationLength);
             processed_data = Data_to_display;
         }

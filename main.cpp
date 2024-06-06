@@ -57,27 +57,7 @@ void dataAcquisitionLoop(dataHandler &handler) {
 
 
 
-
-
-// Function to write Eigen matrix to CSV file
-// void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
-//     std::ofstream file(filename);
-
-//     if (file.is_open()) {
-//         for (int i = 0; i < matrix.rows(); ++i) {
-//             for (int j = 0; j < matrix.cols(); ++j) {
-//                 file << matrix(i, j);
-//                 if (j + 1 < matrix.cols()) file << ","; // Comma for next column
-//             }
-//             file << "\n"; // Newline for next row
-//         }
-//         file.close();
-//     } else {
-//         std::cerr << "Failed to open the file for writing." << std::endl;
-//     }
-// }
-
-
+/*
 // Loop for the data processing
 void dataProcessingLoop(dataHandler &handler) {
     
@@ -167,7 +147,7 @@ void dataProcessingLoop(dataHandler &handler) {
 
     std::cout << "Exiting dataProcessingLoop" << '\n';
 }
-
+*/
 
 
 

@@ -110,81 +110,6 @@ Eigen::MatrixXd phaseAngleToMatrix(const std::vector<std::complex<double>>& comp
 
 
 
-// FILTERING FUNCTIONS
-
-// Function to design a simple FIR low-pass filter using the window method
-std::vector<double> designLowPassFilter(int numTaps, double Fs, double Fc) {
-    std::vector<double> h(numTaps);
-    double r = Fc / (Fs / 2);  // Normalized cutoff frequency
-
-    // Apply the window method (Hann window) and sinc function
-    for (int i = 0; i < numTaps; ++i) {
-        double M = numTaps - 1;
-        double n = i - M / 2;
-        if (n == 0.0)
-            h[i] = 2 * r;
-        else
-            h[i] = sin(2 * M_PI * r * n) / (M_PI * n) * (0.5 - 0.5 * cos(2 * M_PI * i / M));
-
-        // Apply the window
-        h[i] *= 0.54 - 0.46 * cos(2 * M_PI * i / M);
-    }
-
-    return h;
-}
-
-// Function to design a bandpass FIR filter using the window method
-std::vector<double> designBandPassFilter(int numTaps, double Fs, double Fc1, double Fc2) {
-    std::vector<double> h(numTaps);
-    double r1 = Fc1 / (Fs / 2); // Normalized lower cutoff frequency
-    double r2 = Fc2 / (Fs / 2); // Normalized upper cutoff frequency
-
-    // Apply the window method (Hann window) and sinc function for bandpass
-    for (int i = 0; i < numTaps; ++i) {
-        double M = numTaps - 1;
-        double n = i - M / 2;
-        if (n == 0.0)
-            h[i] = 2 * (r2 - r1);
-        else
-            h[i] = (sin(2 * M_PI * r2 * n) / (M_PI * n)) - (sin(2 * M_PI * r1 * n) / (M_PI * n));
-
-        // Apply the window
-        h[i] *= 0.54 - 0.46 * cos(2 * M_PI * i / M);
-    }
-
-    return h;
-}
-
-// Function to apply a simple FIR filter to each row of an Eigen matrix
-Eigen::MatrixXd applyFIRFilterToMatrix(const Eigen::MatrixXd& dataMatrix, const std::vector<double>& b) {
-    int numRows = dataMatrix.rows();
-    int numCols = dataMatrix.cols();
-    int nb = b.size();
-    Eigen::MatrixXd result(numRows, numCols);
-
-    // Process each row with the FIR filter
-    for (int i = 0; i < numRows; ++i) {
-        Eigen::VectorXd currentRow = dataMatrix.row(i);
-        Eigen::VectorXd filteredRow(numCols);
-
-        // Zero-padding is not considered here for simplicity and speed
-        for (int j = 0; j < numCols; ++j) {
-            double sum = 0.0;
-            for (int k = 0; k < nb; ++k) {
-                if (j - k >= 0) {
-                    sum += b[k] * currentRow[j - k];
-                }
-            }
-            filteredRow[j] = sum;
-        }
-        result.row(i) = filteredRow;
-    }
-
-    return result;
-}
-
-
-
 
 
 
@@ -355,6 +280,27 @@ void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd&
 
     // Solve the linear system A * x = b
     coeffs = A.colPivHouseholderQr().solve(b);
+}
+
+
+void MultiChannelRealTimeFilter::reset_filter(int numChannels) {
+    getLSFIRCoeffs_0_80Hz(filterCoeffs);
+    M = filterCoeffs.size();
+    buffers = Eigen::MatrixXd::Zero(M, numChannels);
+    filteredSamples = Eigen::VectorXd::Zero(numChannels);
+}
+
+// Process a new sample vector where each element is the current sample for a channel
+Eigen::VectorXd MultiChannelRealTimeFilter::processSample(const Eigen::VectorXd& newSamples) {
+    for (int ch = 0; ch < newSamples.size(); ++ch) {
+        // Move existing buffer data up one row
+        buffers.col(ch).tail(M - 1) = buffers.col(ch).head(M - 1);
+        buffers.col(ch)(0) = newSamples(ch);
+
+        // Apply the filter using Eigen dot product
+        filteredSamples(ch) = buffers.col(ch).dot(filterCoeffs);
+    }
+    return filteredSamples;
 }
 
 // Function that returns fixed butterworth coefficients for a band pass of 0-80Hz
