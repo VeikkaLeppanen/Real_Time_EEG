@@ -8,6 +8,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
+    resize(1280, 720);
 
     MainGlWidget* mainglWidget = ui->mainGlWidget;
     if (false && mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET

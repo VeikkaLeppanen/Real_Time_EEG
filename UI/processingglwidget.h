@@ -71,11 +71,24 @@ public slots:
     }
     void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
 
+    void setCustomScaleStatus(bool isChecked) { useCustomScale_ = isChecked; }
+    void setCustomScaleMin(double min) { min_scale_ = min; }
+    void setCustomScaleMax(double max) { max_scale_ = max; }
+
+    bool getCustomScaleStatus() { return useCustomScale_; }
+    double getCustomScaleMin() { return min_scale_; }
+    double getCustomScaleMax() { return max_scale_; }
+
 private:
     Eigen::MatrixXd dataMatrix_;
     std::vector<bool> channelCheckStates_;
-    bool draw_channel_scales = false;
+    bool draw_channel_scales = true;
     QStringList channelNames_;
+
+    // Custom scale
+    bool useCustomScale_ = false;
+    double min_scale_ = -10.0;
+    double max_scale_ = 10.0;
 
     int matrixCapasity_;
     int n_channels_;

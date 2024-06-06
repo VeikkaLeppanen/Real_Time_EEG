@@ -23,6 +23,14 @@ public:
 signals:
     void startProcessing(processingParameters& params);
 
+    void setCustomScaleStatus(bool status);
+    void setCustomScaleMin(double min);
+    void setCustomScaleMax(double max);
+
+    bool getCustomScaleStatus();
+    double getCustomScaleMin();
+    double getCustomScaleMax();
+
 public slots:
     void updateData();
     void on_startButton_clicked();
@@ -30,6 +38,8 @@ public slots:
 
 private slots:
     void on_downsampling_editingFinished();
+
+    void on_numberOfSamples_editingFinished();
 
     void on_delay_editingFinished();
 
@@ -42,6 +52,12 @@ private slots:
     void on_stimulationTarget_editingFinished();
 
     void on_phaseShift_editingFinished();
+
+    void on_scaleMax_editingFinished();
+
+    void on_scaleMin_editingFinished();
+
+    void on_checkBox_stateChanged(int arg1);
 
 private:
     Ui::ProcessingWindow *ui;

@@ -11,11 +11,14 @@
 
 struct processingParameters {
 
+    // Number of samples to use for the processing
+    int numberOfSamples = 10000;
+
     //  downsampling
     int downsampling_factor = 10;
 
     // removeBCG
-    int delay = 6;
+    int delay = 11;
 
     // phase estimate
     size_t edge = 35;
@@ -63,7 +66,6 @@ private:
     std::vector<double> filterCoeffs_;
     std::vector<double> b; 
     std::vector<double> a;
-    int samples_to_process = 10000;
 };
 
 #endif // PROCESSINGWORKER_H

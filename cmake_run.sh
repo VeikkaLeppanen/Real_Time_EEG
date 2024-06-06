@@ -12,4 +12,5 @@ mkdir build
 cd build
 cmake ..
 make
+# sudo setcap cap_ipc_lock+ep real_time_eeg
 sudo ./real_time_eeg

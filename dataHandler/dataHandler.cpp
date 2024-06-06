@@ -20,20 +20,15 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
         trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
     }
 
+    processing_sample_vector = Eigen::VectorXd::Zero(channel_count);
+
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
 
     baseline_average = Eigen::VectorXd(channel_count);
 
     handler_state = WAITING_FOR_STOP;
 
-
-    // Filter design parameters
-    double fc_low = 0.33;  // Lower cutoff frequency
-    double fc_high = 135;  // Upper cutoff frequency
-    int M = 51;  // Number of filter coefficients (kernel size)
-
-    filterCoeffs_ = createBandPassFilter(M, fc_low, fc_high, sampling_rate);
-    RTfilter_.reset_filter(filterCoeffs_, channel_count);
+    RTfilter_.reset_filter(channel_count);
 }
     
 void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input) {
@@ -165,8 +160,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
         {
             std::lock_guard<std::mutex> lock(this->dataMutex);
-            sample_buffer_.col(current_data_index_) = samples - GACorr_.getTemplateCol(stimulation_tracker);
-            // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples - GACorr_.getTemplateCol(stimulation_tracker));
+            processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
         }
         
         GACorr_.update_template(stimulation_tracker, samples);
@@ -174,8 +168,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     } else {
 
         std::lock_guard<std::mutex> lock(this->dataMutex);
-        sample_buffer_.col(current_data_index_) = samples;
-        // sample_buffer_.col(current_data_index_) = RTfilter_.processSample(samples);
+        processing_sample_vector = samples;
 
     }
 
@@ -183,8 +176,15 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     if (Apply_baseline) {
         int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
         baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
-        sample_buffer_.col(current_data_index_) = sample_buffer_.col(current_data_index_).cwiseQuotient(baseline_average);
+        processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
     }
+
+    // Filtering
+    if (Apply_filter) {
+        processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
+    }
+
+    sample_buffer_.col(current_data_index_) = processing_sample_vector;
 
     if (getTriggerPortStatus() && shouldTrigger(SeqNo)) {
         trig();
@@ -409,6 +409,7 @@ std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
     std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
     uint8_t crc = crc8(cmd);
     std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
+    fullCmd.reserve(4 + cmd.size()); // 4 extra for {0xfe, size, crc, 0xff}
     fullCmd.insert(fullCmd.end(), cmd.begin(), cmd.end());
     fullCmd.push_back(crc);
     fullCmd.push_back(0xff);
