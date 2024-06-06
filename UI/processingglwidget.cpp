@@ -55,9 +55,16 @@ void ProcessingGlWidget::paintGL()
 
         // Prepare data and draw the line strip
         Eigen::VectorXd dataVector = dataMatrix_.row(n_channels_ - 1 - row);
-        double minVal = dataVector.minCoeff();
+        
+        double minVal, maxVal;
+        if(useCustomScale_) {
+            minVal = min_scale_;
+            maxVal = max_scale_;
+        } else {
+            minVal = dataVector.minCoeff();
+            maxVal = dataVector.maxCoeff();
+        }
         min_coeffs(row) = minVal;
-        double maxVal = dataVector.maxCoeff();
         max_coeffs(row) = maxVal;
 
         glColor3f(1.0, 1.0, 1.0); // Set the color to white for the lines
