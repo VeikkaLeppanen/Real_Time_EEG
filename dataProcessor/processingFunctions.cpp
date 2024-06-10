@@ -1,3 +1,7 @@
+#ifndef EIGEN_USE_LAPACKE
+#error "EIGEN_USE_LAPACKE not defined"
+#endif
+
 #include "processingFunctions.h"
 
 // Function for writing Eigen matrix to CSV file
@@ -279,7 +283,8 @@ void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd&
     }
 
     // Solve the linear system A * x = b
-    coeffs = A.colPivHouseholderQr().solve(b);
+    coeffs = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+    // coeffs = A.colPivHouseholderQr().solve(b);
 }
 
 
@@ -575,7 +580,7 @@ std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, si
     }
 
     // Step 2: Estimate AR parameters using linear regression
-    Eigen::VectorXd arParams = X.colPivHouseholderQr().solve(y);  // More stable than normal equations
+    Eigen::VectorXd arParams = X.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
 
     // Step 3: Predict future values based on the AR model
     std::vector<double> predictions;

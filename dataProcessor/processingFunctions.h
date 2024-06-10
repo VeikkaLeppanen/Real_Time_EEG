@@ -1,6 +1,7 @@
 #ifndef PROCESSINGFUNCTIONS_H
 #define PROCESSINGFUNCTIONS_H
 
+
 #include <vector>
 #include <string>
 #include <chrono>
@@ -14,7 +15,6 @@
 #include <algorithm>
 
 #include <fftw3.h>
-#include <armadillo>
 
 // Function declarations
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);

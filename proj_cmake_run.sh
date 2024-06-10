@@ -8,5 +8,5 @@ mkdir build
 cd build
 cmake -DCMAKE_PREFIX_PATH=~/Qt/6.7.0/gcc_64/lib/cmake -DCMAKE_BUILD_TYPE=Release ..
 # cmake ..
-make
+make # VERBOSE=1
 sudo ./real_time_eeg
