@@ -392,6 +392,16 @@ int dataHandler::connectTriggerPort() {
         serial.set_option(boost::asio::serial_port_base::character_size(8));
 
         std::cout << "Serial port configured and opened." << std::endl;
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        // TODO: Write a set_enable(bool) member function
+        auto cmd_enable = create_enable_cmd_byte_str(true);
+        boost::asio::write(serial, boost::asio::buffer(cmd_enable));        
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        set_amplitude(50);
+
     } catch (const boost::system::system_error& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
@@ -401,11 +411,24 @@ int dataHandler::connectTriggerPort() {
 }
 
 void dataHandler::trig() {
-    auto cmd = createTrigCmdByteStr();
+
+    auto cmd = create_trig_cmd_byte_str();
     boost::asio::write(serial, boost::asio::buffer(cmd));
+    
 }
 
-std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
+void dataHandler::set_amplitude(int amplitude) {
+    if (amplitude <= 0 || amplitude >= 100) {
+        std::cerr << "Error amplitude must be between 0 and 100" << std::endl;
+        return;
+    } else {
+        auto cmd_amplitude = create_amplitude_cmd_byte_str(amplitude, 0);
+        boost::asio::write(serial, boost::asio::buffer(cmd_amplitude));
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
+
+std::vector<uint8_t> dataHandler::create_trig_cmd_byte_str() {
     std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
     uint8_t crc = crc8(cmd);
     std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
@@ -416,19 +439,51 @@ std::vector<uint8_t> dataHandler::createTrigCmdByteStr() {
     return fullCmd;
 }
 
-uint8_t dataHandler::crc8(const std::vector<uint8_t>& data) {
-    uint8_t crc = 0x00; // Initial value
-    uint8_t poly = 0x31; // Example polynomial: x^8 + x^5 + x^4 + 1
+std::vector<uint8_t> dataHandler::create_enable_cmd_byte_str(bool enable) {
+    std::vector<uint8_t> cmd;
 
-    for (auto byte : data) {
-        crc ^= byte;
-        for (unsigned int i = 0; i < 8; i++) {
-            if (crc & 0x80)
-                crc = (crc << 1) ^ poly;
-            else
-                crc <<= 1;
-        }
+    if (enable) {
+        cmd = {0x02, 0x01, 0x00};
+    } else {
+        cmd = {0x02, 0x00, 0x00};
     }
 
+    uint8_t crc = crc8(cmd);
+    std::vector<uint8_t> result = {0xfe, static_cast<uint8_t>(cmd.size())};
+    result.reserve(4 + cmd.size());
+    result.insert(result.end(), cmd.begin(), cmd.end());
+    result.push_back(crc);
+    result.push_back(0xff);
+
+    return result;
+}
+
+std::vector<uint8_t> dataHandler::create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value) {
+    std::vector<uint8_t> cmd = {0x01, amplitudeA_value, amplitudeB_value};
+
+    uint8_t crc = crc8(cmd);
+    std::vector<uint8_t> result = {0xfe, static_cast<uint8_t>(cmd.size())};
+    result.reserve(4 + cmd.size());
+    result.insert(result.end(), cmd.begin(), cmd.end());
+    result.push_back(crc);
+    result.push_back(0xff);
+
+    return result;
+}
+
+uint8_t dataHandler::crc8(const std::vector<uint8_t>& bytes) {
+    uint8_t crc = 0;
+    for (auto next : bytes) {
+        for (int j = 0; j < 8; j++) {
+            if ((next ^ crc) & 0x01) {
+                crc ^= 0x18;
+                crc = (crc & 0xff) >> 1;
+                crc |= 0x80;
+            } else {
+                crc >>= 1;
+            }
+            next >>= 1;
+        }
+    }
     return crc;
 }
