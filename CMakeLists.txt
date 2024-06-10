@@ -16,24 +16,16 @@ find_package(OpenGL REQUIRED)  # Added OpenGL package
 find_package(Threads REQUIRED)
 find_package(Boost 1.65 REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
-find_package(Armadillo REQUIRED)
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-# Find MKL using pkg-config
-find_package(MKL REQUIRED mkl)
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(MKL REQUIRED mkl)
 
 include_directories(/home/veikka/Work/Real_Time_EEG)
 # include_directories(/usr/include/eigen3)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${ARMADILLO_INCLUDE_DIRS})
 # Add the include directories
-include_directories(${EIGEN3_INCLUDE_DIR} ${MKL_INCLUDE_DIRS})
+include_directories(${EIGEN3_INCLUDE_DIR}) # ${MKL_INCLUDE_DIRS}
 
 # Link the MKL libraries
-link_directories(${MKL_LIBRARY_DIRS})
+# link_directories(${MKL_LIBRARY_DIRS})
 
 # Set compiler and linker flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MKL_CFLAGS_OTHER}")
@@ -79,10 +71,7 @@ target_link_libraries(real_time_eeg PRIVATE
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
-    ${ARMADILLO_LIBRARIES} 
-    ${LAPACK_LIBRARIES} 
-    ${BLAS_LIBRARIES}
-    ${MKL_LIBRARIES}
+    # ${MKL_LIBRARIES}
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
@@ -90,7 +79,7 @@ if(QT_VERSION_MAJOR EQUAL 6)
 endif()
 
 # Use the flag to suppress deprecated declarations warnings
-target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations -DEIGEN_USE_MKL_ALL)
+target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations) # -DEIGEN_USE_MKL_ALL
 
 # Compiler optimization and OpenMP
 include(CheckCXXCompilerFlag)
@@ -109,5 +98,5 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 # Set other compiler optimizations
-# target_compile_options(real_time_eeg PRIVATE -O3)
+target_compile_options(real_time_eeg PRIVATE -O3)
 

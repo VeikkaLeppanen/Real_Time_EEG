@@ -561,12 +561,11 @@ Eigen::VectorXd zeroPhaseBW(const Eigen::VectorXd& data, const Eigen::VectorXd& 
 
 
 
-
 // Function to fit an AR model of given order and predict future values
 std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
     // Step 1: Prepare the design matrix for the AR model
-    arma::mat X(data.size() - modelOrder, modelOrder);
-    arma::vec y(data.size() - modelOrder);
+    Eigen::MatrixXd X(data.size() - modelOrder, modelOrder);
+    Eigen::VectorXd y(data.size() - modelOrder);
     
     for (size_t i = 0; i < data.size() - modelOrder; ++i) {
         y(i) = data[i + modelOrder];
@@ -576,7 +575,7 @@ std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, si
     }
 
     // Step 2: Estimate AR parameters using linear regression
-    arma::vec arParams = arma::solve(X, y); // Solve X * arParams = y
+    Eigen::VectorXd arParams = X.colPivHouseholderQr().solve(y);  // More stable than normal equations
 
     // Step 3: Predict future values based on the AR model
     std::vector<double> predictions;
