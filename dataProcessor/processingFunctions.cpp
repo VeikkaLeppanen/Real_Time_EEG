@@ -1,7 +1,3 @@
-#ifndef EIGEN_USE_LAPACKE
-#error "EIGEN_USE_LAPACKE not defined"
-#endif
-
 #include "processingFunctions.h"
 
 // Function for writing Eigen matrix to CSV file
