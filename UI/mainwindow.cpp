@@ -162,24 +162,23 @@ void MainWindow::startProcessing(processingParameters& parameters)
     }
 }
 
-void MainWindow::on_connectTrigger_clicked()
+void MainWindow::on_triggering_clicked()
 {
-    if(handler.connectTriggerPort()) {
-        handler.setTriggerPortStatus(false);
-        std::cerr << "Trigger port connection failed" << '\n';
-    } else {
-        handler.setTriggerPortStatus(true);
-        std::cout << "Trigger port connected" << '\n';
+    std::cout << "Triggering start" << '\n';
+    if (!triggeringWindow) {
+        triggeringWindow = new TriggeringWindow(handler, signal_received, this);
+        triggeringWindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
+        connect(triggeringWindow, &TriggeringWindow::destroyed, this, &MainWindow::resetEegWindowPointer);
     }
+    triggeringWindow->show();
+    triggeringWindow->raise();
+    triggeringWindow->activateWindow();
+    // connect(eegwindow, &eegWindow::connectEegBridge, this, &MainWindow::eegBridgeSpin);
 }
 
-void MainWindow::on_testTrigger_clicked()
-{
-    if(handler.getTriggerPortStatus()) {
-        handler.trig();
-        std::cout << "Trigger sent" << '\n';
-    } else {
-        std::cerr << "Trigger port not connected" << '\n';
-    }
+void MainWindow::resetTriggeringWindowPointer() {
+    triggeringWindow = nullptr;  // Reset the pointer after the window is destroyed
 }
+
+
 

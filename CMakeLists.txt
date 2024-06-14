@@ -43,6 +43,8 @@ set(SOURCES
     UI/eegwindow.ui
     UI/processingwindow.h 
     UI/processingwindow.cpp 
+    UI/triggeringwindow.h 
+    UI/triggeringwindow.cpp 
     UI/processingwindow.ui
     UI/processingglwidget.cpp 
     UI/processingglwidget.h
@@ -56,7 +58,8 @@ set(SOURCES
     UI/mainglwidget.h
 )
 
-add_executable(real_time_eeg ${SOURCES})
+add_executable(real_time_eeg ${SOURCES}
+    UI/triggeringwindow.h UI/triggeringwindow.cpp UI/triggeringwindow.ui)
 
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
