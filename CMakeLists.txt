@@ -10,8 +10,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 # Find packages
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Charts)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets) # Charts)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets) # Charts)
 find_package(OpenGL REQUIRED)  # Added OpenGL package
 find_package(Threads REQUIRED)
 find_package(Boost 1.65 REQUIRED COMPONENTS system)
@@ -19,6 +19,7 @@ find_package(Eigen3 REQUIRED)
 
 include_directories(/home/veikka/Work/Real_Time_EEG)
 # include_directories(/usr/include/eigen3)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
@@ -59,7 +60,8 @@ add_executable(real_time_eeg ${SOURCES})
 
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Charts  # Assuming you might use Qt Charts
+    Qt${QT_VERSION_MAJOR}::OpenGL
+    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
     OpenGL::GL  # Linking OpenGL
     Threads::Threads
     ${Boost_LIBRARIES}
