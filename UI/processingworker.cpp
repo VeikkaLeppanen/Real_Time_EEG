@@ -98,7 +98,7 @@ void ProcessingWorker::process()
             EEG_filter2 = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
 
             // Hilbert transform
-            EEG_predicted = fitAndPredictAR_LeastSquares(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             EEG_hilbert = hilbertTransform(EEG_predicted);
             for (std::size_t i = edge; i < estimationLength; ++i) {
                 phaseAngles(i) = std::arg(EEG_hilbert[i]);
@@ -266,7 +266,7 @@ void ProcessingWorker::process_testing()
                 pEstFilt_total_time += pEstFilt_time.count();
 
                 // Phase estimate
-                EEG_predicted = fitAndPredictAR_LeastSquares(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+                EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
 
                 std::chrono::duration<double> phaseEstimate_time = std::chrono::high_resolution_clock::now() - pEstFilt_time - removeBCG_time - downsampling_time - filtering_time - start;
                 phaseEstimate_total_time += phaseEstimate_time.count();

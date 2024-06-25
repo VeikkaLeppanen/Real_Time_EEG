@@ -101,6 +101,7 @@ public:
     std::vector<uint8_t> create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value);
     uint8_t crc8(const std::vector<uint8_t>& data);
 
+    void set_enable(bool status);
     void set_amplitude(int amplitude);
 
     void setTriggerPortStatus(bool value) { triggerPortState = value; }

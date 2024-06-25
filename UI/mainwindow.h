@@ -14,6 +14,7 @@
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow.h"
 #include "processingwindow.h"
+#include "triggeringwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -45,12 +46,11 @@ private slots:
     void on_EEG_clicked();
     void resetEegWindowPointer();
 
-    void on_connectTrigger_clicked();
-
-    void on_testTrigger_clicked();
-
     void on_processing_clicked();
     void resetProcessingWindowPointer();
+
+    void on_triggering_clicked();
+    void resetTriggeringWindowPointer();
 
 private:
     Ui::MainWindow *ui;
@@ -73,10 +73,10 @@ private:
     // windows
     eegWindow *eegwindow = nullptr;
     ProcessingWindow *processingWindow = nullptr;
+    TriggeringWindow *triggeringWindow = nullptr;
 
     volatile std::sig_atomic_t &signal_received;
     volatile std::sig_atomic_t processingWorkerRunning = 0;
-
 
     // Testing parameters
     double total_time = 0.0;

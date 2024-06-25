@@ -395,10 +395,7 @@ int dataHandler::connectTriggerPort() {
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        // TODO: Write a set_enable(bool) member function
-        auto cmd_enable = create_enable_cmd_byte_str(true);
-        boost::asio::write(serial, boost::asio::buffer(cmd_enable));        
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        set_enable(true);
 
         set_amplitude(50);
 
@@ -415,6 +412,12 @@ void dataHandler::trig() {
     auto cmd = create_trig_cmd_byte_str();
     boost::asio::write(serial, boost::asio::buffer(cmd));
     
+}
+
+void dataHandler::set_enable(bool status) {
+    auto cmd_enable = create_enable_cmd_byte_str(status);
+    boost::asio::write(serial, boost::asio::buffer(cmd_enable));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 void dataHandler::set_amplitude(int amplitude) {
