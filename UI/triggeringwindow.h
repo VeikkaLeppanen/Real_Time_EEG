@@ -2,6 +2,8 @@
 #define TRIGGERINGWINDOW_H
 
 #include <QMainWindow>
+#include <QMessageBox>
+#include <QIntValidator>
 
 #include "../dataHandler/dataHandler.h"
 
@@ -21,6 +23,15 @@ private slots:
     void on_connectTrigger_clicked();
 
     void on_testTrigger_clicked();
+
+    void on_enable_clicked();
+
+    void on_disable_clicked();
+
+    void on_TimeLimitLineEdit_editingFinished();
+
+    void on_setAmplitude_clicked();
+
 
 private:
     Ui::TriggeringWindow *ui;

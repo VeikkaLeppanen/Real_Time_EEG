@@ -3,7 +3,6 @@
 
 #include <mutex>
 #include <cstddef> // For size_t
-#include <boost/asio.hpp>
 #include <iostream>
 #include <chrono>
 #include <array>
@@ -13,6 +12,7 @@
 #include <Eigen/Dense>
 
 #include "GACorrection.h"
+#include "magPro.h"
 #include "../dataProcessor/dataProcessor.h"
 #include "../dataProcessor/processingFunctions.h"
 
@@ -29,7 +29,7 @@ public:
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
                     GACorr_(GACorrection(0, 0, 0)),
-                    serial(io)
+                    magPro_()
     { };
 
     // Reset functions
@@ -93,19 +93,13 @@ public:
     bool getFilterState() { return Apply_filter; }
 
     // Triggering
-    int connectTriggerPort();
+    void setTriggerConnectStatus(bool value) { triggerPortState = value; }
+    bool getTriggerConnectStatus() { return triggerPortState; }
 
-    void trig();
-    std::vector<uint8_t> create_trig_cmd_byte_str();
-    std::vector<uint8_t> create_enable_cmd_byte_str(bool enable);
-    std::vector<uint8_t> create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value);
-    uint8_t crc8(const std::vector<uint8_t>& data);
+    bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void set_enable(bool status);
-    void set_amplitude(int amplitude);
-
-    void setTriggerPortStatus(bool value) { triggerPortState = value; }
-    bool getTriggerPortStatus() { return triggerPortState; }
+    void setTriggerTimeLimit(int value) { triggerTimeLimit = value; }
+    bool getTriggerTimeLimit() { return triggerTimeLimit; }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
@@ -121,6 +115,14 @@ public:
         std::lock_guard<std::mutex> lock(triggerMutex);
         triggerSet.erase(seqNum);
     }
+
+    int connectTriggerPort();
+
+    void send_trigger();
+
+    void set_enable(bool status);
+
+    void set_amplitude(int amplitude);
 
 private:
     HandlerState handler_state = WAITING_FOR_START;
@@ -161,9 +163,10 @@ private:
     MultiChannelRealTimeFilter RTfilter_;
 
     // Sending triggers
-    boost::asio::io_service io;
-    boost::asio::serial_port serial;
+    magPro magPro_;
     bool triggerPortState = false;
+    bool triggerEnableState = false;
+    int triggerTimeLimit = 500;
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;

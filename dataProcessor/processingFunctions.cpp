@@ -748,7 +748,6 @@ Eigen::VectorXd computeAutocorrelation_levinson(const Eigen::VectorXd& data, int
     return autocorrelations;
 }
 
-// Levinson-Durbin recursion for solving Yule-Walker equations
 void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, double& sigma2, Eigen::VectorXd& k) {
     Eigen::VectorXd e(order + 1);
     a = Eigen::VectorXd::Zero(order + 1);
@@ -758,38 +757,93 @@ void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, dou
 
     for (int m = 1; m <= order; ++m) {
         double numerator = r(m);
-        for (int j = 1; j <= m - 1; j++) {
+        for (int j = 1; j < m; j++) {  // Ensure not to include the current 'm'
             numerator -= a(j) * r(m - j);
         }
         double km = numerator / e(m - 1);
         k(m - 1) = km;
 
-        // Update AR coefficients for new order
-        Eigen::VectorXd a_prev = a;  // Store previous coefficients
+        Eigen::VectorXd a_new = a;  // Make a copy of the current coefficients
         for (int j = 1; j <= m; j++) {
-            a(j) += km * a_prev(m - j);
+            a_new(j) = a(j) + km * a(m - j);  // Update based on symmetry
         }
+        a = a_new;  // Update the coefficients from the new calculated values
 
-        e(m) = (1 - km * km) * e(m - 1);
+        e(m) = (1 - km * km) * e(m - 1);  // Update the prediction error
     }
 
-    sigma2 = e(order);
-    // Ensure only necessary coefficients are returned
-    a = a.segment(0, order + 1);
+    sigma2 = e(order);  // The error variance of the final prediction error
 }
 
+Eigen::VectorXd levinsonRecursion(const Eigen::VectorXd &toeplitz, const Eigen::VectorXd &y) {
+    const int N = y.size();
+    // Correct assertion to match 2 * N + 1 size
+    assert(toeplitz.size() == 2 * N + 1); // Ensure toeplitz vector includes zero lag at the center
 
-// Function to estimate AR coefficients using Yule-Walker method
+    Eigen::VectorXd x(N);
+    Eigen::VectorXd fn(N), en(N); // Use progressively
+    fn.setZero();
+    en.setZero();
+
+    int midIndex = N; // Center index of the toeplitz vector
+    if (toeplitz[midIndex] == 0) {
+        std::cerr << "Error: Central value (zero lag) of toeplitz is zero, inversion impossible.";
+        return Eigen::VectorXd(); // Return empty vector if inversion is not possible
+    }
+
+    // Initialization based on the zero lag correlation (central value of the toeplitz vector)
+    fn[0] = en[0] = 1 / toeplitz[midIndex];
+    x[0] = fn[0] * y[0];
+
+    for (int n = 1; n < N; n++) {
+        double ef = 0, eb = 0;
+        for (int i = 0; i < n; i++) {
+            ef += fn[i] * toeplitz[midIndex + n - i];
+            eb += en[i] * toeplitz[midIndex - n + i];
+        }
+
+        if (1 - ef * eb == 0) {
+            std::cerr << "Error: Stability condition failed (1 - ef * eb == 0).";
+            return Eigen::VectorXd(); // Return empty vector if stability condition fails
+        }
+
+        double c = 1 / (1 - ef * eb); // Inversion for normalization
+        for (int i = 0; i <= n; i++) {
+            fn[i] *= c;
+            en[i] *= c;
+        }
+        fn[n] = -ef * en[n-1] * c;
+        en[n] = -eb * fn[n-1] * c;
+
+        double z = y[n];
+        for (int i = 0; i < n; i++) z -= x[i] * toeplitz[midIndex + n - i];
+        x[n] = z * en[n];
+        for (int i = 0; i <= n; i++) x[i] += en[i] * z;
+    }
+
+    return x;
+}
+
 std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule_levinson(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
     Eigen::VectorXd autocorrelations = computeAutocorrelation_levinson(data, order, norm);
 
-    Eigen::VectorXd a;
-    double sigma2;
-    Eigen::VectorXd k;
-    levinsonDurbin(autocorrelations, order, a, sigma2, k);
+    int N = order;
+    Eigen::VectorXd toeplitz(2 * N + 1);
+    // Build symmetric Toeplitz vector from autocorrelations
+    for (int i = 0; i <= N; i++) {
+        toeplitz[N + i] = toeplitz[N - i] = autocorrelations[i];  // Assuming autocorrelations are symmetric
+    }
 
-    return std::make_tuple(a, sigma2, k);
+    Eigen::VectorXd y = autocorrelations.segment(1, N);  // y is r[1] to r[order]
+    Eigen::VectorXd arParams = levinsonRecursion(toeplitz, y);
+
+    double sigma2 = 0;  // Compute the final prediction error if necessary
+    Eigen::VectorXd k(N);  // Reflection coefficients, not calculated in this scenario
+
+    return std::make_tuple(arParams, sigma2, k);
 }
+
+
 
 // Function to estimate AR coefficients using Yule-Walker method
 std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
@@ -815,7 +869,7 @@ std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorX
 // Function to fit an AR model using the Yule-Walker method and predict future values
 std::vector<double> fitAndPredictAR_YuleWalker_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
     // Estimate AR coefficients using the Yule-Walker method
-    auto [arParams, noiseVariance, reflectionCoeffs] = aryule(data, modelOrder);
+    auto [arParams, noiseVariance, reflectionCoeffs] = aryule_levinson(data, modelOrder);
 
     // Normalize the data
     double originalMean = data.mean();
