@@ -279,7 +279,8 @@ void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd&
     }
 
     // Solve the linear system A * x = b
-    coeffs = A.colPivHouseholderQr().solve(b);
+    coeffs = A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+    // coeffs = A.colPivHouseholderQr().solve(b);
 }
 
 
@@ -561,12 +562,11 @@ Eigen::VectorXd zeroPhaseBW(const Eigen::VectorXd& data, const Eigen::VectorXd& 
 
 
 
-
 // Function to fit an AR model of given order and predict future values
 std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
     // Step 1: Prepare the design matrix for the AR model
-    arma::mat X(data.size() - modelOrder, modelOrder);
-    arma::vec y(data.size() - modelOrder);
+    Eigen::MatrixXd X(data.size() - modelOrder, modelOrder);
+    Eigen::VectorXd y(data.size() - modelOrder);
     
     for (size_t i = 0; i < data.size() - modelOrder; ++i) {
         y(i) = data[i + modelOrder];
@@ -576,7 +576,7 @@ std::vector<double> fitAndPredictAR_LeastSquares(const Eigen::VectorXd& data, si
     }
 
     // Step 2: Estimate AR parameters using linear regression
-    arma::vec arParams = arma::solve(X, y); // Solve X * arParams = y
+    Eigen::VectorXd arParams = X.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
 
     // Step 3: Predict future values based on the AR model
     std::vector<double> predictions;
@@ -647,31 +647,46 @@ std::vector<double> fitAndPredictAR_Burg(const Eigen::VectorXd& data, size_t mod
 
 // Function to fit an AR model using the Yule-Walker method and predict future values
 std::vector<double> fitAndPredictAR_YuleWalker(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
-    // Step 1: Compute the autocorrelation vector
-    Eigen::VectorXd autocorrelations = computeAutocorrelation(data, modelOrder);
+    // Step 1: Normalize the data
+    Eigen::VectorXd normalizedData = data.array() - data.mean();
+    normalizedData /= std::sqrt((normalizedData.array() * normalizedData.array()).sum() / normalizedData.size());
 
-    // Step 2: Set up the Yule-Walker equations
+    // Step 2: Compute the autocorrelation vector on normalized data
+    Eigen::VectorXd autocorrelations = computeAutocorrelation(normalizedData, modelOrder);
+
+    // Step 3: Set up the Yule-Walker equations
     Eigen::MatrixXd R(modelOrder, modelOrder);
     Eigen::VectorXd r(modelOrder);
-    for (int i = 0; i < modelOrder; ++i) {
+    for (size_t i = 0; i < modelOrder; ++i) {
         r(i) = autocorrelations(i + 1);
-        for (int j = 0; j < modelOrder; ++j) {
-            R(i, j) = autocorrelations(abs(i - j));
+        for (size_t j = 0; j < modelOrder; ++j) {
+            R(i, j) = autocorrelations(std::abs(int(i - j)));
         }
     }
 
     // Solve the Yule-Walker equations to get AR parameters
     Eigen::VectorXd arParams = R.ldlt().solve(r);
 
-    // Step 3: Predict future values based on the AR model
-    std::vector<double> predictions;
+    // Step 4: Predict future values based on the AR model
+    std::vector<double> predictions(numPredictions);
     for (size_t i = 0; i < numPredictions; ++i) {
-        double predictedValue = 0;
+        double predictedValue = 0.0;
         for (size_t j = 0; j < modelOrder; ++j) {
             size_t index = data.size() - modelOrder + i + j;
-            predictedValue += arParams(j) * (index < data.size() ? data(index) : predictions[index - data.size()]);
+            if (index < data.size()) {
+                predictedValue += arParams(j) * normalizedData(index);
+            } else {
+                predictedValue += arParams(j) * predictions[index - data.size()];
+            }
         }
-        predictions.push_back(predictedValue);
+        predictions[i] = predictedValue;
+    }
+
+    // Step 5: Rescale the predicted values back to the original data scale
+    double originalMean = data.mean();
+    double originalStdDev = std::sqrt((data.array() - originalMean).square().sum() / data.size());
+    for (size_t i = 0; i < numPredictions; ++i) {
+        predictions[i] = predictions[i] * originalStdDev + originalMean;
     }
 
     return predictions;
@@ -687,15 +702,263 @@ Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag) 
         if (lag == 0) {
             autocorrelations(lag) = 1;  // Normalized autocorrelation at lag 0
         } else {
-            double autocorrelation = 0;
+            double autocorrelation = 0.0;
             for (int i = 0; i < data.size() - lag; ++i) {
                 autocorrelation += (data(i) - mean) * (data(i + lag) - mean);
             }
             autocorrelations(lag) = autocorrelation / ((data.size() - lag) * variance);
         }
     }
+    
     return autocorrelations;
 }
+
+
+
+
+
+
+
+
+
+// Function to compute autocorrelations up to a given lag
+Eigen::VectorXd computeAutocorrelation_levinson(const Eigen::VectorXd& data, int maxLag, const std::string& norm) {
+    Eigen::VectorXd autocorrelations(maxLag + 1);
+    double mean = data.mean();
+    double variance = (data.array() - mean).square().sum() / data.size();
+
+    for (int lag = 0; lag <= maxLag; ++lag) {
+        if (lag == 0) {
+            autocorrelations(lag) = variance;  // Autocorrelation at lag 0 is the variance
+        } else {
+            double autocorrelation = 0.0;
+            for (int i = 0; i < data.size() - lag; ++i) {
+                autocorrelation += (data(i) - mean) * (data(i + lag) - mean);
+            }
+            if (norm == "biased") {
+                autocorrelations(lag) = autocorrelation / data.size();
+            } else if (norm == "unbiased") {
+                autocorrelations(lag) = autocorrelation / (data.size() - lag);
+            } else {
+                throw std::invalid_argument("Norm must be either 'biased' or 'unbiased'");
+            }
+        }
+    }
+
+    return autocorrelations;
+}
+
+void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, double& sigma2, Eigen::VectorXd& k) {
+    Eigen::VectorXd e(order + 1);
+    a = Eigen::VectorXd::Zero(order + 1);
+    k = Eigen::VectorXd::Zero(order);
+    a(0) = 1.0;
+    e(0) = r(0);
+
+    for (int m = 1; m <= order; ++m) {
+        double numerator = r(m);
+        for (int j = 1; j < m; j++) {  // Ensure not to include the current 'm'
+            numerator -= a(j) * r(m - j);
+        }
+        double km = numerator / e(m - 1);
+        k(m - 1) = km;
+
+        Eigen::VectorXd a_new = a;  // Make a copy of the current coefficients
+        for (int j = 1; j <= m; j++) {
+            a_new(j) = a(j) + km * a(m - j);  // Update based on symmetry
+        }
+        a = a_new;  // Update the coefficients from the new calculated values
+
+        e(m) = (1 - km * km) * e(m - 1);  // Update the prediction error
+    }
+
+    sigma2 = e(order);  // The error variance of the final prediction error
+}
+
+Eigen::VectorXd levinsonRecursion(const Eigen::VectorXd &toeplitz, const Eigen::VectorXd &y) {
+    const int N = y.size();
+    // Correct assertion to match 2 * N + 1 size
+    assert(toeplitz.size() == 2 * N + 1); // Ensure toeplitz vector includes zero lag at the center
+
+    Eigen::VectorXd x(N);
+    Eigen::VectorXd fn(N), en(N); // Use progressively
+    fn.setZero();
+    en.setZero();
+
+    int midIndex = N; // Center index of the toeplitz vector
+    if (toeplitz[midIndex] == 0) {
+        std::cerr << "Error: Central value (zero lag) of toeplitz is zero, inversion impossible.";
+        return Eigen::VectorXd(); // Return empty vector if inversion is not possible
+    }
+
+    // Initialization based on the zero lag correlation (central value of the toeplitz vector)
+    fn[0] = en[0] = 1 / toeplitz[midIndex];
+    x[0] = fn[0] * y[0];
+
+    for (int n = 1; n < N; n++) {
+        double ef = 0, eb = 0;
+        for (int i = 0; i < n; i++) {
+            ef += fn[i] * toeplitz[midIndex + n - i];
+            eb += en[i] * toeplitz[midIndex - n + i];
+        }
+
+        if (1 - ef * eb == 0) {
+            std::cerr << "Error: Stability condition failed (1 - ef * eb == 0).";
+            return Eigen::VectorXd(); // Return empty vector if stability condition fails
+        }
+
+        double c = 1 / (1 - ef * eb); // Inversion for normalization
+        for (int i = 0; i <= n; i++) {
+            fn[i] *= c;
+            en[i] *= c;
+        }
+        fn[n] = -ef * en[n-1] * c;
+        en[n] = -eb * fn[n-1] * c;
+
+        double z = y[n];
+        for (int i = 0; i < n; i++) z -= x[i] * toeplitz[midIndex + n - i];
+        x[n] = z * en[n];
+        for (int i = 0; i <= n; i++) x[i] += en[i] * z;
+    }
+
+    return x;
+}
+
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule_levinson(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
+    Eigen::VectorXd autocorrelations = computeAutocorrelation_levinson(data, order, norm);
+
+    int N = order;
+    Eigen::VectorXd toeplitz(2 * N + 1);
+    // Build symmetric Toeplitz vector from autocorrelations
+    for (int i = 0; i <= N; i++) {
+        toeplitz[N + i] = toeplitz[N - i] = autocorrelations[i];  // Assuming autocorrelations are symmetric
+    }
+
+    Eigen::VectorXd y = autocorrelations.segment(1, N);  // y is r[1] to r[order]
+    Eigen::VectorXd arParams = levinsonRecursion(toeplitz, y);
+
+    double sigma2 = 0;  // Compute the final prediction error if necessary
+    Eigen::VectorXd k(N);  // Reflection coefficients, not calculated in this scenario
+
+    return std::make_tuple(arParams, sigma2, k);
+}
+
+
+
+// Function to estimate AR coefficients using Yule-Walker method
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
+    Eigen::VectorXd autocorrelations = computeAutocorrelation_levinson(data, order, norm);
+
+    Eigen::MatrixXd R(order, order);
+    Eigen::VectorXd r(order);
+    for (int i = 0; i < order; ++i) {
+        r(i) = autocorrelations(i + 1);
+        for (int j = 0; j < order; ++j) {
+            R(i, j) = autocorrelations(std::abs(i - j));
+        }
+    }
+
+    // Solve the Yule-Walker equations using matrix operations
+    Eigen::VectorXd arParams = R.ldlt().solve(r);
+    double sigma2 = autocorrelations(0) - arParams.dot(r);
+    Eigen::VectorXd k = Eigen::VectorXd::Zero(order);  // Placeholder, no reflection coefficients computed here
+
+    return std::make_tuple(arParams, sigma2, k);
+}
+
+// Function to fit an AR model using the Yule-Walker method and predict future values
+std::vector<double> fitAndPredictAR_YuleWalker_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
+    // Estimate AR coefficients using the Yule-Walker method
+    auto [arParams, noiseVariance, reflectionCoeffs] = aryule_levinson(data, modelOrder);
+
+    // Normalize the data
+    double originalMean = data.mean();
+    double originalStdDev = std::sqrt((data.array() - originalMean).square().sum() / data.size());
+    Eigen::VectorXd normalizedData = (data.array() - originalMean) / originalStdDev;
+
+    // Pre-pend the last 'modelOrder' points of the original data to stabilize predictions
+    Eigen::VectorXd prePendedData = Eigen::VectorXd::Zero(modelOrder + numPredictions);
+    prePendedData.head(modelOrder) = normalizedData.tail(modelOrder);
+
+    // Predict future values based on the AR model
+    std::vector<double> predictions(numPredictions);
+    for (size_t i = 0; i < numPredictions; ++i) {
+        double predictedValue = 0.0;
+        for (size_t j = 0; j < modelOrder; ++j) {
+            size_t index = modelOrder + i - 1 - j;
+            if (index >= 0 && index < prePendedData.size()) {
+                predictedValue += arParams(j) * prePendedData(index);
+            }
+        }
+        prePendedData(modelOrder + i) = predictedValue; // Ensure this index is also valid
+        predictions[i] = predictedValue * originalStdDev + originalMean; // Normalize back to original scale
+
+    }
+
+    return predictions;
+}
+
+
+
+
+
+
+// Function to estimate AR coefficients using least squares method
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> ls(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
+
+    Eigen::MatrixXd X(data.size() - order, order);
+    Eigen::VectorXd y(data.size() - order);
+
+    for (size_t i = 0; i < data.size() - order; ++i) {
+        y(i) = data[i + order];
+        for (size_t j = 0; j < order; ++j) {
+            X(i, j) = data[i + j];
+        }
+    }
+
+    // Solve the least squares problem using QR decomposition
+    Eigen::VectorXd arParams = X.householderQr().solve(y);
+    double sigma2 = (X * arParams - y).squaredNorm() / y.size(); // Calculate sigma^2 as the mean squared error
+    Eigen::VectorXd k = Eigen::VectorXd::Zero(order);  // Placeholder, no reflection coefficients computed here
+
+    return std::make_tuple(arParams, sigma2, k);
+}
+
+// Function to fit an AR model using the least squares method and predict future values
+std::vector<double> fitAndPredictAR_LeastSquares_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
+    // Estimate AR coefficients using the Yule-Walker method
+    auto [arParams, noiseVariance, reflectionCoeffs] = ls(data, modelOrder);
+
+    // Normalize the data
+    double originalMean = data.mean();
+    double originalStdDev = std::sqrt((data.array() - originalMean).square().sum() / data.size());
+    Eigen::VectorXd normalizedData = (data.array() - originalMean) / originalStdDev;
+
+    // Pre-pend the last 'modelOrder' points of the original data to stabilize predictions
+    Eigen::VectorXd prePendedData = Eigen::VectorXd::Zero(modelOrder + numPredictions);
+    prePendedData.head(modelOrder) = normalizedData.tail(modelOrder);
+
+    // Predict future values based on the AR model
+    std::vector<double> predictions(numPredictions);
+    for (size_t i = 0; i < numPredictions; ++i) {
+        double predictedValue = 0.0;
+        for (size_t j = 0; j < modelOrder; ++j) {
+            size_t index = modelOrder + i - 1 - j;
+            if (index >= 0 && index < prePendedData.size()) {
+                predictedValue += arParams(j) * prePendedData(index);
+            }
+        }
+        prePendedData(modelOrder + i) = predictedValue; // Ensure this index is also valid
+        predictions[i] = predictedValue * originalStdDev + originalMean; // Normalize back to original scale
+
+    }
+
+    return predictions;
+}
+
+
+
+
 
 
 

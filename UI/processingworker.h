@@ -31,7 +31,8 @@ struct processingParameters {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const processingParameters& params) {
-    os << "Downsampling Factor: " << params.downsampling_factor
+    os << "Number of Samples: " << params.numberOfSamples
+       << "\nDownsampling Factor: " << params.downsampling_factor
        << "\nDelay: " << params.delay
        << "\nEdge: " << params.edge
        << "\nModel Order: " << params.modelOrder

@@ -1,6 +1,7 @@
 #ifndef PROCESSINGFUNCTIONS_H
 #define PROCESSINGFUNCTIONS_H
 
+
 #include <vector>
 #include <string>
 #include <chrono>
@@ -12,9 +13,9 @@
 #include <omp.h>
 #include <numeric>
 #include <algorithm>
+#include <stdexcept>
 
 #include <fftw3.h>
-#include <armadillo>
 
 // Function declarations
 void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
@@ -57,6 +58,18 @@ std::vector<double> fitAndPredictAR_Burg(const Eigen::VectorXd& data, size_t mod
 std::vector<double> fitAndPredictAR_YuleWalker(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
 
 Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag);
+
+
+Eigen::VectorXd computeAutocorrelation_levinson(const Eigen::VectorXd& data, int maxLag, const std::string& norm = "biased");
+void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, double& sigma2, Eigen::VectorXd& k);
+Eigen::VectorXd levinsonRecursion(const Eigen::VectorXd &toeplitz, const Eigen::VectorXd &y);
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule_levinson(const Eigen::VectorXd& data, int order, const std::string& norm = "biased", bool allow_singularity = true);
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm = "biased", bool allow_singularity = true);
+std::vector<double> fitAndPredictAR_YuleWalker_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
+
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> ls(const Eigen::VectorXd& data, int order, const std::string& norm = "biased", bool allow_singularity = true);
+std::vector<double> fitAndPredictAR_LeastSquares_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions);
+
 
 std::vector<std::complex<double>> performFFT(const std::vector<double>& data);
 std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data);
