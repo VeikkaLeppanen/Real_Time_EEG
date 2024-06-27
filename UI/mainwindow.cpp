@@ -145,7 +145,7 @@ void MainWindow::startProcessing(processingParameters& parameters)
         ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, parameters);
         worker->moveToThread(thread);
 
-        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between processing and testing functions here
+        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_ar_testing);       // Switch between processing and testing functions here
         QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);

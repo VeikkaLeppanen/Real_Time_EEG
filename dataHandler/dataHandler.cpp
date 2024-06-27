@@ -24,7 +24,7 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
 
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
 
-    baseline_average = Eigen::VectorXd(channel_count);
+    // baseline_average = Eigen::VectorXd(channel_count);
 
     handler_state = WAITING_FOR_STOP;
 
@@ -174,9 +174,33 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
     // Baseline average
     if (Apply_baseline) {
-        int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
-        baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
-        processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
+        if (baseline_length > 0) {
+            // Ensure baseline_average and baseline_matrix are initialized correctly
+            if (baseline_average.size() != samples.size()) {
+                baseline_average = Eigen::VectorXd::Zero(samples.size());
+                baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
+                baseline_index = 0;
+            }
+
+            // Update baseline_average
+            baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
+            baseline_matrix.col(baseline_index) = samples;
+
+            // Avoid dividing by zero in baseline_average
+            for (int i = 0; i < baseline_average.size(); ++i) {
+                if (baseline_average(i) == 0) {
+                    baseline_average(i) = 1; // Prevent division by zero
+                }
+            }
+
+            // Update processing_sample_vector
+            processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
+
+            // Update baseline_index
+            baseline_index = (baseline_index + 1) % baseline_length;
+        } else {
+            std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+        }
     }
 
     // Filtering

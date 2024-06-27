@@ -18,11 +18,13 @@
 #include <fftw3.h>
 
 // Function declarations
-void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
+void writeMatrixdToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
+void writeMatrixiToCSV(const std::string& filename, const Eigen::MatrixXi& matrix);
 Eigen::MatrixXd readCSV(const std::string &file_path);
 
 Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec);
-Eigen::MatrixXd vectorToColumnMatrix(const std::vector<double>& vec);
+Eigen::MatrixXd vectorToColumnMatrixd(const std::vector<double>& vec);
+Eigen::MatrixXi vectorToColumnMatrixi(const std::vector<int>& vec);
 Eigen::MatrixXd complexVectorToMatrix(const std::vector<std::complex<double>>& complexVec);
 Eigen::MatrixXd phaseAngleToMatrix(const std::vector<std::complex<double>>& complexVec);
 
@@ -76,6 +78,8 @@ std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data);
 std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data);
 std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& signal);
 std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
+
+int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, Eigen::VectorXd& phaseAngles, int sequence_number, int downsampling_factor, int edge, int phase_shift, double stimulation_target);
 
 
 // Real-time filter processor class for multiple channels

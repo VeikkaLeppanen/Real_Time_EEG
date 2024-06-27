@@ -100,13 +100,8 @@ void ProcessingWorker::process()
             // Hilbert transform
             EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             EEG_hilbert = hilbertTransform(EEG_predicted);
-            for (std::size_t i = edge; i < estimationLength; ++i) {
-                phaseAngles(i) = std::arg(EEG_hilbert[i]);
-                if (phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target ) {
-                    int trigger_seqNum = sequence_number + (i - edge) * downsampling_factor + phase_shift;
-                    handler.insertTrigger(trigger_seqNum);
-                }
-            }
+            int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+            if (trigger_seqNum) { handler.insertTrigger(trigger_seqNum); }
 
             seq_num_tracker = sequence_number;
             
@@ -273,13 +268,8 @@ void ProcessingWorker::process_testing()
 
                 // Hilbert transform
                 EEG_hilbert = hilbertTransform(EEG_predicted);
-                for (std::size_t i = edge; i < estimationLength; ++i) {
-                    phaseAngles(i) = std::arg(EEG_hilbert[i]);
-                    if (phaseAngles(i - 1) < stimulation_target && phaseAngles(i) >= stimulation_target) {
-                        int trigger_seqNum = sequence_number + (i - edge) * downsampling_factor + phase_shift;
-                        handler.insertTrigger(trigger_seqNum);
-                    }
-                }
+                int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+                if (trigger_seqNum) { handler.insertTrigger(trigger_seqNum); }
 
                 std::chrono::duration<double> hilbert_time = std::chrono::high_resolution_clock::now() - phaseEstimate_time - pEstFilt_time - removeBCG_time - downsampling_time - filtering_time - start;
                 hilbert_total_time += hilbert_time.count();
@@ -323,8 +313,110 @@ void ProcessingWorker::process_testing()
             std::cout << "Min total time taken: " << min_time << " seconds." << std::endl;
 
             // writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Betas.csv", Betas);
-            writeMatrixToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", CSV_save);
+            writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/EEG_corrected.csv", CSV_save);
         }
+        
+        emit finished();
+    } catch (std::exception& e) {
+        emit error(QString("An error occurred in process_test function: %1").arg(e.what()));
+    }
+}
+
+
+void ProcessingWorker::process_ar_testing()
+{
+    omp_set_num_threads(10);
+
+    // Eigen::setNbThreads(std::thread::hardware_concurrency());
+
+    try {
+        std::cout << "Pworker start" << '\n';
+        std::cout << "params: " << params << '\n';
+
+        // Number of samples to use for processing
+        int samples_to_process = params.numberOfSamples;
+
+        //  downsampling
+        int downsampling_factor = params.downsampling_factor;
+        int downsampled_cols = (samples_to_process + downsampling_factor - 1) / downsampling_factor;
+
+        // FIR filters
+        Eigen::VectorXd LSFIR_coeffs_2;
+        getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
+
+        // phase estimate
+        size_t edge = params.edge;
+        int edge_cut_cols = downsampled_cols - 2 * edge;
+        size_t modelOrder = params.modelOrder;
+        size_t hilbertWinLength = params.hilbertWinLength;
+        size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
+
+        // stimulation
+        double stimulation_target = params.stimulation_target;
+        int phase_shift = params.phase_shift;
+
+        // Initializing parameters and matrices for algorithms
+        int n_channels = handler.get_channel_count();
+
+        Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
+        Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
+        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
+        Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
+        Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
+        std::vector<double> EEG_predicted(estimationLength, 0.0);
+        std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
+        Eigen::VectorXd phaseAngles(estimationLength);
+
+        Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
+        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
+
+        std::vector<int> index_list;
+
+        int seq_num_tracker = 0;
+        while(processingWorkerRunning) {
+            int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
+            if (seq_num_tracker == sequence_number) continue;
+
+            std::cout << "Samples skipped: " << sequence_number - seq_num_tracker << '\n';
+            auto start = std::chrono::high_resolution_clock::now();
+
+            // Downsampling
+            downsample(all_channels, EEG_downsampled, downsampling_factor);
+
+            // Spatial
+            EEG_spatial = EEG_downsampled.row(0) - EEG_downsampled.bottomRows(4).colwise().mean();
+
+            // Phase estimate
+            EEG_filter2 = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
+
+            // Hilbert transform
+            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+            EEG_hilbert = hilbertTransform(EEG_predicted);
+            int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+            if (trigger_seqNum) { 
+                handler.insertTrigger(trigger_seqNum);
+                if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
+            }
+
+            seq_num_tracker = sequence_number;
+            
+            std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
+            std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
+
+
+            // Save displayed data
+            Data_to_display.row(0).head(downsampled_cols) = EEG_downsampled.row(0);
+            Data_to_display.row(1).head(downsampled_cols) = EEG_corrected.row(0);
+            Data_to_display.row(2).head(downsampled_cols) = EEG_spatial;
+            Data_to_display.row(3).head(downsampled_cols - edge) = EEG_filter2.head(downsampled_cols - edge);
+
+            // EEG_predicted_EIGEN = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            Data_to_display.row(3).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            Data_to_display.row(4).tail(estimationLength) = phaseAngles.tail(estimationLength);
+            processed_data = Data_to_display;
+        }
+
+        writeMatrixiToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Stimulation_indices.csv", vectorToColumnMatrixi(index_list));
         
         emit finished();
     } catch (std::exception& e) {

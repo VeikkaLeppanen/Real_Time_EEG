@@ -92,6 +92,10 @@ public:
     void setFilterState(bool state) { Apply_filter = state; }
     bool getFilterState() { return Apply_filter; }
 
+    // Baseline
+    void setBaselineState(bool state) { Apply_baseline = state; }
+    bool getBaselineState() { return Apply_baseline; }
+
     // Triggering
     void setTriggerConnectStatus(bool value) { triggerPortState = value; }
     bool getTriggerConnectStatus() { return triggerPortState; }
@@ -146,19 +150,22 @@ private:
 
     Eigen::VectorXd processing_sample_vector;
 
-    bool GACorr_running = true;
+    // Gradient artifact correction
+    bool GACorr_running = false;
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;
     int stimulation_tracker = 10000000;
 
-    bool Apply_filter = true;
-
+    // Baseline correction
     bool Apply_baseline = false;
+    int baseline_index = 0;
     Eigen::VectorXd baseline_average;
+    Eigen::MatrixXd baseline_matrix;
     int baseline_length = 2500;
 
     // Filter
+    bool Apply_filter = false;
     std::vector<double> filterCoeffs_;
     MultiChannelRealTimeFilter RTfilter_;
 
