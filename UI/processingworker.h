@@ -27,7 +27,7 @@ struct processingParameters {
 
     // stimulation
     double stimulation_target = M_PI * 0.5;
-    int phase_shift = -40;                        // for 5000Hz
+    int phase_shift = 0;                        // for 5000Hz
 };
 
 inline std::ostream& operator<<(std::ostream& os, const processingParameters& params) {

@@ -370,15 +370,22 @@ void ProcessingWorker::process_ar_testing()
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
 
-        std::vector<int> index_list;
-
+        Eigen::MatrixXd CSV_save = Eigen::MatrixXd::Zero(164, samples_to_process);
+        int csv_save_count = 0;
+        int last_processed_index = 0;
+        
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
-            if (seq_num_tracker == sequence_number) continue;
+            if (/*seq_num_tracker == sequence_number ||*/last_processed_index == sequence_number || !(sequence_number % 10000 == 0)) {
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+                continue;
+            }
 
             std::cout << "Samples skipped: " << sequence_number - seq_num_tracker << '\n';
             auto start = std::chrono::high_resolution_clock::now();
+
+            CSV_save.row(csv_save_count) = all_channels.row(0);
 
             // Downsampling
             downsample(all_channels, EEG_downsampled, downsampling_factor);
@@ -395,11 +402,12 @@ void ProcessingWorker::process_ar_testing()
             int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
             if (trigger_seqNum) { 
                 handler.insertTrigger(trigger_seqNum);
-                if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
+                // if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
             }
 
             seq_num_tracker = sequence_number;
-            
+
+            std::cout << "Seq_num: " << sequence_number << " , count: " << csv_save_count << std::endl;
             std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
             std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
 
@@ -414,9 +422,11 @@ void ProcessingWorker::process_ar_testing()
             Data_to_display.row(3).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             Data_to_display.row(4).tail(estimationLength) = phaseAngles.tail(estimationLength);
             processed_data = Data_to_display;
+            csv_save_count++;
+            last_processed_index = sequence_number;
         }
 
-        writeMatrixiToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/Stimulation_indices.csv", vectorToColumnMatrixi(index_list));
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/GA&Filt1.csv", CSV_save);
         
         emit finished();
     } catch (std::exception& e) {

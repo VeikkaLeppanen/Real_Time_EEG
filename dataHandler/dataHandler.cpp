@@ -79,56 +79,6 @@ int dataHandler::simulateData_sin() {
     return 0;
 }
 
-int dataHandler::simulateData_mat() {
-
-    // Eigen::MatrixXd readMatFile("interl_eegfmri.mat");
-
-
-
-    auto startTime = std::chrono::high_resolution_clock::now();
-    double time = 0.0;
-
-    Eigen::VectorXd sample(channel_count_);
-    const Eigen::VectorXd linspace_example = Eigen::VectorXd::LinSpaced(channel_count_, 0, channel_count_);
-
-    int stimulation_interval = 10000;
-    int stimulation_tracker = 0;
-    while (false) { // Adjust this condition as needed
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - startTime;
-        double time_stamp = 0.0;
-        int trigger = 0;
-        
-        // Check if it's time to generate the next sample
-        if (elapsed.count() >= 1.0 / sampling_rate_) {
-            startTime = currentTime;
-
-            double SIN = 5.0 * M_PI * time;
-            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)); });
-            time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-            
-            if (stimulation_tracker >= stimulation_interval) {
-                trigger = 1;
-                stimulation_tracker = 0;
-            } else {
-                trigger = 0;
-            }
-            
-            time += 1.0 / sampling_rate_;
-
-            this->addData(sample, time_stamp, trigger, 0);
-
-            stimulation_tracker++;
-        }
-    }
-
-    return 0;
-}
-
-// For demonstration, print the size of a buffer (e.g., for channel 0)
-void dataHandler::printBufferSize() {
-    std::cout << "Buffer capacity: " << this->buffer_capacity_ << std::endl;
-}
 
 
 
@@ -223,7 +173,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 }
 
-// Retrieves number_of_samples data points form all channels in chronological order
+// Returns number_of_samples data points form all channels in chronological order
 Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
 
     Eigen::MatrixXd output(channel_count_, number_of_samples);
@@ -246,7 +196,7 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
     return output;
 }
 
-// Retrieves number_of_samples data points form all channels in chronological order
+// Returns current sequence number and saves number_of_samples data points to output form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
 
     output.resize(channel_count_, number_of_samples);
@@ -269,26 +219,7 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     return current_sequence_number_;
 }
 
-// Retrieves data from the specified channel in chronological order
-Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSamplingFactor) {
-
-    if (downSamplingFactor < 1) throw std::invalid_argument("downSamplingFactor must be greater than 0");
-
-    // Calculate the effective size after downsampling
-    size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
-    Eigen::VectorXd downSampledData(downSampledSize);
-
-    std::lock_guard<std::mutex> lock(this->dataMutex);
-    for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
-        // Calculate the index in the circular buffer accounting for wrap-around
-        size_t index = (current_data_index_ + i) % buffer_capacity_;
-        downSampledData(j) = sample_buffer_(channel_index, index);
-    }
-
-    return downSampledData;
-}
-
-// Retrieves data from the specified channels in chronological order
+// Returns data from the specified channels in chronological order
 Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
 
     Eigen::MatrixXd outputData(channel_indices.size(), number_of_samples);

@@ -39,7 +39,6 @@ public:
     bool isReady() { return (handler_state == WAITING_FOR_STOP); }
 
     int simulateData_sin();
-    int simulateData_mat();
 
     // Data handling
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
@@ -47,7 +46,6 @@ public:
     int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
-    Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
 
@@ -85,8 +83,6 @@ public:
     }
     int get_TA_length() { return TA_length; }
     int get_GA_average_length() { return GA_average_length; }
-    
-    void printBufferSize();
     
     // Filtering
     void setFilterState(bool state) { Apply_filter = state; }

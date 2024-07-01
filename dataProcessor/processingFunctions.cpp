@@ -1138,11 +1138,10 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
                           int phase_shift,
                           double stimulation_target) 
 {
-    int estimationLength = hilbert_signal.size();
 
-    for (std::size_t i = edge; i < estimationLength; ++i) {
+    for (std::size_t i = edge; i < hilbert_signal.size(); ++i) {
         phaseAngles(i) = std::arg(hilbert_signal[i]);
-        if (phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target ) {
+        if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
             int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
             int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
             return trigger_seqNum;
