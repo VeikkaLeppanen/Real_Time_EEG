@@ -71,18 +71,27 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             
             deserializeMeasurementStartPacket_pointer(buffer, n, packet_info, SourceChannels, ChannelTypes);
 
+            // Divide channels into data and trigger sources
+            std::vector<uint16_t> data_channel_sources;
+            std::vector<uint16_t> trigger_channel_sources;
+            for (size_t i = 0; i < SourceChannels.size(); i++) {
+                uint16_t source = SourceChannels[i];
+                if(source < 65535 ) { 
+                    data_channel_sources.push_back(source);
+                } else {
+                    trigger_channel_sources.push_back(source); 
+                }
+            }
+
             numChannels = packet_info.NumChannels;
-            numDataChannels = numChannels - 1;              // Excluding trigger channel
+            numDataChannels = numChannels - trigger_channel_sources.size();              // Excluding trigger channels
             sampling_rate = packet_info.SamplingRateHz;
             lastSequenceNumber = -1;
 
-            handler.setTriggerSource(SourceChannels.back());
-            SourceChannels.pop_back();
-            handler.setSourceChannels(SourceChannels);
+            handler.setSourceChannels(data_channel_sources);
+            handler.setTriggerSource(trigger_channel_sources[0]);
 
-            // TODO: Initialize data_handler_samples
             data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 100);
-
 
             std::cout << "MeasurementStart package processed!\n";
 
@@ -102,8 +111,8 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
             int sequenceNumber = packet_info.PacketSeqNo;
 
-            Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
-            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
+            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(numDataChannels) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
+            Eigen::VectorXd triggers = data_handler_samples.row(numDataChannels);
             
             for (int i = 0; i < packet_info.NumSampleBundles; i++) {
                 handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)), sequenceNumber);
@@ -112,10 +121,10 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             // Check for dropped packets
             if (lastSequenceNumber != -1 && sequenceNumber != (lastSequenceNumber + 1)) {
                 std::cerr << "Packet loss detected. Expected sequence: " << (lastSequenceNumber + 1) << ", but received: " << sequenceNumber << '\n';
-                // Handle packet loss
+                // TODO: Handle packet loss
             }
 
-            lastSequenceNumber = sequenceNumber; // Update the last received sequence number
+            lastSequenceNumber = sequenceNumber; // Update the latest sequence number
 
             // std::cout << "Package " << sequenceNumber << " received!" << '\n';
 

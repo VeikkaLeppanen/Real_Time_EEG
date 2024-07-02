@@ -98,8 +98,8 @@ public:
 
     bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void setTriggerTimeLimit(int value) { triggerTimeLimit = value; }
-    bool getTriggerTimeLimit() { return triggerTimeLimit; }
+    void setTriggerTimeLimit(int value) { magPro_.setTriggerTimeLimit(value); }
+    bool getTriggerTimeLimit() { return magPro_.getTriggerTimeLimit(); }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
@@ -169,7 +169,6 @@ private:
     magPro magPro_;
     bool triggerPortState = false;
     bool triggerEnableState = false;
-    int triggerTimeLimit = 500;
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;

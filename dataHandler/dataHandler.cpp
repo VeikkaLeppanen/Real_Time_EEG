@@ -38,6 +38,21 @@ void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input)
     stimulation_tracker = 10000000;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int dataHandler::simulateData_sin() {
     auto startTime = std::chrono::high_resolution_clock::now();
     double time = 0.0;

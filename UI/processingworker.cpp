@@ -344,6 +344,12 @@ void ProcessingWorker::process_ar_testing()
         Eigen::VectorXd LSFIR_coeffs_2;
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
 
+        // removeBCG
+        int delay = params.delay;
+        int step = (1+2*delay);
+        int n_EEG_channels_to_use = 5;
+        int n_CWL_channels_to_use = 7;
+
         // phase estimate
         size_t edge = params.edge;
         int edge_cut_cols = downsampled_cols - 2 * edge;
@@ -360,7 +366,9 @@ void ProcessingWorker::process_ar_testing()
 
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
-        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
+        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
+        Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
+        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
         std::vector<double> EEG_predicted(estimationLength, 0.0);
@@ -390,8 +398,16 @@ void ProcessingWorker::process_ar_testing()
             // Downsampling
             downsample(all_channels, EEG_downsampled, downsampling_factor);
 
-            // Spatial
-            EEG_spatial = EEG_downsampled.row(0) - EEG_downsampled.bottomRows(4).colwise().mean();
+            
+            // CWL
+            if (delay > 0) {
+                // Perform delay embedding if delay is positive
+                delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
+            } else {
+                expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
+            }
+            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
+            EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // Phase estimate
             EEG_filter2 = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
@@ -407,9 +423,8 @@ void ProcessingWorker::process_ar_testing()
 
             seq_num_tracker = sequence_number;
 
-            std::cout << "Seq_num: " << sequence_number << " , count: " << csv_save_count << std::endl;
             std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
-            std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
+            std::cout << "Time taken: " << total_elapsed.count() << " sec." << " Seq_num: " << sequence_number << " , count: " << csv_save_count << std::endl;
 
 
             // Save displayed data
