@@ -15,6 +15,7 @@
 #include "magPro.h"
 #include "../dataProcessor/dataProcessor.h"
 #include "../dataProcessor/processingFunctions.h"
+#include <boost/stacktrace.hpp>
 
 enum HandlerState {
   WAITING_FOR_START,
@@ -70,10 +71,10 @@ public:
     std::vector<std::string> getChannelNames() { return channel_names_; }
 
     // Gradient artifact correction
-    void GACorr_off() { GACorr_running = false; }
+    void GACorr_off() { Apply_GACorr = false; }
     void GACorr_on() {
         int stimulation_tracker = 10000000;
-        GACorr_running = true; 
+        Apply_GACorr = true; 
     }
 
     void reset_GACorr(int TA_length_input, int GA_average_length_input);
@@ -147,7 +148,7 @@ private:
     Eigen::VectorXd processing_sample_vector;
 
     // Gradient artifact correction
-    bool GACorr_running = false;
+    bool Apply_GACorr = false;
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;

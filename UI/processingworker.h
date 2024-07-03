@@ -7,6 +7,7 @@
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
 #include "../dataProcessor/processingFunctions.h"
+#include <boost/stacktrace.hpp>
 
 
 struct processingParameters {
@@ -55,8 +56,8 @@ signals:
 
 public slots:
     void process();
+    void process_timing();
     void process_testing();
-    void process_ar_testing();
 
 private:
     dataHandler &handler;

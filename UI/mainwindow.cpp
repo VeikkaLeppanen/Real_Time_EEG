@@ -86,8 +86,8 @@ void MainWindow::startGACorrection() {
 }
 
 void MainWindow::stopGACorrection() {
-    handler.reset_GACorr_tracker();
     handler.GACorr_off();
+    handler.reset_GACorr_tracker();
 }
 
 void MainWindow::on_EEG_clicked()
@@ -145,7 +145,7 @@ void MainWindow::startProcessing(processingParameters& parameters)
         ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, parameters);
         worker->moveToThread(thread);
 
-        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_ar_testing);       // Switch between processing and testing functions here
+        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_testing);       // Switch between differentprocessing functions here
         QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);

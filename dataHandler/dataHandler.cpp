@@ -115,13 +115,15 @@ int dataHandler::simulateData_sin() {
 // Add a signle sample to each channel
 void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
 
+    try {
+
     if (trigger == 1) { 
         stimulation_tracker = 0;
         // GACorr_.printTemplate();
     }
 
     // Gradient artifact correction
-    if (GACorr_running && stimulation_tracker < TA_length) {
+    if (Apply_GACorr && stimulation_tracker < TA_length) {
 
         {
             std::lock_guard<std::mutex> lock(this->dataMutex);
@@ -186,6 +188,11 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
     trigger_buffer_(current_data_index_) = trigger;
     current_sequence_number_ = SeqNo;
     current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+
+    } catch (const std::exception& e) {
+    std::cerr << "Datahandler exception: " << e.what() << '\n';
+    std::cerr << boost::stacktrace::stacktrace();
+    }
 }
 
 // Returns number_of_samples data points form all channels in chronological order

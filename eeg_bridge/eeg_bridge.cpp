@@ -46,6 +46,8 @@ void EegBridge::bind_socket() {
 }
 
 void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
+    try {
+    
     running = true;
     std::cout << "Waiting for measurement start..." << '\n';
     eeg_bridge_status = WAITING_MEASUREMENT_START;
@@ -155,4 +157,9 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
     running = false;
     std::cout << "Shutting down..." << '\n';
     close(sockfd);
+
+    } catch (const std::exception& e) {
+        std::cerr << "Eeg_bridge exception: " << e.what() << '\n';
+        std::cerr << boost::stacktrace::stacktrace();
+    }
 }

@@ -307,7 +307,7 @@
           <item row="7" column="0" colspan="2">
            <widget class="QPushButton" name="HandlerApplyButton">
             <property name="text">
-             <string>Apply</string>
+             <string>Start gradient correction</string>
             </property>
            </widget>
           </item>
@@ -354,7 +354,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Stop</string>
+             <string>Pause</string>
             </property>
            </widget>
           </item>
@@ -380,7 +380,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Start</string>
+             <string>Continue</string>
             </property>
            </widget>
           </item>
