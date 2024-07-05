@@ -24,7 +24,7 @@ TODO:
 */
 
 // Simulating parameters
-const uint16_t CHANNEL_COUNT = 13;
+const uint16_t CHANNEL_COUNT = 5;
 const uint32_t SAMPLINGRATE = 5000;
 
 const uint8_t DC_MODE_SCALE = 100;
@@ -234,8 +234,8 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw_2.csv");
-    std::ifstream csvFile("/home/vleppanen/Work/EEG_data/testdata_veikka_raw2.csv");
+    std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw_2.csv");
+    // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_clean_phase_est.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;

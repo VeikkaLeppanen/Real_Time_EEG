@@ -1,7 +1,25 @@
 #include "processingFunctions.h"
 
 // Function for writing Eigen matrix to CSV file
-void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+void writeMatrixdToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+    std::ofstream file(filename);
+
+    if (file.is_open()) {
+        for (int i = 0; i < matrix.rows(); ++i) {
+            for (int j = 0; j < matrix.cols(); ++j) {
+                file << matrix(i, j);
+                if (j + 1 < matrix.cols()) file << ","; // Comma for next column
+            }
+            file << "\n"; // Newline for next row
+        }
+        file.close();
+    } else {
+        std::cerr << "Failed to open the file for writing." << std::endl;
+    }
+}
+
+// Function for writing Eigen matrix to CSV file
+void writeMatrixiToCSV(const std::string& filename, const Eigen::MatrixXi& matrix) {
     std::ofstream file(filename);
 
     if (file.is_open()) {
@@ -71,9 +89,15 @@ Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec) {
 }
 
 // Function to convert std::vector<double> to a single-column Eigen::MatrixXd
-Eigen::MatrixXd vectorToColumnMatrix(const std::vector<double>& vec) {
+Eigen::MatrixXd vectorToColumnMatrixd(const std::vector<double>& vec) {
     // Map the vector as a single-column matrix
     return Eigen::Map<const Eigen::MatrixXd>(vec.data(), vec.size(), 1);
+}
+
+// Function to convert std::vector<double> to a single-column Eigen::MatrixXd
+Eigen::MatrixXi vectorToColumnMatrixi(const std::vector<int>& vec) {
+    // Map the vector as a single-column matrix
+    return Eigen::Map<const Eigen::MatrixXi>(vec.data(), vec.size(), 1);
 }
 
 // Function to convert std::vector<std::complex<double>> to Eigen::MatrixXd with real and imaginary parts in separate columns
@@ -347,18 +371,66 @@ void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs) {
               -4.51913817e-03, -2.21522410e-03, -5.76355265e-05;
 }
 
-// Function to apply FIR filter using Eigen
+// Function to pad the data vector with odd reflection padding
+Eigen::VectorXd padDataOdd(const Eigen::VectorXd& data, int filterSize) {
+    int dataSize = data.size();
+    int padSize = filterSize - 1;
+    Eigen::VectorXd paddedData(dataSize + 2 * padSize);
+
+    // Left padding
+    for (int i = 0; i < padSize; ++i) {
+        paddedData(padSize - 1 - i) = -data(i);
+    }
+    // Original data
+    paddedData.segment(padSize, dataSize) = data;
+    // Right padding
+    for (int i = 0; i < padSize; ++i) {
+        paddedData(dataSize + padSize + i) = -data(dataSize - 1 - i);
+    }
+
+    return paddedData;
+}
+
+Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n) {
+    int dataSize = x.size();
+    if (n < 1) {
+        return x;
+    }
+    if (n > dataSize - 1) {
+        throw std::invalid_argument("The extension length n is too big. It must not exceed x.size()-1.");
+    }
+
+    Eigen::VectorXd extendedData(dataSize + 2 * n);
+
+    // Left extension
+    for (int i = 0; i < n; ++i) {
+        extendedData(n - 1 - i) = 2 * x(0) - x(i + 1); // Odd reflection as per Python example
+    }
+
+    // Copy original data
+    extendedData.segment(n, dataSize) = x;
+
+    // Right extension
+    for (int i = 0; i < n; ++i) {
+        extendedData(dataSize + n + i) = 2 * x(dataSize - 1) - x(dataSize - 2 - i); // Odd reflection as per Python example
+    }
+
+    return extendedData;
+}
+
+// Function to apply FIR filter to a vector with odd reflection padding
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
     int dataSize = data.size();
     int filterSize = coeffs.size();
     Eigen::VectorXd filteredData = Eigen::VectorXd::Zero(dataSize);
 
+    // Pad data
+    Eigen::VectorXd paddedData = oddExtension(data, filterSize);
+
     // Perform convolution
     for (int i = 0; i < dataSize; ++i) {
         for (int j = 0; j < filterSize; ++j) {
-            if (i - j >= 0) {
-                filteredData(i) += data(i - j) * coeffs(j);
-            }
+            filteredData(i) += paddedData(i + j) * coeffs(j);
         }
     }
 
@@ -869,7 +941,7 @@ std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorX
 // Function to fit an AR model using the Yule-Walker method and predict future values
 std::vector<double> fitAndPredictAR_YuleWalker_V2(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
     // Estimate AR coefficients using the Yule-Walker method
-    auto [arParams, noiseVariance, reflectionCoeffs] = aryule_levinson(data, modelOrder);
+    auto [arParams, noiseVariance, reflectionCoeffs] = aryule(data, modelOrder);
 
     // Normalize the data
     double originalMean = data.mean();
@@ -1100,4 +1172,29 @@ std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal
 
     // Perform inverse FFT
     return performIFFT(fft_signal);
+}
+
+
+
+
+
+int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, 
+                          Eigen::VectorXd& phaseAngles, 
+                          int sequence_number,
+                          int downsampling_factor, 
+                          int edge, 
+                          int phase_shift,
+                          double stimulation_target) 
+{
+
+    for (std::size_t i = edge; i < hilbert_signal.size(); ++i) {
+        phaseAngles(i) = std::arg(hilbert_signal[i]);
+        if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
+            int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
+            int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
+            return trigger_seqNum;
+        }
+    }
+
+    return 0;
 }

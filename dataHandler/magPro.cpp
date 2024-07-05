@@ -38,10 +38,9 @@ int magPro::connectTriggerPort() {
 }
 
 void magPro::trig() {
-
+    if (std::chrono::system_clock::now() - latest_trigger_time < std::chrono::milliseconds(time_limit)) { return; }
     auto cmd = create_trig_cmd_byte_str();
     boost::asio::write(serial, boost::asio::buffer(cmd));
-    
 }
 
 void magPro::set_enable(bool status) {

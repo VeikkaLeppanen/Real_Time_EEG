@@ -69,7 +69,7 @@ void TriggeringWindow::on_TimeLimitLineEdit_editingFinished()
     if (ok) {
         handler.setTriggerTimeLimit(value);
     } else {
-        QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 1000.");
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number between 100 and 100000.");
     }
 }
 
