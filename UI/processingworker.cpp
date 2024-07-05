@@ -3,8 +3,16 @@
 #include <QThread>
 
 
-ProcessingWorker::ProcessingWorker(dataHandler &handler, Eigen::MatrixXd &processed_data, volatile std::sig_atomic_t &processingWorkerRunning, const processingParameters& params, QObject* parent)
-    : QObject(parent), handler(handler), processed_data(processed_data), processingWorkerRunning(processingWorkerRunning), params(params)
+ProcessingWorker::ProcessingWorker(dataHandler &handler, 
+                               Eigen::MatrixXd &processed_data, 
+                    volatile std::sig_atomic_t &processingWorkerRunning, 
+                    const processingParameters &params, 
+                                       QObject* parent)
+    : QObject(parent), 
+      handler(handler), 
+      processed_data(processed_data), 
+      processingWorkerRunning(processingWorkerRunning), 
+      params(params)
 { }
 
 ProcessingWorker::~ProcessingWorker()
@@ -68,6 +76,10 @@ void ProcessingWorker::process()
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
 
+        // Set names for each channel in Data_to_display
+        std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
+        emit updateProcessingChannelNames(processing_channel_names);
+
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
@@ -108,7 +120,7 @@ void ProcessingWorker::process()
             std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
 
 
-            // Save displayed data
+            // Save displayed data and names for each channel
             Data_to_display.row(0).head(downsampled_cols) = EEG_downsampled.row(0);
             Data_to_display.row(1).head(downsampled_cols) = EEG_corrected.row(0);
             Data_to_display.row(2).head(downsampled_cols) = EEG_spatial;
@@ -384,9 +396,15 @@ void ProcessingWorker::process_testing()
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
 
-        Eigen::MatrixXd CSV_save = Eigen::MatrixXd::Zero(164, estimationLength);
+        Eigen::MatrixXd CSV_CWL_save = Eigen::MatrixXd::Zero(164, downsampled_cols);
+        Eigen::MatrixXd CSV_filter2_save = Eigen::MatrixXd::Zero(164, filter2_length);
+        Eigen::MatrixXd CSV_predict_save = Eigen::MatrixXd::Zero(164, estimationLength);
         int csv_save_count = 0;
         int last_processed_index = 0;
+        
+        // Set names for each channel in Data_to_display
+        std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
+        emit updateProcessingChannelNames(processing_channel_names);
         
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
@@ -410,11 +428,12 @@ void ProcessingWorker::process_testing()
                 expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
             }
             removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
+            CSV_CWL_save.row(csv_save_count) = EEG_corrected.row(0);
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // Filter2
             EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.segment(EEG_spatial.size() - filter2_length, filter2_length), LSFIR_coeffs_2);
-            // CSV_save.row(csv_save_count) = EEG_filter2;
+            CSV_filter2_save.row(csv_save_count) = EEG_filter2;
 
             // Phase estimation
             EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
@@ -429,7 +448,7 @@ void ProcessingWorker::process_testing()
                 // if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
             }
 
-            CSV_save.row(csv_save_count) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            CSV_predict_save.row(csv_save_count) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
 
             seq_num_tracker = sequence_number;
 
@@ -451,7 +470,9 @@ void ProcessingWorker::process_testing()
             last_processed_index = sequence_number;
         }
 
-        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/predicted_end.csv", CSV_save);
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/CWL.csv", CSV_CWL_save);
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/filter2_end.csv", CSV_filter2_save);
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/predicted_end.csv", CSV_predict_save);
         
         emit finished();
     } catch (std::exception& e) {

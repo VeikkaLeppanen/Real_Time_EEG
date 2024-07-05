@@ -43,6 +43,8 @@ void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs);
 void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs);
 void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd& coeffs);
 
+Eigen::VectorXd padDataOdd(const Eigen::VectorXd& data, int filterSize);
+Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n);
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
 

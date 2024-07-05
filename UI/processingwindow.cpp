@@ -2,7 +2,10 @@
 #include "ui_processingwindow.h"
 #include <QThread>
 
-ProcessingWindow::ProcessingWindow(dataHandler &handler, volatile std::sig_atomic_t &processingWorkerRunning, Eigen::MatrixXd &processed_data, QWidget *parent)
+ProcessingWindow::ProcessingWindow(dataHandler &handler, 
+                    volatile std::sig_atomic_t &processingWorkerRunning, 
+                               Eigen::MatrixXd &processed_data, 
+                                       QWidget *parent)
     : QMainWindow(parent), 
       ui(new Ui::ProcessingWindow),
       handler(handler),
@@ -35,6 +38,8 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler, volatile std::sig_atomi
         connect(this, &ProcessingWindow::getCustomScaleStatus, processingglWidget, &ProcessingGlWidget::getCustomScaleStatus);
         connect(this, &ProcessingWindow::getCustomScaleMin, processingglWidget, &ProcessingGlWidget::getCustomScaleMin);
         connect(this, &ProcessingWindow::getCustomScaleMax, processingglWidget, &ProcessingGlWidget::getCustomScaleMax);
+
+        connect(this, &ProcessingWindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
 
         ui->checkBox->setChecked(emit getCustomScaleStatus());
         ui->scaleMin->setText(QString::number(emit getCustomScaleMin()));

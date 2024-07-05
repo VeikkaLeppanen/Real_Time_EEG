@@ -371,18 +371,66 @@ void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs) {
               -4.51913817e-03, -2.21522410e-03, -5.76355265e-05;
 }
 
-// Function to apply FIR filter using Eigen
+// Function to pad the data vector with odd reflection padding
+Eigen::VectorXd padDataOdd(const Eigen::VectorXd& data, int filterSize) {
+    int dataSize = data.size();
+    int padSize = filterSize - 1;
+    Eigen::VectorXd paddedData(dataSize + 2 * padSize);
+
+    // Left padding
+    for (int i = 0; i < padSize; ++i) {
+        paddedData(padSize - 1 - i) = -data(i);
+    }
+    // Original data
+    paddedData.segment(padSize, dataSize) = data;
+    // Right padding
+    for (int i = 0; i < padSize; ++i) {
+        paddedData(dataSize + padSize + i) = -data(dataSize - 1 - i);
+    }
+
+    return paddedData;
+}
+
+Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n) {
+    int dataSize = x.size();
+    if (n < 1) {
+        return x;
+    }
+    if (n > dataSize - 1) {
+        throw std::invalid_argument("The extension length n is too big. It must not exceed x.size()-1.");
+    }
+
+    Eigen::VectorXd extendedData(dataSize + 2 * n);
+
+    // Left extension
+    for (int i = 0; i < n; ++i) {
+        extendedData(n - 1 - i) = 2 * x(0) - x(i + 1); // Odd reflection as per Python example
+    }
+
+    // Copy original data
+    extendedData.segment(n, dataSize) = x;
+
+    // Right extension
+    for (int i = 0; i < n; ++i) {
+        extendedData(dataSize + n + i) = 2 * x(dataSize - 1) - x(dataSize - 2 - i); // Odd reflection as per Python example
+    }
+
+    return extendedData;
+}
+
+// Function to apply FIR filter to a vector with odd reflection padding
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
     int dataSize = data.size();
     int filterSize = coeffs.size();
     Eigen::VectorXd filteredData = Eigen::VectorXd::Zero(dataSize);
 
+    // Pad data
+    Eigen::VectorXd paddedData = oddExtension(data, filterSize);
+
     // Perform convolution
     for (int i = 0; i < dataSize; ++i) {
         for (int j = 0; j < filterSize; ++j) {
-            if (i - j >= 0) {
-                filteredData(i) += data(i - j) * coeffs(j);
-            }
+            filteredData(i) += paddedData(i + j) * coeffs(j);
         }
     }
 

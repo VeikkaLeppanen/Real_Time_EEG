@@ -31,6 +31,9 @@ public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~MainWindow();
 
+signals:
+    void updateProcessingChannelNames_signal(std::vector<std::string> processing_channel_names_2);
+
 public slots:
     void updateData();
     void eegBridgeSpin(int port, int timeout);
@@ -39,6 +42,8 @@ public slots:
     void stopGACorrection();
 
     void startProcessing(processingParameters& parameters);
+
+    void updateProcessingChannelNames_slot(std::vector<std::string> processing_channel_names_2) { emit updateProcessingChannelNames_signal(processing_channel_names_2); }
 
 private slots:
     void handleError(const QString& error);
@@ -61,6 +66,7 @@ private:
     // Graph parameters
     int samples_to_display = 10000;
     Eigen::MatrixXd processed_data;
+    std::vector<std::string> processing_channel_names;
 
     // Filtering parameters
     std::vector<double> filterCoeffs_;

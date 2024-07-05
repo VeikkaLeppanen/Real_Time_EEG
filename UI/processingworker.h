@@ -47,12 +47,17 @@ class ProcessingWorker : public QObject {
     Q_OBJECT
 
 public:
-    explicit ProcessingWorker(dataHandler &handler, Eigen::MatrixXd& processed_data, volatile std::sig_atomic_t &processingWorkerRunning, const processingParameters& params,  QObject* parent = nullptr);
+    explicit ProcessingWorker(dataHandler &handler, 
+                          Eigen::MatrixXd &processed_data, 
+               volatile std::sig_atomic_t &processingWorkerRunning, 
+               const processingParameters &params, 
+                                  QObject* parent = nullptr);
     ~ProcessingWorker();
 
 signals:
     void finished();
     void error(QString err);
+    void updateProcessingChannelNames(std::vector<std::string> processing_channel_names);
 
 public slots:
     void process();
