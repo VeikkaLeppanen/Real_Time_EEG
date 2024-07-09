@@ -129,7 +129,6 @@ void MainWindow::on_processing_clicked()
     processingWindow->raise();
     processingWindow->activateWindow();
     connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startProcessing);
-    connect(this, &MainWindow::updateProcessingChannelNames_signal, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
 }
 
 void MainWindow::resetProcessingWindowPointer() {
@@ -146,7 +145,7 @@ void MainWindow::startProcessing(processingParameters& parameters)
         ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, parameters);
         worker->moveToThread(thread);
 
-        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between differentprocessing functions here
+        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_testing);       // Switch between differentprocessing functions here
         QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
@@ -158,7 +157,7 @@ void MainWindow::startProcessing(processingParameters& parameters)
         });
 
         thread->start();
-        QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, this, &MainWindow::updateProcessingChannelNames_slot);
+        QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
     } else {
         std::cout << "Processing start failed" << '\n';
     }

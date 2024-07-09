@@ -32,7 +32,6 @@ public:
     ~MainWindow();
 
 signals:
-    void updateProcessingChannelNames_signal(std::vector<std::string> processing_channel_names_2);
 
 public slots:
     void updateData();
@@ -42,8 +41,6 @@ public slots:
     void stopGACorrection();
 
     void startProcessing(processingParameters& parameters);
-
-    void updateProcessingChannelNames_slot(std::vector<std::string> processing_channel_names_2) { emit updateProcessingChannelNames_signal(processing_channel_names_2); }
 
 private slots:
     void handleError(const QString& error);

@@ -31,6 +31,7 @@ void writeMatrixiToCSV(const std::string& filename, const Eigen::MatrixXi& matri
             file << "\n"; // Newline for next row
         }
         file.close();
+        std::cout << "Data written to " << filename << " successfully." << std::endl;
     } else {
         std::cerr << "Failed to open the file for writing." << std::endl;
     }
@@ -371,40 +372,18 @@ void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs) {
               -4.51913817e-03, -2.21522410e-03, -5.76355265e-05;
 }
 
-// Function to pad the data vector with odd reflection padding
-Eigen::VectorXd padDataOdd(const Eigen::VectorXd& data, int filterSize) {
-    int dataSize = data.size();
-    int padSize = filterSize - 1;
-    Eigen::VectorXd paddedData(dataSize + 2 * padSize);
-
-    // Left padding
-    for (int i = 0; i < padSize; ++i) {
-        paddedData(padSize - 1 - i) = -data(i);
-    }
-    // Original data
-    paddedData.segment(padSize, dataSize) = data;
-    // Right padding
-    for (int i = 0; i < padSize; ++i) {
-        paddedData(dataSize + padSize + i) = -data(dataSize - 1 - i);
-    }
-
-    return paddedData;
-}
-
 Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n) {
     int dataSize = x.size();
     if (n < 1) {
         return x;
-    }
-    if (n > dataSize - 1) {
-        throw std::invalid_argument("The extension length n is too big. It must not exceed x.size()-1.");
     }
 
     Eigen::VectorXd extendedData(dataSize + 2 * n);
 
     // Left extension
     for (int i = 0; i < n; ++i) {
-        extendedData(n - 1 - i) = 2 * x(0) - x(i + 1); // Odd reflection as per Python example
+        int idx = std::min(i + 1, dataSize - 1); // Clamp index within bounds
+        extendedData(n - 1 - i) = 2 * x(0) - x(idx);
     }
 
     // Copy original data
@@ -412,25 +391,26 @@ Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n) {
 
     // Right extension
     for (int i = 0; i < n; ++i) {
-        extendedData(dataSize + n + i) = 2 * x(dataSize - 1) - x(dataSize - 2 - i); // Odd reflection as per Python example
+        int idx = std::max(dataSize - 2 - i, 0); // Clamp index within bounds
+        extendedData(dataSize + n + i) = 2 * x(dataSize - 1) - x(idx);
     }
 
     return extendedData;
 }
 
-// Function to apply FIR filter to a vector with odd reflection padding
+
+// Function to apply FIR filter using Eigen
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
     int dataSize = data.size();
     int filterSize = coeffs.size();
     Eigen::VectorXd filteredData = Eigen::VectorXd::Zero(dataSize);
 
-    // Pad data
-    Eigen::VectorXd paddedData = oddExtension(data, filterSize);
-
     // Perform convolution
     for (int i = 0; i < dataSize; ++i) {
         for (int j = 0; j < filterSize; ++j) {
-            filteredData(i) += paddedData(i + j) * coeffs(j);
+            if (i - j >= 0) {
+                filteredData(i) += data(i - j) * coeffs(j);
+            }
         }
     }
 
@@ -439,9 +419,11 @@ Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::Vecto
 
 // Zero-phase filtering equivalent to MATLAB's filtfilt
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
-                 
+    int extensionSize = 3 * coeffs.size() - 1;
+    Eigen::VectorXd paddedData = oddExtension(data, extensionSize);
+
     // Forward filter pass
-    Eigen::VectorXd forwardFiltered = applyLSFIRFilter(data, coeffs);
+    Eigen::VectorXd forwardFiltered = applyLSFIRFilter(paddedData, coeffs);
                  
     // Reverse the data for the backward pass
     Eigen::VectorXd reversedData = forwardFiltered.reverse();
@@ -449,8 +431,10 @@ Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorX
     // Backward filter pass
     Eigen::VectorXd backwardFiltered = applyLSFIRFilter(reversedData, coeffs);
                  
+    Eigen::VectorXd orderedData = backwardFiltered.reverse();
+    
     // Reverse the result to get the final output
-    return backwardFiltered.reverse();
+    return orderedData.segment(extensionSize, data.size());
 }
 
 Eigen::MatrixXd applyLSFIRFilterMatrix_ret(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
@@ -1191,10 +1175,31 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
         phaseAngles(i) = std::arg(hilbert_signal[i]);
         if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
             int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
+            std::cout << "Target phase found: " << phaseAngles(best_index) << '\n';
             int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
             return trigger_seqNum;
         }
     }
 
     return 0;
+}
+
+double ang_diff(double x, double y) {
+    std::complex<double> result = std::exp(std::complex<double>(0, x)) / std::exp(std::complex<double>(0, y));
+    return std::arg(result);
+}
+
+Eigen::VectorXd ang_diff(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
+    if (x.size() != y.size()) {
+        throw std::invalid_argument("Input vectors must have the same size.");
+    }
+
+    Eigen::VectorXd result(x.size());
+    for (int i = 0; i < x.size(); ++i) {
+        std::complex<double> num = std::exp(std::complex<double>(0, x[i]));
+        std::complex<double> den = std::exp(std::complex<double>(0, y[i]));
+        std::complex<double> quotient = num / den;
+        result[i] = std::arg(quotient);
+    }
+    return result;
 }

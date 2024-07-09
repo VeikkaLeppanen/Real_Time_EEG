@@ -391,7 +391,7 @@ void ProcessingWorker::process_testing()
         Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(filter2_length);
         std::vector<double> EEG_predicted(estimationLength, 0.0);
         std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
-        Eigen::VectorXd phaseAngles(estimationLength);
+        Eigen::VectorXd phaseAngles = Eigen::VectorXd::Zero(estimationLength);
 
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
@@ -401,7 +401,14 @@ void ProcessingWorker::process_testing()
         Eigen::MatrixXd CSV_predict_save = Eigen::MatrixXd::Zero(164, estimationLength);
         int csv_save_count = 0;
         int last_processed_index = 0;
+        std::vector<int> index_list;
         
+        Eigen::VectorXd EEG_filter2_total = Eigen::VectorXd::Zero(downsampled_cols);
+        std::vector<std::complex<double>> EEG_hilbert_total(estimationLength, std::complex<double>(0.0, 0.0));
+        Eigen::VectorXd phaseAngles_total = Eigen::VectorXd::Zero(estimationLength);
+        Eigen::MatrixXd phaseAngles_out = Eigen::MatrixXd::Zero(164, estimationLength);
+        Eigen::MatrixXd phaseAngles_difference = Eigen::MatrixXd::Zero(164, estimationLength);
+
         // Set names for each channel in Data_to_display
         std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
         emit updateProcessingChannelNames(processing_channel_names);
@@ -422,7 +429,6 @@ void ProcessingWorker::process_testing()
 
             // CWL
             if (delay > 0) {
-                // Perform delay embedding if delay is positive
                 delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
             } else {
                 expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
@@ -432,7 +438,8 @@ void ProcessingWorker::process_testing()
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // Filter2
-            EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.segment(EEG_spatial.size() - filter2_length, filter2_length), LSFIR_coeffs_2);
+            EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.segment(EEG_spatial.size() / 2 - filter2_length, filter2_length), LSFIR_coeffs_2);
+            EEG_filter2_total = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
             CSV_filter2_save.row(csv_save_count) = EEG_filter2;
 
             // Phase estimation
@@ -440,13 +447,26 @@ void ProcessingWorker::process_testing()
 
             // Hilbert transform
             EEG_hilbert = hilbertTransform(EEG_predicted);
+            Eigen::VectorXd EEG_filter2_cut = EEG_filter2_total.segment(EEG_spatial.size() / 2 - edge, estimationLength);
+            std::vector<double> dtf(EEG_filter2_cut.data(), EEG_filter2_cut.data() + EEG_filter2_cut.size());
+            EEG_hilbert_total = hilbertTransform(dtf);
+
+            for (std::size_t i = 0; i < EEG_hilbert.size(); ++i) {
+                phaseAngles(i) = std::arg(EEG_hilbert[i]);
+                phaseAngles_out(csv_save_count, i) = std::arg(EEG_hilbert_total[i]);
+                phaseAngles_total(i) = std::arg(EEG_hilbert_total[i]);
+                // phaseAngles_total(i) = stimulation_target;
+            }
+
+            phaseAngles_difference.row(csv_save_count) = ang_diff(phaseAngles_total, phaseAngles);
 
             // Trigger phase targeting
             int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
-            if (trigger_seqNum) { 
-                handler.insertTrigger(trigger_seqNum);
-                // if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
-            }
+            index_list.push_back(trigger_seqNum);
+            // if (trigger_seqNum) { 
+            //     handler.insertTrigger(trigger_seqNum);
+            //     // if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }
+            // }
 
             CSV_predict_save.row(csv_save_count) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
 
@@ -473,6 +493,9 @@ void ProcessingWorker::process_testing()
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/CWL.csv", CSV_CWL_save);
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/filter2_end.csv", CSV_filter2_save);
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/predicted_end.csv", CSV_predict_save);
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/phaseAngles_total.csv", phaseAngles_out);
+        writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/phaseAngles_difference.csv", phaseAngles_difference);
+        writeMatrixiToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/index_list.csv", vectorToColumnMatrixi(index_list));
         
         emit finished();
     } catch (std::exception& e) {
@@ -481,3 +504,10 @@ void ProcessingWorker::process_testing()
         std::cerr << boost::stacktrace::stacktrace();
     }
 }
+
+
+
+
+
+
+

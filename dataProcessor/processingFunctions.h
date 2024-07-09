@@ -43,7 +43,6 @@ void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs);
 void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs);
 void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd& coeffs);
 
-Eigen::VectorXd padDataOdd(const Eigen::VectorXd& data, int filterSize);
 Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n);
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs);
@@ -82,7 +81,8 @@ std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& si
 std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
 
 int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, Eigen::VectorXd& phaseAngles, int sequence_number, int downsampling_factor, int edge, int phase_shift, double stimulation_target);
-
+double ang_diff(double x, double y);
+Eigen::VectorXd ang_diff(const Eigen::VectorXd& x, const Eigen::VectorXd& y);
 
 // Real-time filter processor class for multiple channels
 class MultiChannelRealTimeFilter {
