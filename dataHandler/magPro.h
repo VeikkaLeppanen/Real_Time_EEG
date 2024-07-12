@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <boost/asio.hpp>
 
 
@@ -23,6 +24,7 @@ public:
     void trig();
     
     int wait_for_next_package_from_G3();
+    void print_formatted_data_if_all_available();
 
     void set_enable(bool status);
     void set_amplitude(int amplitude);
@@ -69,8 +71,11 @@ private:
     void store_current_burst_pulses(int pulses);
     void store_current_ipi_index(const std::string& ipi_index);
     void store_current_ba_ratio(char byte);
+    void store_current_enabled(char byte);
+    void store_model(char byte);
+    void store_max_pps(int pps);
+    void store_supports_biphasic_burst(char byte);
     void store_mep_values(const std::string& data);
-    void print_formatted_data_if_all_available();
     void read_from_serial(unsigned char* buffer, std::size_t size);
     int handle_cmd_length_4(const std::string& received_cmd);
     int handle_cmd_length_10(const std::string& received_cmd);
@@ -106,33 +111,33 @@ private:
     double sleep_time_set_enable = sleep_time_set_amp;
     double sleep_time = 0.5;
     
-    double G3_current_ba_ratio;         // MagPro G3 X100 limits: 0.2 to 5.0
-    int G3_current_direction;           // 0 = Normal, 1 = Reverse
-    int G3_current_enabled;             // 1 = Enabled, 0 = Disabled
-    int G3_current_ipi;                 // IPI from 1.0ms to 3000ms
-    int G3_current_mode;                // 0 = Standard, 1 = Power, 2 = Twin, 3 = Dual
-    int G3_current_burst_pulses;        // 5, 4, 3 or 2
-    int G3_current_waveform;            // 0 = Monophasic, 1 = Biphasic, 2 = Half sine, 3 = Biphasic burst
-    int G3_current_page;                // 8 = MEP page
-    int G3_train_running;               // 0 = Not running, 1 = Running
+    float G3_current_ba_ratio;              // MagPro G3 X100 limits: 0.2 to 5.0
+    int G3_current_direction;               // 0 = Normal, 1 = Reverse
+    int G3_current_enabled;                 // 1 = Enabled, 0 = Disabled
+    float G3_current_ipi;                   // IPI from 1.0ms to 3000ms
+    int G3_current_mode;                    // 0 = Standard, 1 = Power, 2 = Twin, 3 = Dual
+    int G3_current_burst_pulses;            // 5, 4, 3 or 2
+    int G3_current_waveform;                // 0 = Monophasic, 1 = Biphasic, 2 = Half sine, 3 = Biphasic burst
+    int G3_current_page;                    // 8 = MEP page
+    int G3_train_running;                   // 0 = Not running, 1 = Running
 
     int G3_model;                           // 0 = R30, 1 = X100, 2 = R30+Option, 3 = X100+Option, 4 = R30+Option+Mono, 5 = MST
-    int G3_max_pps;
-    int G3_supports_biphasic_burst;
+    int G3_max_pps;                         // CHECK VALUE TYPE
+    long long G3_supports_biphasic_burst;
 
     int G3_A_amp_percent;
     int G3_B_amp_percent;
-    int G3_amp_timestamp_ms;
+    long long G3_amp_timestamp_ms;
 
     int G3_A_di_dt;
     int G3_B_di_dt;
-    int G3_di_dt_timestamp_ms;
+    long long G3_di_dt_timestamp_ms;
 
     int G3_mep_max_amp_value_uv;
     int G3_mep_min_amp_value_uv;
     int G3_mep_max_time_value_us;
     int G3_mep_peak_to_peak_amp_value_uv;
-    int G3_mep_timestamp_ms;
+    long long G3_mep_timestamp_ms;
 };
 
 #endif // MAGPRO_H

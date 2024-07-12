@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>243</width>
-    <height>356</height>
+    <width>468</width>
+    <height>449</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,8 +15,21 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0" alignment="Qt::AlignTop">
+    <item row="3" column="1">
+     <widget class="QPushButton" name="testTrigger">
+      <property name="text">
+       <string>TestTrigger</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1" alignment="Qt::AlignTop">
      <widget class="QFrame" name="frame">
+      <property name="maximumSize">
+       <size>
+        <width>230</width>
+        <height>16777215</height>
+       </size>
+      </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -41,7 +54,7 @@
        <item row="0" column="0" colspan="2">
         <widget class="QPushButton" name="connectTrigger">
          <property name="text">
-          <string>Connect Trigger</string>
+          <string>Connect G3</string>
          </property>
         </widget>
        </item>
@@ -69,10 +82,120 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QPushButton" name="testTrigger">
+     <widget class="QPushButton" name="pushButton">
       <property name="text">
-       <string>TestTrigger</string>
+       <string>Request mode info</string>
       </property>
+     </widget>
+    </item>
+    <item row="0" column="0" alignment="Qt::AlignTop">
+     <widget class="QFrame" name="frame_2">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QFormLayout" name="formLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Mode:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Enabled:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>IPI:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Burst pulses: </string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Waveform:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="text">
+          <string>Mep page:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>Train running:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="label_15">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -82,7 +205,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>243</width>
+     <width>468</width>
      <height>22</height>
     </rect>
    </property>

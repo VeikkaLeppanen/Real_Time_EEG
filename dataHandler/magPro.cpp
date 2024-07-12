@@ -102,7 +102,7 @@ int magPro::wait_for_next_package_from_G3() {
 
                 if (received_crc != calculated_crc) {
                     std::cerr << "crc error detected !" << std::endl;
-                    return -1; // Use -1 to indicate error
+                    return -1;
                 }
 
                 unsigned char read_end_flag;
@@ -112,7 +112,7 @@ int magPro::wait_for_next_package_from_G3() {
                     received_end_of_cmd = true;
                 } else {
                     std::cerr << "Error! Unknown package received. Got " << read_end_flag << " as read_end_flag" << std::endl;
-                    return -1; // Use -1 to indicate error
+                    return -1;
                 }
             }
         }
@@ -130,11 +130,12 @@ int magPro::wait_for_next_package_from_G3() {
             case 10:
                 return handle_cmd_length_10(received_cmd);
             case 13:
+                return handle_cmd_length_mep(received_cmd, received_cmd_length);
             case 17:
                 return handle_cmd_length_mep(received_cmd, received_cmd_length);
             default:
                 std::cerr << "Unsupported received_cmd_length=" + std::to_string(received_cmd_length) << std::endl;
-                return -1; // Use -1 to indicate error
+                return -1;
         }
     }
 
@@ -203,58 +204,141 @@ int magPro::handle_cmd_length_mep(const std::string& received_cmd, int length) {
 }
 
 long long magPro::get_epochtime_ms() {
-    // Implement your epoch time function here
-    return 0;
+    auto now = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    return duration.count();
 }
 
 std::string magPro::get_timestamp_str() {
-    // Implement your timestamp string function here
-    return "";
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
+    return oss.str();
 }
 
 void magPro::cmd_length_4__evaluate_byte_6(char byte) {
-    // Implement your evaluation function here
+    int bit_0_and_1 = byte & 3;            // mode
+    int bit_2_and_3 = (byte >> 2) & 3;     // waveform
+    int bit_4 = (byte >> 4) & 1;           // enabled
+    int bit_5_to_7 = (byte >> 5) & 7;      // model
+    
+    store_mode(bit_0_and_1);
+    store_waveform(bit_2_and_3);
+    store_current_enabled(bit_4);
+    store_model(bit_5_to_7);
 }
 
 void magPro::cmd_length_10__mode_9__evaluate_byte_5(char byte) {
-    // Implement your evaluation function here
+    int bit_0_to_2 = byte & 7;             // model
+    int bit_3_to_5 = (byte >> 3) & 7;      // Max possible pps for given model
+    int bit_6 = (byte >> 6) & 1;           // enabled
+    
+    store_model(bit_0_to_2);
+    
+    if (bit_0_to_2 == 0 || bit_0_to_2 == 4) {  // R30
+        switch (bit_3_to_5) {
+            case 0:
+                store_max_pps(30);
+                break;
+            case 1:
+                store_max_pps(20);
+                break;
+            case 2:
+                store_max_pps(60);
+                break;
+            case 3:
+                store_max_pps(80);
+                break;
+            default:
+                std::cerr << "Unsupported ppm reference in bit_3_to_5=" << bit_3_to_5 << std::endl;
+        }
+    } else if (bit_0_to_2 == 1 || bit_0_to_2 == 3) {  // X100
+        if (bit_3_to_5 == 3) {
+            store_max_pps(250);
+        } else {
+            store_max_pps(100);  // Default if not specified
+        }
+    } else {
+        std::cerr << "Unsupported model bit_0_to_2=" << bit_0_to_2 << std::endl;
+    }
+
+    store_supports_biphasic_burst(bit_6);
 }
 
 void magPro::store_mode(char byte) {
-    // Implement your store mode function here
+    G3_current_mode = static_cast<int>(byte);
 }
 
 void magPro::store_current_direction(char byte) {
-    // Implement your store current direction function here
+    G3_current_direction = static_cast<int>(byte);
 }
 
 void magPro::store_waveform(char byte) {
-    // Implement your store waveform function here
+    G3_current_waveform = static_cast<int>(byte);
 }
 
 void magPro::store_current_burst_pulses(int pulses) {
-    // Implement your store burst pulses function here
+    G3_current_burst_pulses = pulses;
 }
 
 void magPro::store_current_ipi_index(const std::string& ipi_index) {
-    // Implement your store IPI index function here
+    if (ipi_index.size() == 2) {
+        int ipi_value = (static_cast<unsigned char>(ipi_index[0]) << 8) | static_cast<unsigned char>(ipi_index[1]);
+        G3_current_ipi = static_cast<float>(ipi_value) / 10.0f; // Assuming the value is in 0.1 ms increments
+    } else {
+        std::cerr << "Invalid IPI index size" << std::endl;
+    }
 }
 
 void magPro::store_current_ba_ratio(char byte) {
-    // Implement your store BA ratio function here
+    G3_current_ba_ratio = static_cast<float>(byte) / 10.0f; // Assuming the value is in 0.1 increments
+}
+
+void magPro::store_current_enabled(char byte) {
+    G3_current_enabled = static_cast<int>(byte);
+}
+
+void magPro::store_model(char byte) {
+    G3_model = static_cast<int>(byte);
+}
+
+void magPro::store_max_pps(int pps) {
+    G3_max_pps = pps;
+}
+
+void magPro::store_supports_biphasic_burst(char byte) {
+    G3_supports_biphasic_burst = static_cast<int>(byte);
 }
 
 void magPro::store_mep_values(const std::string& data) {
-    // Implement your store MEP values function here
+    if (data.size() == 13 || data.size() == 17) {
+        G3_mep_max_amp_value_uv = (static_cast<unsigned char>(data[1]) << 8) | static_cast<unsigned char>(data[2]);
+        G3_mep_min_amp_value_uv = (static_cast<unsigned char>(data[3]) << 8) | static_cast<unsigned char>(data[4]);
+        G3_mep_max_time_value_us = (static_cast<unsigned char>(data[5]) << 8) | static_cast<unsigned char>(data[6]);
+        G3_mep_peak_to_peak_amp_value_uv = (static_cast<unsigned char>(data[7]) << 8) | static_cast<unsigned char>(data[8]);
+        G3_mep_timestamp_ms = get_epochtime_ms();
+    } else {
+        std::cerr << "Invalid MEP data size" << std::endl;
+    }
 }
 
 void magPro::print_formatted_data_if_all_available() {
-    // Implement your formatted data print function here
+    std::cout << "Amplitude A: " << G3_A_amp_percent << "%" << std::endl;
+    std::cout << "Amplitude B: " << G3_B_amp_percent << "%" << std::endl;
+    std::cout << "di/dt A: " << G3_A_di_dt << std::endl;
+    std::cout << "di/dt B: " << G3_B_di_dt << std::endl;
+    std::cout << "MEP max amplitude: " << G3_mep_max_amp_value_uv << " uV" << std::endl;
+    std::cout << "MEP min amplitude: " << G3_mep_min_amp_value_uv << " uV" << std::endl;
+    std::cout << "MEP max time: " << G3_mep_max_time_value_us << " us" << std::endl;
+    std::cout << "MEP peak-to-peak amplitude: " << G3_mep_peak_to_peak_amp_value_uv << " uV" << std::endl;
+    std::cout << "MEP timestamp: " << G3_mep_timestamp_ms << " ms" << std::endl;
 }
 
 void magPro::read_from_serial(unsigned char* buffer, std::size_t size) {
     boost::asio::read(serial, boost::asio::buffer(buffer, size));
 }
+
 
 
 
