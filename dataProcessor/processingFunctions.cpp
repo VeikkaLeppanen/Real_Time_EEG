@@ -13,6 +13,7 @@ void writeMatrixdToCSV(const std::string& filename, const Eigen::MatrixXd& matri
             file << "\n"; // Newline for next row
         }
         file.close();
+        std::cout << "Data written to " << filename << " successfully." << std::endl;
     } else {
         std::cerr << "Failed to open the file for writing." << std::endl;
     }
@@ -1175,7 +1176,7 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
         phaseAngles(i) = std::arg(hilbert_signal[i]);
         if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
             int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
-            std::cout << "Target phase found: " << phaseAngles(best_index) << '\n';
+            // std::cout << "Target phase found: " << phaseAngles(best_index) << '\n';
             int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
             return trigger_seqNum;
         }

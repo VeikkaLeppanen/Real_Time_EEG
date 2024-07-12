@@ -112,88 +112,101 @@ int dataHandler::simulateData_sin() {
 
 
 // Buffer functions
-// Add a signle sample to each channel
+// Add a single sample to each channel
 void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
 
     try {
-
-    if (trigger == 1) { 
-        stimulation_tracker = 0;
-        // GACorr_.printTemplate();
-    }
-
-    // Gradient artifact correction
-    if (Apply_GACorr && stimulation_tracker < TA_length) {
-
-        {
-            std::lock_guard<std::mutex> lock(this->dataMutex);
-            processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
+        // Debug: Validate sample size
+        if (samples.size() == 0) {
+            std::cerr << "Error: Empty samples vector." << std::endl;
+            return;
         }
-        
-        GACorr_.update_template(stimulation_tracker, samples);
-        stimulation_tracker++;
-    } else {
 
-        std::lock_guard<std::mutex> lock(this->dataMutex);
-        processing_sample_vector = samples;
+        if (trigger == 1) { 
+            stimulation_tracker = 0;
+        }
 
-    }
+        // Gradient artifact correction
+        if (Apply_GACorr && stimulation_tracker < TA_length) {
 
-    // Baseline average
-    if (Apply_baseline) {
-        if (baseline_length > 0) {
-            // Ensure baseline_average and baseline_matrix are initialized correctly
-            if (baseline_average.size() != samples.size()) {
-                baseline_average = Eigen::VectorXd::Zero(samples.size());
-                baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
-                baseline_index = 0;
+            {
+                std::lock_guard<std::mutex> lock(this->dataMutex);
+                // if (stimulation_tracker >= GACorr_.getTemplateSize()) {
+                //     std::cerr << "Error: stimulation_tracker exceeds GACorr template size." << std::endl;
+                //     return;
+                // }
+                processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
             }
-
-            // Update baseline_average
-            baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
-            baseline_matrix.col(baseline_index) = samples;
-
-            // Avoid dividing by zero in baseline_average
-            for (int i = 0; i < baseline_average.size(); ++i) {
-                if (baseline_average(i) == 0) {
-                    baseline_average(i) = 1; // Prevent division by zero
-                }
-            }
-
-            // Update processing_sample_vector
-            processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
-
-            // Update baseline_index
-            baseline_index = (baseline_index + 1) % baseline_length;
+            
+            GACorr_.update_template(stimulation_tracker, samples);
+            stimulation_tracker++;
         } else {
-            std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+            std::lock_guard<std::mutex> lock(this->dataMutex);
+            processing_sample_vector = samples;
         }
-    }
 
-    // Filtering
-    if (Apply_filter) {
-        processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
-    }
+        // Baseline average
+        if (Apply_baseline) {
+            if (baseline_length > 0) {
+                // Ensure baseline_average and baseline_matrix are initialized correctly
+                if (baseline_average.size() != samples.size()) {
+                    std::cerr << "Warning: Resetting baseline structures due to size mismatch." << std::endl;
+                    baseline_average = Eigen::VectorXd::Zero(samples.size());
+                    baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
+                    baseline_index = 0;
+                }
 
-    sample_buffer_.col(current_data_index_) = processing_sample_vector;
+                // Update baseline_average
+                baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
+                baseline_matrix.col(baseline_index) = samples;
 
-    // Triggering
-    if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
-        send_trigger();
-        removeTrigger(SeqNo);
-    }
+                // Avoid dividing by zero in baseline_average
+                for (int i = 0; i < baseline_average.size(); ++i) {
+                    if (baseline_average(i) == 0) {
+                        baseline_average(i) = 1; // Prevent division by zero
+                    }
+                }
 
-    // Timestamp, triggers and buffer index update
-    time_stamp_buffer_(current_data_index_) = time_stamp;
-    trigger_buffer_(current_data_index_) = trigger;
-    current_sequence_number_ = SeqNo;
-    current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+                // Update processing_sample_vector
+                processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
+
+                // Update baseline_index
+                baseline_index = (baseline_index + 1) % baseline_length;
+            } else {
+                std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+            }
+        }
+
+        // Filtering
+        if (Apply_filter) {
+            processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
+        }
+
+        // Debug: Check buffer capacity before indexing
+        if (current_data_index_ >= buffer_capacity_) {
+            std::cerr << "Error: current_data_index exceeds buffer capacity." << std::endl;
+            return;
+        }
+        sample_buffer_.col(current_data_index_) = processing_sample_vector;
+
+        // Triggering
+        if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
+            send_trigger();
+            removeTrigger(SeqNo);
+        }
+
+        // Timestamp, triggers, and buffer index update
+        time_stamp_buffer_(current_data_index_) = time_stamp;
+        trigger_buffer_(current_data_index_) = trigger;
+        current_sequence_number_ = SeqNo;
+        current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 
     } catch (const std::exception& e) {
-    std::cerr << "Datahandler exception: " << e.what() << '\n';
-    std::cerr << boost::stacktrace::stacktrace();
+        std::cerr << "Datahandler exception: " << e.what() << '\n';
+        std::cerr << boost::stacktrace::stacktrace();  // Ensure boost stacktrace is linked correctly
     }
 }
+
 
 // Returns number_of_samples data points form all channels in chronological order
 Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {

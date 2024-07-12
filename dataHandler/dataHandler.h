@@ -99,8 +99,8 @@ public:
 
     bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void setTriggerTimeLimit(int value) { magPro_.setTriggerTimeLimit(value); }
-    bool getTriggerTimeLimit() { return magPro_.getTriggerTimeLimit(); }
+    void setTriggerTimeLimit(double value) { magPro_.setTriggerTimeLimit(value); }
+    double getTriggerTimeLimit() { return magPro_.getTriggerTimeLimit(); }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);

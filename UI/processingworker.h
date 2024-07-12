@@ -70,10 +70,6 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
     const processingParameters &params;
 
-    // Filtering parameters
-    std::vector<double> filterCoeffs_;
-    std::vector<double> b; 
-    std::vector<double> a;
 };
 
 #endif // PROCESSINGWORKER_H
