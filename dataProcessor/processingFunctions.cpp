@@ -1085,7 +1085,7 @@ std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data) {
     fftw_free(out_fftw);
 
     return out;
-}
+}   
 
 // Perform inverse FFT using FFTW
 std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data) {
@@ -1159,6 +1159,60 @@ std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal
     return performIFFT(fft_signal);
 }
 
+
+// Welch's method for Power Spectral Density
+std::vector<double> pwelch(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs) {
+    int step_size = window_size - overlap;
+    int num_segments = (data.size() - overlap) / step_size;
+
+    Eigen::VectorXd window = Eigen::VectorXd::Ones(window_size); // You can use a different window function if desired
+
+    std::vector<double> psd(nfft / 2 + 1, 0.0);
+    for (int i = 0; i < num_segments; ++i) {
+        Eigen::VectorXd segment = data.segment(i * step_size, window_size).array() * window.array();
+        auto fft_result = performFFT(segment);
+        for (int k = 0; k <= nfft / 2; ++k) {
+            double power = std::norm(fft_result[k]) / (window_size * fs);
+            if (i == 0) {
+                psd[k] = power;
+            } else {
+                psd[k] += power;
+            }
+        }
+    }
+
+    for (int k = 0; k <= nfft / 2; ++k) {
+        psd[k] /= num_segments;
+    }
+
+    return psd;
+}
+
+// Calculate SNR around 10 Hz
+double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
+    auto psd = pwelch(data, window_size, overlap, nfft, fs);
+
+    double df = fs / nfft; // Frequency resolution
+    int target_index = static_cast<int>(target_freq / df);
+    int half_bandwidth = static_cast<int>(bandwidth / (2 * df));
+
+    double signal_power = 0.0;
+    for (int i = target_index - half_bandwidth; i <= target_index + half_bandwidth; ++i) {
+        if (i >= 0 && i < psd.size()) {
+            signal_power += psd[i];
+        }
+    }
+
+    double noise_power = 0.0;
+    for (int i = 0; i < psd.size(); ++i) {
+        if (i < target_index - half_bandwidth || i > target_index + half_bandwidth) {
+            noise_power += psd[i];
+        }
+    }
+    noise_power /= (psd.size() - 2 * half_bandwidth);
+
+    return 10 * std::log10(signal_power / noise_power); // SNR in dB
+}
 
 
 

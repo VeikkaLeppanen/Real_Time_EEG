@@ -80,6 +80,9 @@ std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<dou
 std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& signal);
 std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
 
+std::vector<double> pwelch(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs);
+double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs, double target_freq = 10.0, double bandwidth = 1.0);
+
 int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, Eigen::VectorXd& phaseAngles, int sequence_number, int downsampling_factor, int edge, int phase_shift, double stimulation_target);
 double ang_diff(double x, double y);
 Eigen::VectorXd ang_diff(const Eigen::VectorXd& x, const Eigen::VectorXd& y);

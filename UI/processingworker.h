@@ -27,7 +27,7 @@ struct processingParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = M_PI * 0.5;
+    double stimulation_target = 0; //M_PI * 0.5;
     int phase_shift = 0;                        // for 5000Hz
 };
 
@@ -63,6 +63,7 @@ public slots:
     void process();
     void process_timing();
     void process_testing();
+    void process_stimulation_testing();
 
 private:
     dataHandler &handler;

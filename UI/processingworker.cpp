@@ -395,7 +395,7 @@ void ProcessingWorker::process_testing()
         Eigen::VectorXd phaseAngles = Eigen::VectorXd::Zero(estimationLength);
 
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
-        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(5, downsampled_cols + estimationLength - edge);
+        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, downsampled_cols + estimationLength - edge);
 
         int number_of_save_rows = 520;
         Eigen::MatrixXd CSV_CWL_save = Eigen::MatrixXd::Zero(number_of_save_rows, downsampled_cols);
@@ -513,3 +513,139 @@ void ProcessingWorker::process_testing()
 
 
 
+void ProcessingWorker::process_stimulation_testing()
+{
+    omp_set_num_threads(10);
+
+    // Eigen::setNbThreads(std::thread::hardware_concurrency());
+
+    try {
+        std::cout << "ProcessingWorker start" << '\n';
+        std::cout << "params: " << params << '\n';
+
+        // Number of samples to use for processing
+        int samples_to_process = params.numberOfSamples;
+
+        //  downsampling
+        int downsampling_factor = params.downsampling_factor;
+        int downsampled_cols = (samples_to_process + downsampling_factor - 1) / downsampling_factor;
+
+        // removeBCG
+        int delay = params.delay;
+        int step = (1+2*delay);
+        int n_EEG_channels_to_use = 5;
+        int n_CWL_channels_to_use = 7;
+
+        // FIR filters
+        Eigen::VectorXd LSFIR_coeffs_2;
+        getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
+
+        // phase estimate
+        size_t edge = params.edge;
+        int edge_cut_cols = downsampled_cols - 2 * edge;
+        size_t modelOrder = params.modelOrder;
+        size_t hilbertWinLength = params.hilbertWinLength;
+        size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
+
+        // stimulation
+        double stimulation_target = params.stimulation_target;
+        int phase_shift = params.phase_shift;
+
+        int n_channels = handler.get_channel_count();
+
+        // Memory preallocation for processing matrices
+        Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
+        Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
+        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
+        Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
+        Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
+        Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
+        Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
+        std::vector<double> EEG_predicted(estimationLength, 0.0);
+        std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
+        Eigen::VectorXd phaseAngles(estimationLength);
+
+        // Data visualization matrices
+        Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
+        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, downsampled_cols + estimationLength - edge);
+
+        // Set names for each channel in Data_to_display
+        std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle", "Stimulation"};
+        emit updateProcessingChannelNames(processing_channel_names);
+
+        int seq_num_tracker = 0;
+        int stimulation_tracker = -1;
+        while(processingWorkerRunning) {
+            int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
+            if (seq_num_tracker == sequence_number) continue;
+
+            // std::cout << "Samples skipped: " << sequence_number - seq_num_tracker << '\n';
+            // auto start = std::chrono::high_resolution_clock::now();
+
+            // Downsampling
+            downsample(all_channels, EEG_downsampled, downsampling_factor);
+
+            // CWL
+            if (delay > 0) {
+                // Perform delay embedding if delay is positive
+                delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
+            } else {
+                expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
+            }
+            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
+            EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
+
+            // SNR check
+            double SNR = calculateSNR(EEG_spatial, 500, 250, 512, 500);
+            // std::cout << "SNR: " << SNR << '\n';
+            if (SNR < 5) {
+                std::cout << "SNR too small: " << SNR << '\n';
+                continue;
+            }
+
+            // Filter2
+            EEG_filter2 = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
+
+            // Phase estimation
+            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+            
+            // Hilbert transform
+            EEG_hilbert = hilbertTransform(EEG_predicted);
+            
+            // Trigger phase targeting
+            int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+            if (trigger_seqNum) { 
+                handler.insertTrigger(trigger_seqNum); 
+                if (stimulation_tracker < 0) stimulation_tracker++;
+            }
+
+            if (stimulation_tracker > 2500) {
+                int stim_length = 250 + stimulation_tracker / 10;
+                Data_to_display.row(5).segment(500, 500) = EEG_filter2.tail(stim_length).head(500);
+                stimulation_tracker = -1;
+            } else if (stimulation_tracker > -1) {
+                stimulation_tracker += sequence_number - seq_num_tracker;
+            }
+
+            seq_num_tracker = sequence_number;
+            
+            // std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
+            // std::cout << "Time taken: " << total_elapsed.count() << " seconds." << std::endl;
+
+
+            // Save displayed data and names for each channel
+            Data_to_display.row(0).head(downsampled_cols) = EEG_downsampled.row(0);
+            Data_to_display.row(1).head(downsampled_cols) = EEG_corrected.row(0);
+            Data_to_display.row(2).head(downsampled_cols) = EEG_spatial;
+            Data_to_display.row(3).head(downsampled_cols - edge) = EEG_filter2.head(downsampled_cols - edge);
+
+            Data_to_display.row(3).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            Data_to_display.row(4).tail(estimationLength) = phaseAngles.tail(estimationLength);
+            processed_data = Data_to_display;
+        }
+        
+        emit finished();
+    } catch (std::exception& e) {
+        emit error(QString("An error occurred in process_test function: %1").arg(e.what()));
+    }
+}
