@@ -550,6 +550,7 @@ void ProcessingWorker::process_stimulation_testing()
         // stimulation
         double stimulation_target = params.stimulation_target;
         int phase_shift = params.phase_shift;
+        int stim_window_delay = 2500;
 
         int n_channels = handler.get_channel_count();
 
@@ -567,7 +568,8 @@ void ProcessingWorker::process_stimulation_testing()
 
         // Data visualization matrices
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
-        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, downsampled_cols + estimationLength - edge);
+        int display_length = downsampled_cols + estimationLength - edge;
+        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, display_length);
 
         // Set names for each channel in Data_to_display
         std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle", "Stimulation"};
@@ -597,8 +599,7 @@ void ProcessingWorker::process_stimulation_testing()
 
             // SNR check
             double SNR = calculateSNR(EEG_spatial, 500, 250, 512, 500);
-            // std::cout << "SNR: " << SNR << '\n';
-            if (SNR < 5) {
+            if (SNR < 6) {
                 std::cout << "SNR too small: " << SNR << '\n';
                 continue;
             }
@@ -619,9 +620,11 @@ void ProcessingWorker::process_stimulation_testing()
                 if (stimulation_tracker < 0) stimulation_tracker++;
             }
 
-            if (stimulation_tracker > 2500) {
-                int stim_length = 250 + stimulation_tracker / 10;
-                Data_to_display.row(5).segment(500, 500) = EEG_filter2.tail(stim_length).head(500);
+            // Trigger visualization
+            if (stimulation_tracker > stim_window_delay) {
+                int stim_length = (stim_window_delay + stimulation_tracker) / downsampling_factor;
+                int stim_length_cut = (stim_window_delay * 2) / downsampling_factor;
+                Data_to_display.row(5).segment(downsampled_cols - stim_length_cut, stim_length_cut) = EEG_filter2.tail(stim_length).head(stim_length_cut);
                 stimulation_tracker = -1;
             } else if (stimulation_tracker > -1) {
                 stimulation_tracker += sequence_number - seq_num_tracker;

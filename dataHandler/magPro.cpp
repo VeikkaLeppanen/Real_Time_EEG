@@ -67,12 +67,49 @@ void magPro::set_amplitude(int amplitude) {
     sleep(sleep_time_set_amp);
 }
 
+// Function to set the mode
+void magPro::set_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio, bool delay) {
+    print_debug("set_mode(): Start of function");
+
+    int ipi_x10 = ipi * 10;
+    int ba_ratio_x100 = static_cast<int>(round(ba_ratio * 100));
+
+    auto cmd = create_set_mode_cmd_byte_str(mode, direction, waveform, burst_pulses, ipi_x10, ba_ratio_x100);
+    boost::asio::write(serial, boost::asio::buffer(cmd));
+
+    print_debug("Mode has been sent.");
+    if (delay) {
+        print_debug("Sleeping " + std::to_string(sleep_time_set_mode) + " seconds");
+        std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(sleep_time_set_mode)));
+    }
+
+    handle_input_queue();
+    verify_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio);
+    print_debug("set_mode(): End of function");
+}
 
 
 
 
 
 // Data receiving functions
+void magPro::handle_input_queue() {
+    while (package_available()) {
+        auto received_package = wait_for_next_package_from_G3();
+        print_debug("Received package: " + std::to_string(received_package));
+    }
+}
+
+bool magPro::package_available() {
+    int bytes_available;
+    if (ioctl(serial.native_handle(), FIONREAD, &bytes_available) == -1) {
+        print_debug("Error checking available bytes in serial port");
+        return false;
+    }
+    print_debug("number_of_bytes_in_input_buffer=" + std::to_string(bytes_available));
+    return bytes_available > 0;
+}
+
 int magPro::wait_for_next_package_from_G3() {
         std::string received_cmd;
         bool received_end_of_cmd = false;
@@ -282,17 +319,55 @@ void magPro::store_current_burst_pulses(int pulses) {
     G3_current_burst_pulses = pulses;
 }
 
-void magPro::store_current_ipi_index(const std::string& ipi_index) {
-    if (ipi_index.size() == 2) {
-        int ipi_value = (static_cast<unsigned char>(ipi_index[0]) << 8) | static_cast<unsigned char>(ipi_index[1]);
-        G3_current_ipi = static_cast<float>(ipi_value) / 10.0f; // Assuming the value is in 0.1 ms increments
-    } else {
+void magPro::store_current_ipi_index(const std::string& received_ipi_bytearray) {
+    if (received_ipi_bytearray.size() != 2) {
         std::cerr << "Invalid IPI index size" << std::endl;
+        return;
     }
+
+    print_debug("received_ipi_bytearray=" + std::to_string(static_cast<int>(received_ipi_bytearray[0])) + " " + std::to_string(static_cast<int>(received_ipi_bytearray[1])));
+
+    int current_ipi_index = static_cast<int>(received_ipi_bytearray[0]) | (static_cast<int>(received_ipi_bytearray[1]) << 8);
+    print_debug("current_ipi_index=" + std::to_string(current_ipi_index));
+
+    if (current_ipi_index <= 20) {  // 3000 to 1000 step 100
+        G3_current_ipi = 3000 - (100 * current_ipi_index);
+    } else if (current_ipi_index > 20 && current_ipi_index <= 30) {  // 1000 to 500 step 50
+        G3_current_ipi = 1000 - (50 * (current_ipi_index - 20));
+    } else if (current_ipi_index > 30 && current_ipi_index <= 70) {  // 500 to 100 step 10
+        G3_current_ipi = 500 - (10 * (current_ipi_index - 30));
+    } else if (current_ipi_index > 70 && current_ipi_index <= 150) {  // 100 to 20 step 1.0
+        G3_current_ipi = 100 - (current_ipi_index - 70);
+    } else if (current_ipi_index > 150 && current_ipi_index <= 170) {  // 20 to 10 step 0.5
+        G3_current_ipi = static_cast<int>(round(20 - (0.5 * (current_ipi_index - 150))));
+    } else if (current_ipi_index > 170 && current_ipi_index <= 260) {  // 10 to 1 step 0.1
+        G3_current_ipi = static_cast<int>(round(10 - (0.1 * (current_ipi_index - 170))));
+    } else {
+        std::cerr << "current_ipi_index=" + std::to_string(current_ipi_index) + " out of expected range 0 to 270." << std::endl;
+        return;
+    }
+
+    print_debug("G3_current_ipi=" + std::to_string(G3_current_ipi));
+    print_debug("Stored G3_current_ipi =" + std::to_string(G3_current_ipi));
 }
 
-void magPro::store_current_ba_ratio(char byte) {
-    G3_current_ba_ratio = static_cast<float>(byte) / 10.0f; // Assuming the value is in 0.1 increments
+void magPro::store_current_ba_ratio(char current_ba_ratio_index) {
+    print_debug("_store_current_ba_ratio: current_ba_ratio_index=" + std::to_string(static_cast<int>(current_ba_ratio_index)));
+    
+    float current_ba_ratio = roundf(5.0f - (0.05f * current_ba_ratio_index) * 100.0f) / 100.0f;
+    print_debug("_store_current_ba_ratio: current_ba_ratio=" + std::to_string(current_ba_ratio));
+
+    if (G3_current_mode == 2) { // Assuming TWIN mode is represented by 2
+        if (0.2 <= current_ba_ratio && current_ba_ratio <= 5.0) {
+            G3_current_ba_ratio = current_ba_ratio;
+            print_debug("self.G3_current_ba_ratio=" + std::to_string(G3_current_ba_ratio) + " stored.");
+        } else {
+            throw std::out_of_range("current_ba_ratio=" + std::to_string(current_ba_ratio) + " out of range. Valid range: 0.2 to 5.0");
+        }
+    } else {  // Other modes: Standard, Power, Dual
+        G3_current_ba_ratio = current_ba_ratio;
+        print_debug("self.G3_current_ba_ratio=" + std::to_string(G3_current_ba_ratio) + " stored (unused for current mode).");
+    }
 }
 
 void magPro::store_current_enabled(char byte) {
@@ -320,6 +395,57 @@ void magPro::store_mep_values(const std::string& data) {
         G3_mep_timestamp_ms = get_epochtime_ms();
     } else {
         std::cerr << "Invalid MEP data size" << std::endl;
+    }
+}
+
+void magPro::request_G3_to_send_mode_info() {
+    print_debug("Running request_G3_to_send_mode_info()");
+    
+    auto cmd = create_get_mode_cmd_byte_str();
+    boost::asio::write(serial, boost::asio::buffer(cmd));
+    
+    print_debug("Done running request_G3_to_send_mode_info()");
+}
+
+void magPro::verify_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio) {
+    print_debug("Requesting G3 to send current mode");
+    request_G3_to_send_mode_info();
+    print_debug("Done requesting G3 to send response");
+
+    while (wait_for_next_package_from_G3() != static_cast<int>(CmdType::MODE)) {
+        std::cout << "Waiting for first MODE package" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    // Mode data has now been received from G3. Comparing with expected values
+    print_debug("G3_current_mode=" + std::to_string(G3_current_mode) + ", mode=" + std::to_string(mode));
+    if (G3_current_mode != mode) {
+        std::cout << "Warning: Mode could not be verified. Current mode=" + std::to_string(G3_current_mode) + ", requested mode=" + std::to_string(mode) << std::endl;
+    }
+
+    print_debug("G3_current_direction=" + std::to_string(G3_current_direction) + ", direction=" + std::to_string(direction));
+    if (G3_current_direction != direction) {
+        std::cout << "Warning: Direction could not be verified. Current direction=" + std::to_string(G3_current_direction) + ", requested direction=" + std::to_string(direction) << std::endl;
+    }
+
+    print_debug("G3_current_waveform=" + std::to_string(G3_current_waveform) + ", waveform=" + std::to_string(waveform));
+    if (G3_current_waveform != waveform) {
+        std::cout << "Warning: Waveform could not be verified. Current waveform=" + std::to_string(G3_current_waveform) + ", requested waveform=" + std::to_string(waveform) << std::endl;
+    }
+
+    print_debug("G3_current_burst_pulses=" + std::to_string(G3_current_burst_pulses) + ", burst_pulses=" + std::to_string(burst_pulses));
+    if (G3_current_burst_pulses != burst_pulses) {
+        std::cout << "Warning: Burst pulses could not be verified (not relevant for current mode?). Current burst pulses=" + std::to_string(G3_current_burst_pulses) + ", requested burst_pulses=" + std::to_string(burst_pulses) << std::endl;
+    }
+
+    print_debug("G3_current_ipi=" + std::to_string(G3_current_ipi) + ", ipi=" + std::to_string(ipi));
+    if (G3_current_ipi != ipi) {
+        std::cout << "Warning: IPI could not be verified (not relevant for current mode?). Current IPI=" + std::to_string(G3_current_ipi) + ", requested IPI=" + std::to_string(ipi) << std::endl;
+    }
+
+    print_debug("G3_current_ba_ratio=" + std::to_string(G3_current_ba_ratio) + ", ba_ratio=" + std::to_string(ba_ratio));
+    if (G3_current_ba_ratio != ba_ratio) {
+        std::cout << "Warning: B/A ratio could not be verified (not relevant for current mode?). Current B/A ratio=" + std::to_string(G3_current_ba_ratio) + ", requested B/A ratio=" + std::to_string(ba_ratio) << std::endl;
     }
 }
 
@@ -387,6 +513,79 @@ std::vector<uint8_t> magPro::create_amplitude_cmd_byte_str(uint8_t amplitudeA_va
     result.push_back(0xff);
 
     return result;
+}
+
+// Function to create the command byte string
+std::vector<uint8_t> magPro::create_set_mode_cmd_byte_str(int mode, int direction, int waveform, int burst_pulses, int ipi_x10, int ba_ratio_x100) {
+    std::vector<uint8_t> cmd_array;
+
+    cmd_array.push_back(0x09); // byte 3: Mode command
+    cmd_array.push_back(0x01); // byte 4: 1=set
+    cmd_array.push_back(0x00); // byte 5: N/A (only used for "get", not used for "set)
+
+    if (mode < 0 || mode > 3) {
+        throw std::out_of_range("'mode' out of range 0-3");
+    }
+    cmd_array.push_back(mode); // byte 6: mode: 0 (default) = Standard, 1=Power, 2=Twin, 3=Dual
+
+    if (direction < 0 || direction > 1) {
+        throw std::out_of_range("'direction' out of range 0-1");
+    }
+    cmd_array.push_back(direction); // byte 7: direction: 0=normal (default) , 1=reverse
+
+    if (waveform < 0 || waveform > 3) {
+        throw std::out_of_range("'waveform' out of range 0-3");
+    }
+    cmd_array.push_back(waveform); // byte 8: Waveform: 0=Monophasic, 1=Biphasic (default), 2=Half Sine, 3=Biphasic Burst
+
+    if (burst_pulses < 2 || burst_pulses > 5) {
+        throw std::out_of_range("'burst_pulses' out of range 2-5");
+    }
+    cmd_array.push_back(5 - burst_pulses); // byte 9: index 0 = 5 pulses, index 1 = 4 pulses, index 2 = 3 pulses, index 3 = 2 pulses
+
+    if (ipi_x10 < 10 || ipi_x10 > 1000) {
+        throw std::out_of_range("'ipi_x10' out of range 10-1000");
+    }
+    cmd_array.push_back(ipi_x10 / 256); // byte 10: MSB of IPI
+    cmd_array.push_back(ipi_x10 % 256); // byte 11: LSB of IPI
+
+    if (ba_ratio_x100 < 20 || ba_ratio_x100 > 500) {
+        throw std::out_of_range("'ba_ratio_x100' out of range 20-500");
+    }
+    cmd_array.push_back(ba_ratio_x100 / 256); // byte 12: MSB of B/A ratio
+    cmd_array.push_back(ba_ratio_x100 % 256); // byte 13: LSB of B/A ratio
+
+    uint8_t crc = crc8(cmd_array);
+    cmd_array.insert(cmd_array.begin(), 0xfe); // Start byte
+    cmd_array.insert(cmd_array.begin() + 1, cmd_array.size()); // Length byte
+    cmd_array.push_back(crc); // CRC
+    cmd_array.push_back(0xff); // End byte
+
+    return cmd_array;
+}
+
+std::vector<uint8_t> magPro::create_get_mode_cmd_byte_str() {
+    std::vector<uint8_t> cmd_array = {
+        0x09,  // byte 3: Mode command
+        0x00,  // byte 4: 0=get
+        0x00,  // byte 5: N/A
+        0x00,  // byte 6: N/A
+        0x00,  // byte 7: N/A
+        0x00,  // byte 8: N/A
+        0x00,  // byte 9: N/A
+        0x00,  // byte 10: N/A
+        0x00,  // byte 11: N/A
+        0x00,  // byte 12: N/A
+        0x00   // byte 13: N/A
+    };
+
+    uint8_t crc = crc8(cmd_array);
+    std::vector<uint8_t> cmd = {0xfe, static_cast<uint8_t>(cmd_array.size())};
+    cmd.insert(cmd.end(), cmd_array.begin(), cmd_array.end());
+    cmd.push_back(crc);
+    cmd.push_back(0xff);
+
+    return cmd;
 }
 
 uint8_t magPro::crc8(const std::vector<uint8_t>& bytes) {

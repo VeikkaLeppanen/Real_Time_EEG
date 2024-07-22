@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iomanip>
 #include <boost/asio.hpp>
+#include <sys/ioctl.h>
 
 
 
@@ -31,6 +32,10 @@ public:
     void setTriggerTimeLimit(double value) { time_limit = std::max(min_time_limit, std::min(max_time_limit, value)); }
     double getTriggerTimeLimit() { return time_limit; }
 
+    void set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, int ipi = 1, double ba_ratio = 1.0, bool delay = true);
+    void handle_input_queue();
+    bool package_available();
+    
     enum class CmdType {
         STATUS = 0,
         AMPLITUDE = 1,
@@ -76,6 +81,8 @@ private:
     void store_max_pps(int pps);
     void store_supports_biphasic_burst(char byte);
     void store_mep_values(const std::string& data);
+    void request_G3_to_send_mode_info();
+    void verify_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio);
     void read_from_serial(unsigned char* buffer, std::size_t size);
     int handle_cmd_length_4(const std::string& received_cmd);
     int handle_cmd_length_10(const std::string& received_cmd);
@@ -84,6 +91,8 @@ private:
     std::vector<uint8_t> create_trig_cmd_byte_str();
     std::vector<uint8_t> create_enable_cmd_byte_str(bool enable);
     std::vector<uint8_t> create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value);
+    std::vector<uint8_t> create_set_mode_cmd_byte_str(int mode, int direction, int waveform, int burst_pulses, int ipi_x10, int ba_ratio_x100);
+    std::vector<uint8_t> create_get_mode_cmd_byte_str();
     uint8_t crc8(const std::vector<uint8_t>& data);
 
     void sleep(double time) { std::this_thread::sleep_for(std::chrono::duration<double>(time)); }
@@ -100,7 +109,7 @@ private:
     const double max_time_limit = 10000;
     std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
 
-    bool enable_debug = false;
+    bool enable_debug = true;
 
     double sleep_time_trig = 0.1;
     double sleep_time_set_amp = 1.0;
