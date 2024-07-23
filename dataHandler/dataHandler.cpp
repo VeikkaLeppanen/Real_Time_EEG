@@ -355,21 +355,42 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
 
 
-// Trigger sending
+// MAGPRO FUNCTIONS
 
 int dataHandler::connectTriggerPort() {
-    return magPro_.connectTriggerPort();
+    return magPro_3G.connectTriggerPort();
 }
 
 void dataHandler::send_trigger() {
-    magPro_.trig();
+    magPro_3G.trig();
 }
 
 void dataHandler::set_enable(bool status) {
-    magPro_.set_enable(status);
+    magPro_3G.set_enable(status);
     triggerEnableState = status;
 }
 
 void dataHandler::set_amplitude(int amplitude) {
-    magPro_.set_amplitude(amplitude);
+    magPro_3G.set_amplitude(amplitude);
+}
+
+void dataHandler::magPro_set_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio, bool delay) {
+    magPro_3G.set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
+}
+
+void dataHandler::magPro_request_mode_info() {
+    magPro_3G.request_G3_to_send_mode_info();
+    magPro_3G.sleep(0.3);
+    magPro_3G.handle_input_queue();
+    magPro_3G.sleep(0.3);
+}
+
+void dataHandler::get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled) {
+    mode = magPro_3G.get_current_mode();
+    direction = magPro_3G.get_current_direction();
+    waveform = magPro_3G.get_current_waveform();
+    burst_pulses = magPro_3G.get_current_burst_pulses();
+    ipi = magPro_3G.get_current_ipi();
+    ba_ratio = magPro_3G.get_current_ba_ratio();
+    enabled = magPro_3G.get_current_enabled();
 }

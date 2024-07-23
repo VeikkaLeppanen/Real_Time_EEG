@@ -25,6 +25,7 @@ public:
     void trig();
     
     int wait_for_next_package_from_G3();
+    void request_G3_to_send_mode_info();
     void print_formatted_data_if_all_available();
 
     void set_enable(bool status);
@@ -32,9 +33,19 @@ public:
     void setTriggerTimeLimit(double value) { time_limit = std::max(min_time_limit, std::min(max_time_limit, value)); }
     double getTriggerTimeLimit() { return time_limit; }
 
-    void set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, int ipi = 1, double ba_ratio = 1.0, bool delay = true);
+    void set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, float ipi = 1, float ba_ratio = 1.0, bool delay = true);
     void handle_input_queue();
     bool package_available();
+
+    int get_current_mode() { return G3_current_mode; }
+    int get_current_direction() { return G3_current_direction; }
+    int get_current_waveform() { return G3_current_waveform; }
+    int get_current_burst_pulses() { return G3_current_burst_pulses; }
+    float get_current_ipi() { return G3_current_ipi; }
+    float get_current_ba_ratio() { return G3_current_ba_ratio; }
+    bool get_current_enabled() { return G3_current_enabled; }
+
+    void sleep(double time) { std::this_thread::sleep_for(std::chrono::duration<double>(time)); }
     
     enum class CmdType {
         STATUS = 0,
@@ -81,8 +92,7 @@ private:
     void store_max_pps(int pps);
     void store_supports_biphasic_burst(char byte);
     void store_mep_values(const std::string& data);
-    void request_G3_to_send_mode_info();
-    void verify_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio);
+    void verify_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio);
     void read_from_serial(unsigned char* buffer, std::size_t size);
     int handle_cmd_length_4(const std::string& received_cmd);
     int handle_cmd_length_10(const std::string& received_cmd);
@@ -95,7 +105,6 @@ private:
     std::vector<uint8_t> create_get_mode_cmd_byte_str();
     uint8_t crc8(const std::vector<uint8_t>& data);
 
-    void sleep(double time) { std::this_thread::sleep_for(std::chrono::duration<double>(time)); }
     void print_debug(std::string msg) { if(enable_debug) std::cout << msg << std::endl; }
 
 

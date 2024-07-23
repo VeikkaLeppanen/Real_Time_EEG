@@ -32,6 +32,9 @@ private slots:
 
     void on_setAmplitude_clicked();
 
+    void on_SetMode_clicked();
+
+    void on_RequestInfo_clicked();
 
 private:
     Ui::TriggeringWindow *ui;

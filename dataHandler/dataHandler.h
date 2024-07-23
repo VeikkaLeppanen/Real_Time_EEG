@@ -30,7 +30,7 @@ public:
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
                     GACorr_(GACorrection(0, 0, 0)),
-                    magPro_()
+                    magPro_3G()
     { };
 
     // Reset functions
@@ -99,8 +99,8 @@ public:
 
     bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void setTriggerTimeLimit(double value) { magPro_.setTriggerTimeLimit(value); }
-    double getTriggerTimeLimit() { return magPro_.getTriggerTimeLimit(); }
+    void setTriggerTimeLimit(double value) { magPro_3G.setTriggerTimeLimit(value); }
+    double getTriggerTimeLimit() { return magPro_3G.getTriggerTimeLimit(); }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
@@ -124,6 +124,12 @@ public:
     void set_enable(bool status);
 
     void set_amplitude(int amplitude);
+
+    void magPro_set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, float ipi = 1, float ba_ratio = 1.0, bool delay = true);
+
+    void magPro_request_mode_info();
+
+    void get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled);
 
 private:
     HandlerState handler_state = WAITING_FOR_START;
@@ -167,7 +173,7 @@ private:
     MultiChannelRealTimeFilter RTfilter_;
 
     // Sending triggers
-    magPro magPro_;
+    magPro magPro_3G;
     bool triggerPortState = false;
     bool triggerEnableState = false;
 

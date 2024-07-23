@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>468</width>
-    <height>449</height>
+    <width>650</width>
+    <height>362</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,14 +15,14 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="3" column="1">
-     <widget class="QPushButton" name="testTrigger">
+    <item row="2" column="0">
+     <widget class="QPushButton" name="RequestInfo">
       <property name="text">
-       <string>TestTrigger</string>
+       <string>Request mode info</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="1" alignment="Qt::AlignTop">
+    <item row="0" column="2" alignment="Qt::AlignTop">
      <widget class="QFrame" name="frame">
       <property name="maximumSize">
        <size>
@@ -81,14 +81,168 @@
       </layout>
      </widget>
     </item>
-    <item row="3" column="0">
-     <widget class="QPushButton" name="pushButton">
+    <item row="2" column="1">
+     <widget class="QPushButton" name="SetMode">
       <property name="text">
-       <string>Request mode info</string>
+       <string>Set mode</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="0" alignment="Qt::AlignTop">
+    <item row="0" column="1" alignment="Qt::AlignTop">
+     <widget class="QFrame" name="formFrame">
+      <layout class="QFormLayout" name="formLayout_2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>Mode</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>Direction</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_18">
+         <property name="text">
+          <string>Waveform</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_19">
+         <property name="text">
+          <string>Burst pulses</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_20">
+         <property name="text">
+          <string>IPI</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="lineEditIPI"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_21">
+         <property name="text">
+          <string>ba ratio</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEditBAratio"/>
+       </item>
+       <item row="6" column="1">
+        <widget class="QCheckBox" name="checkBoxDelay">
+         <property name="text">
+          <string>Delay</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="comboBoxMode">
+         <item>
+          <property name="text">
+           <string>Standard</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Power</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Twin</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Dual</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="comboBoxDirection">
+         <item>
+          <property name="text">
+           <string>Normal</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Reverse</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="comboBoxWaveform">
+         <item>
+          <property name="text">
+           <string>Monophasic</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Biphasic</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Half sine</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Biphasic burst</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="comboBoxBurstPulses">
+         <item>
+          <property name="text">
+           <string>2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>3</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>4</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>5</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="2">
+     <widget class="QPushButton" name="testTrigger">
+      <property name="text">
+       <string>TestTrigger</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
      <widget class="QFrame" name="frame_2">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
@@ -104,31 +258,38 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Enabled:</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="label_4">
+        <widget class="QLabel" name="ModeLabel">
          <property name="text">
           <string>TextLabel</string>
          </property>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>Direction:</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="label_5">
+        <widget class="QLabel" name="DirectionLabel">
          <property name="text">
           <string>TextLabel</string>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="label_6">
+        <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>IPI:</string>
+          <string>Waveform:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="WaveformLabel">
+         <property name="text">
+          <string>TextLabel</string>
          </property>
         </widget>
        </item>
@@ -139,57 +300,50 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Waveform:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="1">
-        <widget class="QLabel" name="label_10">
+        <widget class="QLabel" name="BurstPulsesLabel">
          <property name="text">
           <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>IPI:</string>
          </property>
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLabel" name="label_11">
+        <widget class="QLabel" name="IPILabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Enabled:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="EnabledLabel">
          <property name="text">
           <string>TextLabel</string>
          </property>
         </widget>
        </item>
        <item row="5" column="0">
-        <widget class="QLabel" name="label_12">
+        <widget class="QLabel" name="label_4">
          <property name="text">
-          <string>Mep page:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_13">
-         <property name="text">
-          <string>Train running:</string>
+          <string>ba ratio:</string>
          </property>
         </widget>
        </item>
        <item row="5" column="1">
-        <widget class="QLabel" name="label_14">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QLabel" name="label_15">
+        <widget class="QLabel" name="BAratioLabel">
          <property name="text">
           <string>TextLabel</string>
          </property>
@@ -205,7 +359,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>468</width>
+     <width>650</width>
      <height>22</height>
     </rect>
    </property>

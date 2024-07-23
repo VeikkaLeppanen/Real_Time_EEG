@@ -68,7 +68,7 @@ void magPro::set_amplitude(int amplitude) {
 }
 
 // Function to set the mode
-void magPro::set_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio, bool delay) {
+void magPro::set_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio, bool delay) {
     print_debug("set_mode(): Start of function");
 
     int ipi_x10 = ipi * 10;
@@ -407,7 +407,7 @@ void magPro::request_G3_to_send_mode_info() {
     print_debug("Done running request_G3_to_send_mode_info()");
 }
 
-void magPro::verify_mode(int mode, int direction, int waveform, int burst_pulses, int ipi, double ba_ratio) {
+void magPro::verify_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio) {
     print_debug("Requesting G3 to send current mode");
     request_G3_to_send_mode_info();
     print_debug("Done requesting G3 to send response");
