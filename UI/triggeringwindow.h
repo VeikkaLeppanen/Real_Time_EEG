@@ -42,6 +42,9 @@ private:
     dataHandler &handler;
 
     volatile std::sig_atomic_t &signal_received;
+
+    QStringList mode_names ={"Standard", "Power", "Twin", "Dual"};
+    QStringList waveform_names ={"StanMonophasicdard", "Biphasic", "Half sine", "Biphasic burst"};
 };
 
 #endif // TRIGGERINGWINDOW_H

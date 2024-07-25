@@ -439,6 +439,13 @@ void ProcessingWorker::process_testing()
             CSV_CWL_save.row(csv_save_count) = EEG_corrected.row(0);
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
+            // SNR check
+            double SNR = calculateSNR(EEG_spatial, 500, 250, 512, 500);
+            if (SNR < 6) {
+                std::cout << "SNR too small: " << SNR << '\n';
+                continue;
+            }
+
             // Filter2
             EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.segment(predict_start_index - filter2_length, filter2_length), LSFIR_coeffs_2);
             EEG_filter2_total = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
@@ -464,7 +471,7 @@ void ProcessingWorker::process_testing()
 
             // Trigger phase targeting
             int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
-            index_list.push_back(sequence_number - trigger_seqNum);
+            index_list.push_back(trigger_seqNum - sequence_number);
             // if (trigger_seqNum) { 
             //     handler.insertTrigger(trigger_seqNum);
             //     // if (sequence_number % 1000 == 0) { index_list.push_back(trigger_seqNum); }

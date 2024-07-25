@@ -27,6 +27,9 @@ TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomi
     ui->IPILabel->setText("");
     ui->BAratioLabel->setText("");
     ui->EnabledLabel->setText("");
+    
+    ui->SetModeError->setStyleSheet("QLabel { color : gray; }");
+    ui->RequestInfoError->setStyleSheet("QLabel { color : gray; }");
 }
 
 TriggeringWindow::~TriggeringWindow()
@@ -109,6 +112,7 @@ void TriggeringWindow::on_setAmplitude_clicked()
 void TriggeringWindow::on_SetMode_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
+        ui->SetModeError->setText("Set mode requested");
 
         // Get values from comboboxes
         int mode = ui->comboBoxMode->currentIndex();
@@ -123,9 +127,10 @@ void TriggeringWindow::on_SetMode_clicked()
         // Get the state of the checkbox
         bool delay = ui->checkBoxDelay->isChecked();
 
+        ui->SetModeError->setText("Sending set mode request");
         handler.magPro_set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
 
-        std::cout << "magPro mode set" << '\n';
+        ui->SetModeError->setText("magPro mode set");
     } else {
         QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
     }
@@ -135,9 +140,10 @@ void TriggeringWindow::on_SetMode_clicked()
 void TriggeringWindow::on_RequestInfo_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
+        ui->RequestInfoError->setText("Mode info requested");
 
         handler.magPro_request_mode_info();
-        std::cout << "magPro mode info requested" << '\n';
+        ui->RequestInfoError->setText("Mode info request sent");
 
         int mode;
         int direction;
@@ -147,10 +153,11 @@ void TriggeringWindow::on_RequestInfo_clicked()
         float ba_ratio;
         bool enabled;
         handler.get_mode_info(mode, direction, waveform, burst_pulses, ipi, ba_ratio, enabled);
+        ui->RequestInfoError->setText("Mode info retrieved");
 
-        ui->ModeLabel->setText(QString::number(mode));
-        ui->DirectionLabel->setText(QString::number(direction));
-        ui->WaveformLabel->setText(QString::number(waveform));
+        ui->ModeLabel->setText(mode_names.at(mode));
+        ui->DirectionLabel->setText(direction ? "Reverse" : "Normal");
+        ui->WaveformLabel->setText(waveform_names.at(waveform));
         ui->BurstPulsesLabel->setText(QString::number(burst_pulses));
         ui->IPILabel->setText(QString::number(ipi));
         ui->BAratioLabel->setText(QString::number(ba_ratio));

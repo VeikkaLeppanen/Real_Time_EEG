@@ -15,76 +15,134 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="2" column="0">
-     <widget class="QPushButton" name="RequestInfo">
+    <item row="2" column="1">
+     <widget class="QPushButton" name="SetMode">
       <property name="text">
-       <string>Request mode info</string>
+       <string>Set mode</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="2" alignment="Qt::AlignTop">
-     <widget class="QFrame" name="frame">
-      <property name="maximumSize">
-       <size>
-        <width>230</width>
-        <height>16777215</height>
-       </size>
+    <item row="2" column="2">
+     <widget class="QPushButton" name="testTrigger">
+      <property name="text">
+       <string>TestTrigger</string>
       </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QFrame" name="frame_2">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QGridLayout" name="gridLayout">
+      <layout class="QFormLayout" name="formLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Mode:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="ModeLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="0">
-        <widget class="QPushButton" name="enable">
+        <widget class="QLabel" name="label_13">
          <property name="text">
-          <string>Enable</string>
+          <string>Direction:</string>
          </property>
         </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Interval limit (ms)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <widget class="QPushButton" name="connectTrigger">
-         <property name="text">
-          <string>Connect G3</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="TimeLimitLineEdit"/>
        </item>
        <item row="1" column="1">
-        <widget class="QPushButton" name="disable">
+        <widget class="QLabel" name="DirectionLabel">
          <property name="text">
-          <string>Disable</string>
+          <string>TextLabel</string>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QPushButton" name="setAmplitude">
+        <widget class="QLabel" name="label_8">
          <property name="text">
-          <string>Set amplitude</string>
+          <string>Waveform:</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QLineEdit" name="amplitudeLineEdit"/>
+        <widget class="QLabel" name="WaveformLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Burst pulses: </string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLabel" name="BurstPulsesLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>IPI:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="IPILabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Enabled:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="EnabledLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>ba ratio:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="BAratioLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
     </item>
-    <item row="2" column="1">
-     <widget class="QPushButton" name="SetMode">
+    <item row="2" column="0">
+     <widget class="QPushButton" name="RequestInfo">
       <property name="text">
-       <string>Set mode</string>
+       <string>Request mode info</string>
       </property>
      </widget>
     </item>
@@ -235,121 +293,89 @@
       </layout>
      </widget>
     </item>
-    <item row="2" column="2">
-     <widget class="QPushButton" name="testTrigger">
-      <property name="text">
-       <string>TestTrigger</string>
+    <item row="0" column="2" alignment="Qt::AlignTop">
+     <widget class="QFrame" name="frame">
+      <property name="maximumSize">
+       <size>
+        <width>230</width>
+        <height>16777215</height>
+       </size>
       </property>
-     </widget>
-    </item>
-    <item row="0" column="0">
-     <widget class="QFrame" name="frame_2">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Mode:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="ModeLabel">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
+      <layout class="QGridLayout" name="gridLayout">
        <item row="1" column="0">
-        <widget class="QLabel" name="label_13">
+        <widget class="QPushButton" name="enable">
          <property name="text">
-          <string>Direction:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLabel" name="DirectionLabel">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Waveform:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="WaveformLabel">
-         <property name="text">
-          <string>TextLabel</string>
+          <string>Enable</string>
          </property>
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_7">
+        <widget class="QLabel" name="label">
          <property name="text">
-          <string>Burst pulses: </string>
+          <string>Interval limit (ms)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QPushButton" name="connectTrigger">
+         <property name="text">
+          <string>Connect G3</string>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QLabel" name="BurstPulsesLabel">
+        <widget class="QLineEdit" name="TimeLimitLineEdit"/>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="disable">
          <property name="text">
-          <string>TextLabel</string>
+          <string>Disable</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_6">
+       <item row="2" column="0">
+        <widget class="QPushButton" name="setAmplitude">
          <property name="text">
-          <string>IPI:</string>
+          <string>Set amplitude</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QLabel" name="IPILabel">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Enabled:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QLabel" name="EnabledLabel">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>ba ratio:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="BAratioLabel">
-         <property name="text">
-          <string>TextLabel</string>
-         </property>
-        </widget>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="amplitudeLineEdit"/>
        </item>
       </layout>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QLabel" name="SetModeError">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="RequestInfoError">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
      </widget>
     </item>
    </layout>

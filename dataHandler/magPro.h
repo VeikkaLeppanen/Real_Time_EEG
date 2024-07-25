@@ -113,7 +113,7 @@ private:
     boost::asio::serial_port serial;
 
     // Time limit in milliseconds
-    double time_limit;
+    double time_limit = 0.1;
     const double min_time_limit = 0.1;
     const double max_time_limit = 10000;
     std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
