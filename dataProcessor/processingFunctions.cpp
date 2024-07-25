@@ -1,7 +1,7 @@
 #include "processingFunctions.h"
 
 // Function for writing Eigen matrix to CSV file
-void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+void writeMatrixdToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
     std::ofstream file(filename);
 
     if (file.is_open()) {
@@ -13,6 +13,26 @@ void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix
             file << "\n"; // Newline for next row
         }
         file.close();
+        std::cout << "Data written to " << filename << " successfully." << std::endl;
+    } else {
+        std::cerr << "Failed to open the file for writing." << std::endl;
+    }
+}
+
+// Function for writing Eigen matrix to CSV file
+void writeMatrixiToCSV(const std::string& filename, const Eigen::MatrixXi& matrix) {
+    std::ofstream file(filename);
+
+    if (file.is_open()) {
+        for (int i = 0; i < matrix.rows(); ++i) {
+            for (int j = 0; j < matrix.cols(); ++j) {
+                file << matrix(i, j);
+                if (j + 1 < matrix.cols()) file << ","; // Comma for next column
+            }
+            file << "\n"; // Newline for next row
+        }
+        file.close();
+        std::cout << "Data written to " << filename << " successfully." << std::endl;
     } else {
         std::cerr << "Failed to open the file for writing." << std::endl;
     }
@@ -71,9 +91,15 @@ Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec) {
 }
 
 // Function to convert std::vector<double> to a single-column Eigen::MatrixXd
-Eigen::MatrixXd vectorToColumnMatrix(const std::vector<double>& vec) {
+Eigen::MatrixXd vectorToColumnMatrixd(const std::vector<double>& vec) {
     // Map the vector as a single-column matrix
     return Eigen::Map<const Eigen::MatrixXd>(vec.data(), vec.size(), 1);
+}
+
+// Function to convert std::vector<double> to a single-column Eigen::MatrixXd
+Eigen::MatrixXi vectorToColumnMatrixi(const std::vector<int>& vec) {
+    // Map the vector as a single-column matrix
+    return Eigen::Map<const Eigen::MatrixXi>(vec.data(), vec.size(), 1);
 }
 
 // Function to convert std::vector<std::complex<double>> to Eigen::MatrixXd with real and imaginary parts in separate columns
@@ -347,6 +373,33 @@ void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs) {
               -4.51913817e-03, -2.21522410e-03, -5.76355265e-05;
 }
 
+Eigen::VectorXd oddExtension(const Eigen::VectorXd& x, int n) {
+    int dataSize = x.size();
+    if (n < 1) {
+        return x;
+    }
+
+    Eigen::VectorXd extendedData(dataSize + 2 * n);
+
+    // Left extension
+    for (int i = 0; i < n; ++i) {
+        int idx = std::min(i + 1, dataSize - 1); // Clamp index within bounds
+        extendedData(n - 1 - i) = 2 * x(0) - x(idx);
+    }
+
+    // Copy original data
+    extendedData.segment(n, dataSize) = x;
+
+    // Right extension
+    for (int i = 0; i < n; ++i) {
+        int idx = std::max(dataSize - 2 - i, 0); // Clamp index within bounds
+        extendedData(dataSize + n + i) = 2 * x(dataSize - 1) - x(idx);
+    }
+
+    return extendedData;
+}
+
+
 // Function to apply FIR filter using Eigen
 Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
     int dataSize = data.size();
@@ -367,9 +420,11 @@ Eigen::VectorXd applyLSFIRFilter(const Eigen::VectorXd& data, const Eigen::Vecto
 
 // Zero-phase filtering equivalent to MATLAB's filtfilt
 Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorXd& coeffs) {
-                 
+    int extensionSize = 3 * coeffs.size() - 1;
+    Eigen::VectorXd paddedData = oddExtension(data, extensionSize);
+
     // Forward filter pass
-    Eigen::VectorXd forwardFiltered = applyLSFIRFilter(data, coeffs);
+    Eigen::VectorXd forwardFiltered = applyLSFIRFilter(paddedData, coeffs);
                  
     // Reverse the data for the backward pass
     Eigen::VectorXd reversedData = forwardFiltered.reverse();
@@ -377,8 +432,10 @@ Eigen::VectorXd zeroPhaseLSFIR(const Eigen::VectorXd& data, const Eigen::VectorX
     // Backward filter pass
     Eigen::VectorXd backwardFiltered = applyLSFIRFilter(reversedData, coeffs);
                  
+    Eigen::VectorXd orderedData = backwardFiltered.reverse();
+    
     // Reverse the result to get the final output
-    return backwardFiltered.reverse();
+    return orderedData.segment(extensionSize, data.size());
 }
 
 Eigen::MatrixXd applyLSFIRFilterMatrix_ret(const Eigen::MatrixXd& data, const Eigen::VectorXd& coeffs) {
@@ -748,7 +805,6 @@ Eigen::VectorXd computeAutocorrelation_levinson(const Eigen::VectorXd& data, int
     return autocorrelations;
 }
 
-// Levinson-Durbin recursion for solving Yule-Walker equations
 void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, double& sigma2, Eigen::VectorXd& k) {
     Eigen::VectorXd e(order + 1);
     a = Eigen::VectorXd::Zero(order + 1);
@@ -758,38 +814,93 @@ void levinsonDurbin(const Eigen::VectorXd& r, int order, Eigen::VectorXd& a, dou
 
     for (int m = 1; m <= order; ++m) {
         double numerator = r(m);
-        for (int j = 1; j <= m - 1; j++) {
+        for (int j = 1; j < m; j++) {  // Ensure not to include the current 'm'
             numerator -= a(j) * r(m - j);
         }
         double km = numerator / e(m - 1);
         k(m - 1) = km;
 
-        // Update AR coefficients for new order
-        Eigen::VectorXd a_prev = a;  // Store previous coefficients
+        Eigen::VectorXd a_new = a;  // Make a copy of the current coefficients
         for (int j = 1; j <= m; j++) {
-            a(j) += km * a_prev(m - j);
+            a_new(j) = a(j) + km * a(m - j);  // Update based on symmetry
         }
+        a = a_new;  // Update the coefficients from the new calculated values
 
-        e(m) = (1 - km * km) * e(m - 1);
+        e(m) = (1 - km * km) * e(m - 1);  // Update the prediction error
     }
 
-    sigma2 = e(order);
-    // Ensure only necessary coefficients are returned
-    a = a.segment(0, order + 1);
+    sigma2 = e(order);  // The error variance of the final prediction error
 }
 
+Eigen::VectorXd levinsonRecursion(const Eigen::VectorXd &toeplitz, const Eigen::VectorXd &y) {
+    const int N = y.size();
+    // Correct assertion to match 2 * N + 1 size
+    assert(toeplitz.size() == 2 * N + 1); // Ensure toeplitz vector includes zero lag at the center
 
-// Function to estimate AR coefficients using Yule-Walker method
+    Eigen::VectorXd x(N);
+    Eigen::VectorXd fn(N), en(N); // Use progressively
+    fn.setZero();
+    en.setZero();
+
+    int midIndex = N; // Center index of the toeplitz vector
+    if (toeplitz[midIndex] == 0) {
+        std::cerr << "Error: Central value (zero lag) of toeplitz is zero, inversion impossible.";
+        return Eigen::VectorXd(); // Return empty vector if inversion is not possible
+    }
+
+    // Initialization based on the zero lag correlation (central value of the toeplitz vector)
+    fn[0] = en[0] = 1 / toeplitz[midIndex];
+    x[0] = fn[0] * y[0];
+
+    for (int n = 1; n < N; n++) {
+        double ef = 0, eb = 0;
+        for (int i = 0; i < n; i++) {
+            ef += fn[i] * toeplitz[midIndex + n - i];
+            eb += en[i] * toeplitz[midIndex - n + i];
+        }
+
+        if (1 - ef * eb == 0) {
+            std::cerr << "Error: Stability condition failed (1 - ef * eb == 0).";
+            return Eigen::VectorXd(); // Return empty vector if stability condition fails
+        }
+
+        double c = 1 / (1 - ef * eb); // Inversion for normalization
+        for (int i = 0; i <= n; i++) {
+            fn[i] *= c;
+            en[i] *= c;
+        }
+        fn[n] = -ef * en[n-1] * c;
+        en[n] = -eb * fn[n-1] * c;
+
+        double z = y[n];
+        for (int i = 0; i < n; i++) z -= x[i] * toeplitz[midIndex + n - i];
+        x[n] = z * en[n];
+        for (int i = 0; i <= n; i++) x[i] += en[i] * z;
+    }
+
+    return x;
+}
+
 std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule_levinson(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
     Eigen::VectorXd autocorrelations = computeAutocorrelation_levinson(data, order, norm);
 
-    Eigen::VectorXd a;
-    double sigma2;
-    Eigen::VectorXd k;
-    levinsonDurbin(autocorrelations, order, a, sigma2, k);
+    int N = order;
+    Eigen::VectorXd toeplitz(2 * N + 1);
+    // Build symmetric Toeplitz vector from autocorrelations
+    for (int i = 0; i <= N; i++) {
+        toeplitz[N + i] = toeplitz[N - i] = autocorrelations[i];  // Assuming autocorrelations are symmetric
+    }
 
-    return std::make_tuple(a, sigma2, k);
+    Eigen::VectorXd y = autocorrelations.segment(1, N);  // y is r[1] to r[order]
+    Eigen::VectorXd arParams = levinsonRecursion(toeplitz, y);
+
+    double sigma2 = 0;  // Compute the final prediction error if necessary
+    Eigen::VectorXd k(N);  // Reflection coefficients, not calculated in this scenario
+
+    return std::make_tuple(arParams, sigma2, k);
 }
+
+
 
 // Function to estimate AR coefficients using Yule-Walker method
 std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
@@ -974,7 +1085,7 @@ std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data) {
     fftw_free(out_fftw);
 
     return out;
-}
+}   
 
 // Perform inverse FFT using FFTW
 std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data) {
@@ -1046,4 +1157,104 @@ std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal
 
     // Perform inverse FFT
     return performIFFT(fft_signal);
+}
+
+
+// Welch's method for Power Spectral Density
+std::vector<double> pwelch(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs) {
+    int step_size = window_size - overlap;
+    int num_segments = (data.size() - overlap) / step_size;
+
+    Eigen::VectorXd window = Eigen::VectorXd::Ones(window_size); // You can use a different window function if desired
+
+    std::vector<double> psd(nfft / 2 + 1, 0.0);
+    for (int i = 0; i < num_segments; ++i) {
+        Eigen::VectorXd segment = data.segment(i * step_size, window_size).array() * window.array();
+        auto fft_result = performFFT(segment);
+        for (int k = 0; k <= nfft / 2; ++k) {
+            double power = std::norm(fft_result[k]) / (window_size * fs);
+            if (i == 0) {
+                psd[k] = power;
+            } else {
+                psd[k] += power;
+            }
+        }
+    }
+
+    for (int k = 0; k <= nfft / 2; ++k) {
+        psd[k] /= num_segments;
+    }
+
+    return psd;
+}
+
+// Calculate SNR around 10 Hz
+double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
+    auto psd = pwelch(data, window_size, overlap, nfft, fs);
+
+    double df = fs / nfft; // Frequency resolution
+    int target_index = static_cast<int>(target_freq / df);
+    int half_bandwidth = static_cast<int>(bandwidth / (2 * df));
+
+    double signal_power = 0.0;
+    for (int i = target_index - half_bandwidth; i <= target_index + half_bandwidth; ++i) {
+        if (i >= 0 && i < psd.size()) {
+            signal_power += psd[i];
+        }
+    }
+
+    double noise_power = 0.0;
+    for (int i = 0; i < psd.size(); ++i) {
+        if (i < target_index - half_bandwidth || i > target_index + half_bandwidth) {
+            noise_power += psd[i];
+        }
+    }
+    noise_power /= (psd.size() - 2 * half_bandwidth);
+
+    return 10 * std::log10(signal_power / noise_power); // SNR in dB
+}
+
+
+
+
+int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, 
+                          Eigen::VectorXd& phaseAngles, 
+                          int sequence_number,
+                          int downsampling_factor, 
+                          int edge, 
+                          int phase_shift,
+                          double stimulation_target) 
+{
+
+    for (std::size_t i = edge; i < hilbert_signal.size(); ++i) {
+        phaseAngles(i) = std::arg(hilbert_signal[i]);
+        if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
+            int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
+            // std::cout << "Target phase found: " << phaseAngles(best_index) << '\n';
+            int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
+            return trigger_seqNum;
+        }
+    }
+
+    return 0;
+}
+
+double ang_diff(double x, double y) {
+    std::complex<double> result = std::exp(std::complex<double>(0, x)) / std::exp(std::complex<double>(0, y));
+    return std::arg(result);
+}
+
+Eigen::VectorXd ang_diff(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
+    if (x.size() != y.size()) {
+        throw std::invalid_argument("Input vectors must have the same size.");
+    }
+
+    Eigen::VectorXd result(x.size());
+    for (int i = 0; i < x.size(); ++i) {
+        std::complex<double> num = std::exp(std::complex<double>(0, x[i]));
+        std::complex<double> den = std::exp(std::complex<double>(0, y[i]));
+        std::complex<double> quotient = num / den;
+        result[i] = std::arg(quotient);
+    }
+    return result;
 }

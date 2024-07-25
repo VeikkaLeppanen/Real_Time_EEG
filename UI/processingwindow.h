@@ -17,7 +17,10 @@ class ProcessingWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit ProcessingWindow(dataHandler &handler, volatile std::sig_atomic_t &processingWorkerRunning, Eigen::MatrixXd &processed_data, QWidget *parent = nullptr);
+    explicit ProcessingWindow(dataHandler &handler, 
+               volatile std::sig_atomic_t &processingWorkerRunning, 
+                          Eigen::MatrixXd &processed_data, 
+                                  QWidget *parent = nullptr);
     ~ProcessingWindow();
 
 signals:
@@ -30,6 +33,8 @@ signals:
     bool getCustomScaleStatus();
     double getCustomScaleMin();
     double getCustomScaleMax();
+
+    void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
 public slots:
     void updateData();

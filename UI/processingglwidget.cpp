@@ -7,8 +7,6 @@ ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     matrixCapasity_ = 30000;
     n_channels_ = 0;
     dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
-    channelNames_ = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
-
 
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
@@ -78,8 +76,39 @@ void ProcessingGlWidget::paintGL()
             glVertex2f(x, y);
         }
         glEnd();
+
+        // // Draw a vertical line at the specific index
+        // int specific_index = 750; // Replace this with your specific index
+        // float x = (float)specific_index / (dataVector.size() - 1) * 2.0f - 1.0f;
+        // glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
+        // glBegin(GL_LINES);
+        // glVertex2f(x, -1.0f);
+        // glVertex2f(x, 1.0f);            
+        // glEnd();
+
         graph_index++;
     }
+    
+    // Draw a vertical line at a specific index of the last graph
+    int specific_index = 750; // Replace this with your specific index
+
+    // Calculate the x-coordinate in NDC
+    float x = (float)specific_index / (matrixCapasity_ - 1) * 2.0f - 1.0f;
+
+    // Set viewport for the last graph
+    glViewport(0, 0, width(), rowHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);  // Set the coordinate system to cover [-1,1] in both axes
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Draw the vertical line
+    glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
+    glBegin(GL_LINES);
+    glVertex2f(x, -1.0f);
+    glVertex2f(x, 1.0f);
+    glEnd();
 
     // QPainter for text overlays
     QPainter painter(this);

@@ -76,6 +76,8 @@ private slots:
     
     void on_filter1_stateChanged(int arg1);
 
+    void on_checkBox_2_stateChanged(int arg1);
+
 private:
     Ui::EegWindow *ui;
     QTimer *checkHandlerTimer;

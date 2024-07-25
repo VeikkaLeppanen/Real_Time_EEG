@@ -304,68 +304,42 @@
           <property name="bottomMargin">
            <number>3</number>
           </property>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="lineEditGALength">
+          <item row="7" column="0" colspan="2">
+           <widget class="QPushButton" name="HandlerApplyButton">
             <property name="text">
-             <string>5000</string>
+             <string>Start gradient correction</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Gradient artifact correction</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QPushButton" name="GACorrectionStart">
-            <property name="minimumSize">
-             <size>
-              <width>100</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Start</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QLineEdit" name="lineEditGAaverage">
-            <property name="text">
-             <string>25</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_7">
             <property name="text">
              <string>Average</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="lineEditGALength">
+            <property name="text">
+             <string>5000</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Gradient artifact correction</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
              <string>TA length</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0" colspan="2">
-           <widget class="QPushButton" name="HandlerApplyButton">
-            <property name="text">
-             <string>Apply</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
+          <item row="8" column="1">
            <widget class="QPushButton" name="GACorrectionStop">
             <property name="minimumSize">
              <size>
@@ -380,14 +354,47 @@
              </size>
             </property>
             <property name="text">
-             <string>Stop</string>
+             <string>Pause</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLineEdit" name="lineEditGAaverage">
+            <property name="text">
+             <string>25</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QPushButton" name="GACorrectionStart">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Continue</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="filter1">
+            <property name="text">
+             <string>Filter 0-80Hz</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="filter1">
+           <widget class="QCheckBox" name="checkBox_2">
             <property name="text">
-             <string>Filter 0-80Hz</string>
+             <string>Baseline</string>
             </property>
            </widget>
           </item>

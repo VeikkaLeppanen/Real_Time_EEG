@@ -31,6 +31,8 @@ public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~MainWindow();
 
+signals:
+
 public slots:
     void updateData();
     void eegBridgeSpin(int port, int timeout);
@@ -61,6 +63,7 @@ private:
     // Graph parameters
     int samples_to_display = 10000;
     Eigen::MatrixXd processed_data;
+    std::vector<std::string> processing_channel_names;
 
     // Filtering parameters
     std::vector<double> filterCoeffs_;

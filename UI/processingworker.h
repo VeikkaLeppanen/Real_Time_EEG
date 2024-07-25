@@ -7,6 +7,7 @@
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
 #include "../dataProcessor/processingFunctions.h"
+#include <boost/stacktrace.hpp>
 
 
 struct processingParameters {
@@ -26,8 +27,8 @@ struct processingParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = M_PI * 0.5;
-    int phase_shift = 0;                        // for 5000Hz
+    double stimulation_target = 0;          //M_PI * 0.5;
+    int phase_shift = 0;                    // for 5000Hz
 };
 
 inline std::ostream& operator<<(std::ostream& os, const processingParameters& params) {
@@ -46,16 +47,23 @@ class ProcessingWorker : public QObject {
     Q_OBJECT
 
 public:
-    explicit ProcessingWorker(dataHandler &handler, Eigen::MatrixXd& processed_data, volatile std::sig_atomic_t &processingWorkerRunning, const processingParameters& params,  QObject* parent = nullptr);
+    explicit ProcessingWorker(dataHandler &handler, 
+                          Eigen::MatrixXd &processed_data, 
+               volatile std::sig_atomic_t &processingWorkerRunning, 
+               const processingParameters &params, 
+                                  QObject* parent = nullptr);
     ~ProcessingWorker();
 
 signals:
     void finished();
     void error(QString err);
+    void updateProcessingChannelNames(std::vector<std::string> processing_channel_names);
 
 public slots:
     void process();
+    void process_timing();
     void process_testing();
+    void process_stimulation_testing();
 
 private:
     dataHandler &handler;
@@ -63,10 +71,6 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
     const processingParameters &params;
 
-    // Filtering parameters
-    std::vector<double> filterCoeffs_;
-    std::vector<double> b; 
-    std::vector<double> a;
 };
 
 #endif // PROCESSINGWORKER_H

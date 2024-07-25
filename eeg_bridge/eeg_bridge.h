@@ -11,6 +11,7 @@
 #include "samplePacket.h"
 #include "measurementStartPacket.h"
 #include "../dataHandler/dataHandler.h"
+#include <boost/stacktrace.hpp>
 
 // The maximum length of the UDP packet, as mentioned in the manual of Bittium NeurOne.
 #define BUFFER_LENGTH 1472

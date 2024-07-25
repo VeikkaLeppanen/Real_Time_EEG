@@ -34,7 +34,8 @@ set(SOURCES
     eeg_bridge/networkUtils.cpp
     dataHandler/dataHandler.cpp
     dataHandler/GACorrection.cpp 
-# dataProcessor/dataProcessor.cpp
+    dataHandler/magPro.cpp 
+#    dataProcessor/dataProcessor.cpp
     dataProcessor/processingFunctions.cpp
     UI/mainwindow.cpp
     UI/mainwindow.h

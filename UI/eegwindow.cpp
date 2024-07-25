@@ -20,6 +20,7 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         ui->lineEditGALength->setText(QString::number(GALength));
         ui->lineEditGAaverage->setText(QString::number(GAAverage));
         ui->filter1->setChecked(handler.getFilterState());
+        ui->checkBox_2->setChecked(handler.getBaselineState());
 
         setWindowTitle("EEG Window");
         resize(1280, 720);
@@ -267,5 +268,12 @@ void eegWindow::on_filter1_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     handler.setFilterState(isChecked);
+}
+
+
+void eegWindow::on_checkBox_2_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    handler.setBaselineState(isChecked);
 }
 

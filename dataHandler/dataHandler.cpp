@@ -24,7 +24,7 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
 
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
 
-    baseline_average = Eigen::VectorXd(channel_count);
+    // baseline_average = Eigen::VectorXd(channel_count);
 
     handler_state = WAITING_FOR_STOP;
 
@@ -37,6 +37,21 @@ void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input)
     GACorr_ = GACorrection(channel_count_, GA_average_length, TA_length);
     stimulation_tracker = 10000000;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 int dataHandler::simulateData_sin() {
     auto startTime = std::chrono::high_resolution_clock::now();
@@ -79,56 +94,6 @@ int dataHandler::simulateData_sin() {
     return 0;
 }
 
-int dataHandler::simulateData_mat() {
-
-    // Eigen::MatrixXd readMatFile("interl_eegfmri.mat");
-
-
-
-    auto startTime = std::chrono::high_resolution_clock::now();
-    double time = 0.0;
-
-    Eigen::VectorXd sample(channel_count_);
-    const Eigen::VectorXd linspace_example = Eigen::VectorXd::LinSpaced(channel_count_, 0, channel_count_);
-
-    int stimulation_interval = 10000;
-    int stimulation_tracker = 0;
-    while (false) { // Adjust this condition as needed
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - startTime;
-        double time_stamp = 0.0;
-        int trigger = 0;
-        
-        // Check if it's time to generate the next sample
-        if (elapsed.count() >= 1.0 / sampling_rate_) {
-            startTime = currentTime;
-
-            double SIN = 5.0 * M_PI * time;
-            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (10.0 + x)); });
-            time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-            
-            if (stimulation_tracker >= stimulation_interval) {
-                trigger = 1;
-                stimulation_tracker = 0;
-            } else {
-                trigger = 0;
-            }
-            
-            time += 1.0 / sampling_rate_;
-
-            this->addData(sample, time_stamp, trigger, 0);
-
-            stimulation_tracker++;
-        }
-    }
-
-    return 0;
-}
-
-// For demonstration, print the size of a buffer (e.g., for channel 0)
-void dataHandler::printBufferSize() {
-    std::cout << "Buffer capacity: " << this->buffer_capacity_ << std::endl;
-}
 
 
 
@@ -147,58 +112,103 @@ void dataHandler::printBufferSize() {
 
 
 // Buffer functions
-// Add a signle sample to each channel
+// Add a single sample to each channel
 void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
 
-    if (trigger == 1) { 
-        stimulation_tracker = 0;
-        // GACorr_.printTemplate();
-    }
-
-    // Gradient artifact correction
-    if (GACorr_running && stimulation_tracker < TA_length) {
-
-        {
-            std::lock_guard<std::mutex> lock(this->dataMutex);
-            processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
+    try {
+        // Debug: Validate sample size
+        if (samples.size() == 0) {
+            std::cerr << "Error: Empty samples vector." << std::endl;
+            return;
         }
-        
-        GACorr_.update_template(stimulation_tracker, samples);
-        stimulation_tracker++;
-    } else {
 
-        std::lock_guard<std::mutex> lock(this->dataMutex);
-        processing_sample_vector = samples;
+        if (trigger == 1) { 
+            stimulation_tracker = 0;
+        }
 
+        // Gradient artifact correction
+        if (Apply_GACorr && stimulation_tracker < TA_length) {
+
+            {
+                std::lock_guard<std::mutex> lock(this->dataMutex);
+                // if (stimulation_tracker >= GACorr_.getTemplateSize()) {
+                //     std::cerr << "Error: stimulation_tracker exceeds GACorr template size." << std::endl;
+                //     return;
+                // }
+                processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
+            }
+            
+            GACorr_.update_template(stimulation_tracker, samples);
+            stimulation_tracker++;
+        } else {
+            std::lock_guard<std::mutex> lock(this->dataMutex);
+            processing_sample_vector = samples;
+        }
+
+        // Baseline average
+        if (Apply_baseline) {
+            if (baseline_length > 0) {
+                // Ensure baseline_average and baseline_matrix are initialized correctly
+                if (baseline_average.size() != samples.size()) {
+                    std::cerr << "Warning: Resetting baseline structures due to size mismatch." << std::endl;
+                    baseline_average = Eigen::VectorXd::Zero(samples.size());
+                    baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
+                    baseline_index = 0;
+                }
+
+                // Update baseline_average
+                baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
+                baseline_matrix.col(baseline_index) = samples;
+
+                // Avoid dividing by zero in baseline_average
+                for (int i = 0; i < baseline_average.size(); ++i) {
+                    if (baseline_average(i) == 0) {
+                        baseline_average(i) = 1; // Prevent division by zero
+                    }
+                }
+
+                // Update processing_sample_vector
+                processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
+
+                // Update baseline_index
+                baseline_index = (baseline_index + 1) % baseline_length;
+            } else {
+                std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+            }
+        }
+
+        // Filtering
+        if (Apply_filter) {
+            processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
+        }
+
+        // Debug: Check buffer capacity before indexing
+        if (current_data_index_ >= buffer_capacity_) {
+            std::cerr << "Error: current_data_index exceeds buffer capacity." << std::endl;
+            return;
+        }
+        sample_buffer_.col(current_data_index_) = processing_sample_vector;
+
+        // Triggering
+        if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
+            send_trigger();
+            removeTrigger(SeqNo);
+        }
+
+        // Timestamp, triggers, and buffer index update
+        time_stamp_buffer_(current_data_index_) = time_stamp;
+        trigger_buffer_(current_data_index_) = trigger;
+        current_sequence_number_ = SeqNo;
+        current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Datahandler exception: " << e.what() << '\n';
+        std::cerr << boost::stacktrace::stacktrace();  // Ensure boost stacktrace is linked correctly
     }
-
-    // Baseline average
-    if (Apply_baseline) {
-        int baseline_end_index = (current_data_index_ - baseline_length + buffer_capacity_) % buffer_capacity_;
-        baseline_average = baseline_average + (samples - sample_buffer_.col(baseline_end_index)) / baseline_length;
-        processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
-    }
-
-    // Filtering
-    if (Apply_filter) {
-        processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
-    }
-
-    sample_buffer_.col(current_data_index_) = processing_sample_vector;
-
-    if (getTriggerPortStatus() && shouldTrigger(SeqNo)) {
-        trig();
-        removeTrigger(SeqNo);
-    }
-
-    // Timestamp, triggers and buffer index update
-    time_stamp_buffer_(current_data_index_) = time_stamp;
-    trigger_buffer_(current_data_index_) = trigger;
-    current_sequence_number_ = SeqNo;
-    current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 }
 
-// Retrieves number_of_samples data points form all channels in chronological order
+
+// Returns number_of_samples data points form all channels in chronological order
 Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
 
     Eigen::MatrixXd output(channel_count_, number_of_samples);
@@ -221,7 +231,7 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
     return output;
 }
 
-// Retrieves number_of_samples data points form all channels in chronological order
+// Returns current sequence number and saves number_of_samples data points to output form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
 
     output.resize(channel_count_, number_of_samples);
@@ -244,26 +254,7 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     return current_sequence_number_;
 }
 
-// Retrieves data from the specified channel in chronological order
-Eigen::VectorXd dataHandler::getChannelDataInOrder(int channel_index, int downSamplingFactor) {
-
-    if (downSamplingFactor < 1) throw std::invalid_argument("downSamplingFactor must be greater than 0");
-
-    // Calculate the effective size after downsampling
-    size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
-    Eigen::VectorXd downSampledData(downSampledSize);
-
-    std::lock_guard<std::mutex> lock(this->dataMutex);
-    for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
-        // Calculate the index in the circular buffer accounting for wrap-around
-        size_t index = (current_data_index_ + i) % buffer_capacity_;
-        downSampledData(j) = sample_buffer_(channel_index, index);
-    }
-
-    return downSampledData;
-}
-
-// Retrieves data from the specified channels in chronological order
+// Returns data from the specified channels in chronological order
 Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
 
     Eigen::MatrixXd outputData(channel_indices.size(), number_of_samples);
@@ -364,129 +355,42 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
 
 
-// Trigger sending
+// MAGPRO FUNCTIONS
 
 int dataHandler::connectTriggerPort() {
-
-    // Check if the port exists
-    std::string port = "/dev/ttyUSB0";
-    if (!std::ifstream(port)) {
-        std::cerr << "Error: Port " << port << " not found." << std::endl;
-        return 1; // Return error if port does not exist
-    }
-
-    // Create a serial port object
-    serial.open(port);  // Specify the serial port to connect to
-
-    try {
-        // Set the baud rate
-        serial.set_option(boost::asio::serial_port_base::baud_rate(38400));
-
-        // Set parity (none)
-        serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
-
-        // Set stop bits (one)
-        serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-
-        // Set character size (8 bits)
-        serial.set_option(boost::asio::serial_port_base::character_size(8));
-
-        std::cout << "Serial port configured and opened." << std::endl;
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        set_enable(true);
-
-        set_amplitude(50);
-
-    } catch (const boost::system::system_error& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-
-    return 0;  // Return success
+    return magPro_3G.connectTriggerPort();
 }
 
-void dataHandler::trig() {
-
-    auto cmd = create_trig_cmd_byte_str();
-    boost::asio::write(serial, boost::asio::buffer(cmd));
-    
+void dataHandler::send_trigger() {
+    magPro_3G.trig();
 }
 
 void dataHandler::set_enable(bool status) {
-    auto cmd_enable = create_enable_cmd_byte_str(status);
-    boost::asio::write(serial, boost::asio::buffer(cmd_enable));
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    magPro_3G.set_enable(status);
+    triggerEnableState = status;
 }
 
 void dataHandler::set_amplitude(int amplitude) {
-    if (amplitude <= 0 || amplitude >= 100) {
-        std::cerr << "Error amplitude must be between 0 and 100" << std::endl;
-        return;
-    } else {
-        auto cmd_amplitude = create_amplitude_cmd_byte_str(amplitude, 0);
-        boost::asio::write(serial, boost::asio::buffer(cmd_amplitude));
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    magPro_3G.set_amplitude(amplitude);
 }
 
-std::vector<uint8_t> dataHandler::create_trig_cmd_byte_str() {
-    std::vector<uint8_t> cmd = {0x03, 0x01, 0x00};
-    uint8_t crc = crc8(cmd);
-    std::vector<uint8_t> fullCmd = {0xfe, static_cast<uint8_t>(cmd.size())};
-    fullCmd.reserve(4 + cmd.size()); // 4 extra for {0xfe, size, crc, 0xff}
-    fullCmd.insert(fullCmd.end(), cmd.begin(), cmd.end());
-    fullCmd.push_back(crc);
-    fullCmd.push_back(0xff);
-    return fullCmd;
+void dataHandler::magPro_set_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio, bool delay) {
+    magPro_3G.set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
 }
 
-std::vector<uint8_t> dataHandler::create_enable_cmd_byte_str(bool enable) {
-    std::vector<uint8_t> cmd;
-
-    if (enable) {
-        cmd = {0x02, 0x01, 0x00};
-    } else {
-        cmd = {0x02, 0x00, 0x00};
-    }
-
-    uint8_t crc = crc8(cmd);
-    std::vector<uint8_t> result = {0xfe, static_cast<uint8_t>(cmd.size())};
-    result.reserve(4 + cmd.size());
-    result.insert(result.end(), cmd.begin(), cmd.end());
-    result.push_back(crc);
-    result.push_back(0xff);
-
-    return result;
+void dataHandler::magPro_request_mode_info() {
+    magPro_3G.request_G3_to_send_mode_info();
+    magPro_3G.sleep(0.3);
+    magPro_3G.handle_input_queue();
+    magPro_3G.sleep(0.3);
 }
 
-std::vector<uint8_t> dataHandler::create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value) {
-    std::vector<uint8_t> cmd = {0x01, amplitudeA_value, amplitudeB_value};
-
-    uint8_t crc = crc8(cmd);
-    std::vector<uint8_t> result = {0xfe, static_cast<uint8_t>(cmd.size())};
-    result.reserve(4 + cmd.size());
-    result.insert(result.end(), cmd.begin(), cmd.end());
-    result.push_back(crc);
-    result.push_back(0xff);
-
-    return result;
-}
-
-uint8_t dataHandler::crc8(const std::vector<uint8_t>& bytes) {
-    uint8_t crc = 0;
-    for (auto next : bytes) {
-        for (int j = 0; j < 8; j++) {
-            if ((next ^ crc) & 0x01) {
-                crc ^= 0x18;
-                crc = (crc & 0xff) >> 1;
-                crc |= 0x80;
-            } else {
-                crc >>= 1;
-            }
-            next >>= 1;
-        }
-    }
-    return crc;
+void dataHandler::get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled) {
+    mode = magPro_3G.get_current_mode();
+    direction = magPro_3G.get_current_direction();
+    waveform = magPro_3G.get_current_waveform();
+    burst_pulses = magPro_3G.get_current_burst_pulses();
+    ipi = magPro_3G.get_current_ipi();
+    ba_ratio = magPro_3G.get_current_ba_ratio();
+    enabled = magPro_3G.get_current_enabled();
 }

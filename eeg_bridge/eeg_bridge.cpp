@@ -46,6 +46,8 @@ void EegBridge::bind_socket() {
 }
 
 void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
+    try {
+    
     running = true;
     std::cout << "Waiting for measurement start..." << '\n';
     eeg_bridge_status = WAITING_MEASUREMENT_START;
@@ -71,18 +73,27 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             
             deserializeMeasurementStartPacket_pointer(buffer, n, packet_info, SourceChannels, ChannelTypes);
 
+            // Divide channels into data and trigger sources
+            std::vector<uint16_t> data_channel_sources;
+            std::vector<uint16_t> trigger_channel_sources;
+            for (size_t i = 0; i < SourceChannels.size(); i++) {
+                uint16_t source = SourceChannels[i];
+                if(source < 65535) { 
+                    data_channel_sources.push_back(source);
+                } else {
+                    trigger_channel_sources.push_back(source); 
+                }
+            }
+
             numChannels = packet_info.NumChannels;
-            numDataChannels = numChannels - 1;              // Excluding trigger channel
+            numDataChannels = numChannels - trigger_channel_sources.size();              // Excluding trigger channels
             sampling_rate = packet_info.SamplingRateHz;
             lastSequenceNumber = -1;
 
-            handler.setTriggerSource(SourceChannels.back());
-            SourceChannels.pop_back();
-            handler.setSourceChannels(SourceChannels);
+            handler.setSourceChannels(data_channel_sources);
+            handler.setTriggerSource(trigger_channel_sources[0]);
 
-            // TODO: Initialize data_handler_samples
             data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 100);
-
 
             std::cout << "MeasurementStart package processed!\n";
 
@@ -94,7 +105,6 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             break;
 
         } case 0x02: { // SamplesPacket
-            
             if (eeg_bridge_status == WAITING_MEASUREMENT_START || !handler.isReady()) break;
 
             // Deserialize the received data into a sample_packet instance
@@ -102,27 +112,47 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
             int sequenceNumber = packet_info.PacketSeqNo;
 
-            Eigen::VectorXd triggers = data_handler_samples.row(data_handler_samples.rows() - 1);
-            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(data_handler_samples.rows() - 1) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
-            
+            // Debug: Print matrix dimensions
+            // std::cout << "Data matrix dimensions - Rows: " << data_handler_samples.rows() << ", Cols: " << data_handler_samples.cols() << '\n';
+            if (numDataChannels >= data_handler_samples.rows()) {
+                std::cerr << "Error: numDataChannels is greater than or equal to total rows in data_handler_samples." << '\n';
+                break;
+            }
+
+            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(numDataChannels) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
+            Eigen::VectorXd triggers;
+            try {
+                triggers = data_handler_samples.row(numDataChannels);
+            } catch (const std::exception& e) {
+                std::cerr << "Exception caught while accessing triggers: " << e.what() << '\n';
+                break;
+            }
+
+            // Ensure column access is valid
+            if (packet_info.NumSampleBundles > data_samples.cols()) {
+                std::cerr << "Error: Requested more sample bundles than available columns in data_samples." << '\n';
+                break;
+            }
+
             for (int i = 0; i < packet_info.NumSampleBundles; i++) {
+                if (i >= data_samples.cols()) {
+                    std::cerr << "Error: Column index " << i << " is out of range for data_samples with columns " << data_samples.cols() << '\n';
+                    break;
+                }
                 handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)), sequenceNumber);
             }
 
             // Check for dropped packets
             if (lastSequenceNumber != -1 && sequenceNumber != (lastSequenceNumber + 1)) {
                 std::cerr << "Packet loss detected. Expected sequence: " << (lastSequenceNumber + 1) << ", but received: " << sequenceNumber << '\n';
-                // Handle packet loss
+                // TODO: Handle packet loss
             }
 
-            lastSequenceNumber = sequenceNumber; // Update the last received sequence number
+            lastSequenceNumber = sequenceNumber; // Update the latest sequence number
 
-            // std::cout << "Package " << sequenceNumber << " received!" << '\n';
-
-            // std::cout << "Samples: " << data_samples << '\n';
-
-            // std::cout << handler.getDataInOrder(1) << '\n';
-            // std::cout << handler.get_buffer_capacity() << '\n';
+            // Debug output to confirm data integrity
+            // std::cout << "Package " << sequenceNumber << " received!\n";
+            // std::cout << "Channels: " << data_samples.rows() << ", " << data_samples.cols() << '\n';
             break;
 
         } case 0x03: { // TriggerPacket
@@ -146,4 +176,9 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
     running = false;
     std::cout << "Shutting down..." << '\n';
     close(sockfd);
+
+    } catch (const std::exception& e) {
+        std::cerr << "Eeg_bridge exception: " << e.what() << '\n';
+        std::cerr << boost::stacktrace::stacktrace();
+    }
 }

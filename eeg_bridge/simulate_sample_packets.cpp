@@ -155,9 +155,10 @@ std::vector<uint8_t> generateExampleMeasurementStartPacket() {
     // Example source channels and types
     std::vector<uint16_t> SourceChannels(CHANNEL_COUNT, 0); // Example channel IDs
 
-    for(size_t i = 0; i < CHANNEL_COUNT; i++) {
+    for(size_t i = 0; i < CHANNEL_COUNT - 1; i++) {
         SourceChannels[i] = i + 1;
     }
+    SourceChannels[CHANNEL_COUNT - 1] = 65535;
 
     std::vector<uint8_t> ChannelTypes(CHANNEL_COUNT, 0); // Example channel types (0 and 1 for demonstration)
 

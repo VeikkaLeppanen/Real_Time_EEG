@@ -155,9 +155,10 @@ std::vector<uint8_t> generateExampleMeasurementStartPacket() {
     // Example source channels and types
     std::vector<uint16_t> SourceChannels(CHANNEL_COUNT, 0); // Example channel IDs
 
-    for(size_t i = 0; i < CHANNEL_COUNT; i++) {
+    for(size_t i = 0; i < CHANNEL_COUNT - 1; i++) {
         SourceChannels[i] = i + 1;
     }
+    SourceChannels[CHANNEL_COUNT - 1] = 65535;
 
     std::vector<uint8_t> ChannelTypes(CHANNEL_COUNT, 0); // Example channel types (0 and 1 for demonstration)
 
@@ -205,7 +206,7 @@ std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample
     }
 
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
-}
+}                   
 
 void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int port) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -236,6 +237,7 @@ int main() {
 
     // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw_2.csv");
     std::ifstream csvFile("/home/vleppanen/Work/EEG_data/testdata_veikka_raw2.csv");
+    // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_clean_phase_est.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;

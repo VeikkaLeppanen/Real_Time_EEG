@@ -3,7 +3,6 @@
 
 #include <mutex>
 #include <cstddef> // For size_t
-#include <boost/asio.hpp>
 #include <iostream>
 #include <chrono>
 #include <array>
@@ -13,8 +12,10 @@
 #include <Eigen/Dense>
 
 #include "GACorrection.h"
+#include "magPro.h"
 #include "../dataProcessor/dataProcessor.h"
 #include "../dataProcessor/processingFunctions.h"
+#include <boost/stacktrace.hpp>
 
 enum HandlerState {
   WAITING_FOR_START,
@@ -29,7 +30,7 @@ public:
                     sampling_rate_(0),
                     simulation_delivery_rate_(0),
                     GACorr_(GACorrection(0, 0, 0)),
-                    serial(io)
+                    magPro_3G()
     { };
 
     // Reset functions
@@ -39,7 +40,6 @@ public:
     bool isReady() { return (handler_state == WAITING_FOR_STOP); }
 
     int simulateData_sin();
-    int simulateData_mat();
 
     // Data handling
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
@@ -47,7 +47,6 @@ public:
     int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
-    Eigen::VectorXd getChannelDataInOrder(int channel_index, int downSamplingFactor);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
 
@@ -72,10 +71,10 @@ public:
     std::vector<std::string> getChannelNames() { return channel_names_; }
 
     // Gradient artifact correction
-    void GACorr_off() { GACorr_running = false; }
+    void GACorr_off() { Apply_GACorr = false; }
     void GACorr_on() {
         int stimulation_tracker = 10000000;
-        GACorr_running = true; 
+        Apply_GACorr = true; 
     }
 
     void reset_GACorr(int TA_length_input, int GA_average_length_input);
@@ -86,26 +85,22 @@ public:
     int get_TA_length() { return TA_length; }
     int get_GA_average_length() { return GA_average_length; }
     
-    void printBufferSize();
-    
     // Filtering
     void setFilterState(bool state) { Apply_filter = state; }
     bool getFilterState() { return Apply_filter; }
 
+    // Baseline
+    void setBaselineState(bool state) { Apply_baseline = state; }
+    bool getBaselineState() { return Apply_baseline; }
+
     // Triggering
-    int connectTriggerPort();
+    void setTriggerConnectStatus(bool value) { triggerPortState = value; }
+    bool getTriggerConnectStatus() { return triggerPortState; }
 
-    void trig();
-    std::vector<uint8_t> create_trig_cmd_byte_str();
-    std::vector<uint8_t> create_enable_cmd_byte_str(bool enable);
-    std::vector<uint8_t> create_amplitude_cmd_byte_str(uint8_t amplitudeA_value, uint8_t amplitudeB_value);
-    uint8_t crc8(const std::vector<uint8_t>& data);
+    bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void set_enable(bool status);
-    void set_amplitude(int amplitude);
-
-    void setTriggerPortStatus(bool value) { triggerPortState = value; }
-    bool getTriggerPortStatus() { return triggerPortState; }
+    void setTriggerTimeLimit(double value) { magPro_3G.setTriggerTimeLimit(value); }
+    double getTriggerTimeLimit() { return magPro_3G.getTriggerTimeLimit(); }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
@@ -121,6 +116,20 @@ public:
         std::lock_guard<std::mutex> lock(triggerMutex);
         triggerSet.erase(seqNum);
     }
+
+    int connectTriggerPort();
+
+    void send_trigger();
+
+    void set_enable(bool status);
+
+    void set_amplitude(int amplitude);
+
+    void magPro_set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, float ipi = 1, float ba_ratio = 1.0, bool delay = true);
+
+    void magPro_request_mode_info();
+
+    void get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled);
 
 private:
     HandlerState handler_state = WAITING_FOR_START;
@@ -144,26 +153,29 @@ private:
 
     Eigen::VectorXd processing_sample_vector;
 
-    bool GACorr_running = true;
+    // Gradient artifact correction
+    bool Apply_GACorr = false;
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;
     int stimulation_tracker = 10000000;
 
-    bool Apply_filter = true;
-
+    // Baseline correction
     bool Apply_baseline = false;
+    int baseline_index = 0;
     Eigen::VectorXd baseline_average;
+    Eigen::MatrixXd baseline_matrix;
     int baseline_length = 2500;
 
     // Filter
+    bool Apply_filter = false;
     std::vector<double> filterCoeffs_;
     MultiChannelRealTimeFilter RTfilter_;
 
     // Sending triggers
-    boost::asio::io_service io;
-    boost::asio::serial_port serial;
+    magPro magPro_3G;
     bool triggerPortState = false;
+    bool triggerEnableState = false;
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;
