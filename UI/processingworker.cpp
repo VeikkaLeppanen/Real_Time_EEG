@@ -397,14 +397,17 @@ void ProcessingWorker::process_testing()
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, downsampled_cols + estimationLength - edge);
 
-        int number_of_save_rows = 520;
+        int number_of_save_rows = 1000;
         Eigen::MatrixXd CSV_CWL_save = Eigen::MatrixXd::Zero(number_of_save_rows, downsampled_cols);
         Eigen::MatrixXd CSV_filter2_save = Eigen::MatrixXd::Zero(number_of_save_rows, filter2_length);
         Eigen::MatrixXd CSV_predict_save = Eigen::MatrixXd::Zero(number_of_save_rows, estimationLength);
         int csv_save_count = 0;
         int last_processed_index = 0;
         std::vector<int> index_list;
-        
+
+        double total_SNR = 0;
+        int snr_count = 0;
+
         Eigen::VectorXd EEG_filter2_total = Eigen::VectorXd::Zero(downsampled_cols);
         std::vector<std::complex<double>> EEG_hilbert_total(estimationLength, std::complex<double>(0.0, 0.0));
         Eigen::VectorXd phaseAngles_total = Eigen::VectorXd::Zero(estimationLength);
@@ -418,7 +421,7 @@ void ProcessingWorker::process_testing()
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
-            if (/*seq_num_tracker == sequence_number ||*/last_processed_index == sequence_number || !(sequence_number % 2500 == 0)) {
+            if (/*seq_num_tracker == sequence_number ||*/last_processed_index == sequence_number || !(sequence_number % 1000 == 0) || sequence_number < 10001) {
                 std::this_thread::sleep_for(std::chrono::microseconds(1));
                 continue;
             }
@@ -440,8 +443,10 @@ void ProcessingWorker::process_testing()
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // SNR check
-            double SNR = calculateSNR(EEG_spatial, 500, 250, 512, 500);
-            if (SNR < 6) {
+            double SNR = calculateSNR(EEG_spatial.segment(predict_start_index - filter2_length, filter2_length), 64, 500, 500.0, 10.0, 2.0);
+            total_SNR += SNR;
+            snr_count++;
+            if (SNR < 10.0) {
                 std::cout << "SNR too small: " << SNR << '\n';
                 continue;
             }
@@ -494,11 +499,17 @@ void ProcessingWorker::process_testing()
             // EEG_predicted_EIGEN = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             Data_to_display.row(3).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             Data_to_display.row(4).tail(estimationLength) = phaseAngles.tail(estimationLength);
-            processed_data = Data_to_display;
+
+            {
+                std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+                processed_data = Data_to_display;
+            }
+
             csv_save_count++;
             last_processed_index = sequence_number;
         }
-
+        
+        std::cout << "Total SNR: " << total_SNR / snr_count << '\n';
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/CWL.csv", CSV_CWL_save);
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/filter2_end.csv", CSV_filter2_save);
         writeMatrixdToCSV("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/predicted_end.csv", CSV_predict_save);
@@ -605,8 +616,8 @@ void ProcessingWorker::process_stimulation_testing()
             EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
 
             // SNR check
-            double SNR = calculateSNR(EEG_spatial, 500, 250, 512, 500);
-            if (SNR < 6) {
+            double SNR = calculateSNR(EEG_spatial, 64, 500, 500.0, 10.0, 2.0);
+            if (SNR < 2) {
                 std::cout << "SNR too small: " << SNR << '\n';
                 continue;
             }

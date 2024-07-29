@@ -252,27 +252,15 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
     }
 }
 
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& pinvCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/) {
+void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& pinvCWL, Eigen::MatrixXd& EEG_corrected) {
     int num_samples = expCWL.rows();
     
-    // auto start = std::chrono::high_resolution_clock::now();
     pinvCWL = expCWL.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(Eigen::MatrixXd::Identity(num_samples, num_samples));
-    // std::chrono::duration<double> total_elapsed = std::chrono::high_resolution_clock::now() - start;
-    // std::cout << "Pinv time taken: " << total_elapsed.count() << " seconds." << std::endl;
-    // std::cout << "Pinv: " << pinvCWL.rows() << ", " << pinvCWL.cols() << std::endl;
-    
-    // Eigen::MatrixXd EEG_fits = Eigen::MatrixXd::Zero(EEG.rows(), EEG.cols());
 
     #pragma omp parallel for
     for(int i = 0; i < EEG.rows(); i++) {
-        // Eigen::MatrixXd Betas = EEG.row(i) * pinvCWL;
-        // if (i == 0) {betas = Betas.row(0);}
-        // EEG_fits.row(i) = (EEG.row(i) * pinvCWL) * expCWL;
         EEG_corrected.row(i) = EEG.row(i) - (EEG.row(i) * pinvCWL) * expCWL;
     }
-    // EEG_fits = (EEG * pinvCWL) * expCWL;
-
-    // EEG_corrected = EEG - EEG_fits;
 }
 
 
@@ -1083,7 +1071,9 @@ std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data) {
 
     fftw_free(in);
     fftw_free(out_fftw);
-
+    for (int i = 0; i < out.size(); ++i) {
+        std::cout << "Freq Bin " << i << ": Magnitude = " << std::abs(out[i]) << std::endl;
+    }
     return out;
 }   
 
@@ -1160,37 +1150,85 @@ std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal
 }
 
 
-// Welch's method for Power Spectral Density
-std::vector<double> pwelch(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs) {
-    int step_size = window_size - overlap;
-    int num_segments = (data.size() - overlap) / step_size;
-
-    Eigen::VectorXd window = Eigen::VectorXd::Ones(window_size); // You can use a different window function if desired
-
-    std::vector<double> psd(nfft / 2 + 1, 0.0);
-    for (int i = 0; i < num_segments; ++i) {
-        Eigen::VectorXd segment = data.segment(i * step_size, window_size).array() * window.array();
-        auto fft_result = performFFT(segment);
-        for (int k = 0; k <= nfft / 2; ++k) {
-            double power = std::norm(fft_result[k]) / (window_size * fs);
-            if (i == 0) {
-                psd[k] = power;
-            } else {
-                psd[k] += power;
-            }
-        }
+Eigen::VectorXd hamming(unsigned int N) {
+    Eigen::VectorXd h(N);
+    double a0 = 0.54, a1 = 0.46;
+    for (unsigned int i = 0; i < N; ++i) {
+        h(i) = a0 - a1 * std::cos(2 * M_PI * i / (N - 1));
     }
-
-    for (int k = 0; k <= nfft / 2; ++k) {
-        psd[k] /= num_segments;
-    }
-
-    return psd;
+    return h;
 }
 
-// Calculate SNR around 10 Hz
-double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
-    auto psd = pwelch(data, window_size, overlap, nfft, fs);
+
+Eigen::VectorXcd spectrum(const Eigen::VectorXd& x, const Eigen::VectorXd& W) {
+    int N = x.size();
+    Eigen::VectorXcd Pxx(N);
+
+    fftw_complex *in, *out;
+    fftw_plan p;
+
+    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    for (int i = 0; i < N; ++i) {
+        in[i][0] = x(i) * W(i); // Real part
+        in[i][1] = 0;           // Imaginary part
+    }
+
+    fftw_execute(p);
+
+    double wc = W.sum();
+    for (int i = 0; i < N; ++i) {
+        Pxx(i) = std::complex<double>(out[i][0], out[i][1]) / wc;
+    }
+
+    fftw_destroy_plan(p);
+    fftw_free(in);
+    fftw_free(out);
+
+    return Pxx;
+}
+
+
+Eigen::MatrixXcd specgram_cx(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl) {
+    int N = x.size();
+    int D = Nfft - Noverl;
+    int U = std::max(1, static_cast<int>((N - Nfft) / D + 1)); // Calculate number of columns
+    Eigen::MatrixXcd Pw(Nfft, U);
+    Eigen::VectorXd W = hamming(Nfft);
+
+    for (int k = 0, m = 0; k <= N - Nfft; k += D, ++m) {
+        Eigen::VectorXd xk = x.segment(k, Nfft);
+        Pw.col(m) = spectrum(xk, W);
+    }
+
+    if (N <= Nfft) {
+        Eigen::VectorXd W = hamming(N);
+        Pw.resize(N, 1);
+        Pw.col(0) = spectrum(x, W);
+    }
+
+    return Pw;
+}
+
+Eigen::MatrixXd specgram(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl) {
+    Eigen::MatrixXcd Pw = specgram_cx(x, Nfft, Noverl);
+    return (Pw.array() * Pw.conjugate().array()).real();
+}
+
+Eigen::VectorXd pwelch(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl, bool doubleSided) {
+    Eigen::MatrixXd Pxx = specgram(x, Nfft, Noverl);
+
+    if (doubleSided) {
+        return Pxx.rowwise().mean();
+    } else {
+        return Pxx.rowwise().mean().segment(0, Pxx.rows() / 2 + 1);
+    }
+}
+
+double calculateSNR(const Eigen::VectorXd& data, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
+    Eigen::VectorXd psd = pwelch(data.array(), nfft, overlap);
 
     double df = fs / nfft; // Frequency resolution
     int target_index = static_cast<int>(target_freq / df);
@@ -1199,14 +1237,14 @@ double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, i
     double signal_power = 0.0;
     for (int i = target_index - half_bandwidth; i <= target_index + half_bandwidth; ++i) {
         if (i >= 0 && i < psd.size()) {
-            signal_power += psd[i];
+            signal_power += psd(i);
         }
     }
 
     double noise_power = 0.0;
     for (int i = 0; i < psd.size(); ++i) {
         if (i < target_index - half_bandwidth || i > target_index + half_bandwidth) {
-            noise_power += psd[i];
+            noise_power += psd(i);
         }
     }
     noise_power /= (psd.size() - 2 * half_bandwidth);

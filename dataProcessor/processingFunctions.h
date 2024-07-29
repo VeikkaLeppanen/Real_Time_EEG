@@ -80,8 +80,12 @@ std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<dou
 std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& signal);
 std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
 
-std::vector<double> pwelch(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs);
-double calculateSNR(const Eigen::VectorXd& data, int window_size, int overlap, int nfft, double fs, double target_freq = 10.0, double bandwidth = 1.0);
+Eigen::VectorXd hamming(unsigned int N);
+Eigen::VectorXcd spectrum(const Eigen::VectorXd& x, const Eigen::VectorXd& W);
+Eigen::MatrixXcd specgram_cx(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl);
+Eigen::MatrixXd specgram(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl);
+Eigen::VectorXd pwelch(const Eigen::VectorXd& x, unsigned int Nfft = 512, unsigned int Noverl = 256, bool doubleSided = false);
+double calculateSNR(const Eigen::VectorXd& data, int overlap, int nfft, double fs, double target_freq, double bandwidth);
 
 int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, Eigen::VectorXd& phaseAngles, int sequence_number, int downsampling_factor, int edge, int phase_shift, double stimulation_target);
 double ang_diff(double x, double y);

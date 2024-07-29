@@ -233,26 +233,36 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
 
 // Returns current sequence number and saves number_of_samples data points to output form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
+    output.resize(channel_count_, number_of_samples); // Ensure matrix is resized correctly
+    size_t channel_index = 0; // Unused variable, consider removing if not needed later.
 
-    output.resize(channel_count_, number_of_samples);
-    size_t channel_index = 0;
-
-    // Calculate the number of samples that fit before reaching the end
+    // Calculate the number of samples that fit before reaching the end of the buffer
     int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
     int overflow = number_of_samples - fitToEnd;
-    
-    
-    std::lock_guard<std::mutex> lock(this->dataMutex);
+
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+
+    // Debugging check before accessing rightCols and middleCols
     if (fitToEnd > 0) {
-        output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+        if (current_data_index_ >= fitToEnd && sample_buffer_.cols() >= (current_data_index_ - fitToEnd + fitToEnd)) {
+            output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+        } else {
+            std::cerr << "Error: fitToEnd calculation is out of bounds. Requested cols: " << (current_data_index_ - fitToEnd + fitToEnd) << ", Available cols: " << sample_buffer_.cols() << '\n';
+        }
     }
-    
+
+    // Debugging check before accessing leftCols and middleCols
     if (overflow > 0) {
-        output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+        if (sample_buffer_.cols() >= buffer_capacity_ && sample_buffer_.cols() >= overflow) {
+            output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+        } else {
+            std::cerr << "Error: Overflow calculation is out of bounds. Requested cols from end: " << overflow << ", Buffer capacity: " << buffer_capacity_ << ", Available cols: " << sample_buffer_.cols() << '\n';
+        }
     }
 
     return current_sequence_number_;
 }
+
 
 // Returns data from the specified channels in chronological order
 Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
