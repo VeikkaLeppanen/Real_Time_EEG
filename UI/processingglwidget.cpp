@@ -25,6 +25,8 @@ void ProcessingGlWidget::resizeGL(int w, int h)
 
 void ProcessingGlWidget::paintGL()
 {
+    if (n_channels_ == 0) return;  // Ensure there is data to draw
+    
     // Initializing positional parameters
     int windowHeight = height();
     int enabled_channel_count = n_channels_;
@@ -76,15 +78,6 @@ void ProcessingGlWidget::paintGL()
             glVertex2f(x, y);
         }
         glEnd();
-
-        // // Draw a vertical line at the specific index
-        // int specific_index = 750; // Replace this with your specific index
-        // float x = (float)specific_index / (dataVector.size() - 1) * 2.0f - 1.0f;
-        // glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
-        // glBegin(GL_LINES);
-        // glVertex2f(x, -1.0f);
-        // glVertex2f(x, 1.0f);            
-        // glEnd();
 
         graph_index++;
     }

@@ -4,6 +4,7 @@
 #include <QObject>
 #include <csignal>
 #include <iostream>
+#include <cstdlib>
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
 #include "../dataProcessor/processingFunctions.h"
@@ -72,6 +73,7 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
     const processingParameters &params;
 
+    const bool debug = false;
 };
 
 #endif // PROCESSINGWORKER_H
