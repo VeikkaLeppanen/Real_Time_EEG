@@ -112,88 +112,101 @@ int dataHandler::simulateData_sin() {
 
 
 // Buffer functions
-// Add a signle sample to each channel
+// Add a single sample to each channel
 void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
 
     try {
-
-    if (trigger == 1) { 
-        stimulation_tracker = 0;
-        // GACorr_.printTemplate();
-    }
-
-    // Gradient artifact correction
-    if (Apply_GACorr && stimulation_tracker < TA_length) {
-
-        {
-            std::lock_guard<std::mutex> lock(this->dataMutex);
-            processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
+        // Debug: Validate sample size
+        if (samples.size() == 0) {
+            std::cerr << "Error: Empty samples vector." << std::endl;
+            return;
         }
-        
-        GACorr_.update_template(stimulation_tracker, samples);
-        stimulation_tracker++;
-    } else {
 
-        std::lock_guard<std::mutex> lock(this->dataMutex);
-        processing_sample_vector = samples;
+        if (trigger == 1) { 
+            stimulation_tracker = 0;
+        }
 
-    }
+        // Gradient artifact correction
+        if (Apply_GACorr && stimulation_tracker < TA_length) {
 
-    // Baseline average
-    if (Apply_baseline) {
-        if (baseline_length > 0) {
-            // Ensure baseline_average and baseline_matrix are initialized correctly
-            if (baseline_average.size() != samples.size()) {
-                baseline_average = Eigen::VectorXd::Zero(samples.size());
-                baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
-                baseline_index = 0;
+            {
+                std::lock_guard<std::mutex> lock(this->dataMutex);
+                // if (stimulation_tracker >= GACorr_.getTemplateSize()) {
+                //     std::cerr << "Error: stimulation_tracker exceeds GACorr template size." << std::endl;
+                //     return;
+                // }
+                processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
             }
-
-            // Update baseline_average
-            baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
-            baseline_matrix.col(baseline_index) = samples;
-
-            // Avoid dividing by zero in baseline_average
-            for (int i = 0; i < baseline_average.size(); ++i) {
-                if (baseline_average(i) == 0) {
-                    baseline_average(i) = 1; // Prevent division by zero
-                }
-            }
-
-            // Update processing_sample_vector
-            processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
-
-            // Update baseline_index
-            baseline_index = (baseline_index + 1) % baseline_length;
+            
+            GACorr_.update_template(stimulation_tracker, samples);
+            stimulation_tracker++;
         } else {
-            std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+            std::lock_guard<std::mutex> lock(this->dataMutex);
+            processing_sample_vector = samples;
         }
-    }
 
-    // Filtering
-    if (Apply_filter) {
-        processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
-    }
+        // Baseline average
+        if (Apply_baseline) {
+            if (baseline_length > 0) {
+                // Ensure baseline_average and baseline_matrix are initialized correctly
+                if (baseline_average.size() != samples.size()) {
+                    std::cerr << "Warning: Resetting baseline structures due to size mismatch." << std::endl;
+                    baseline_average = Eigen::VectorXd::Zero(samples.size());
+                    baseline_matrix = Eigen::MatrixXd::Zero(samples.size(), baseline_length);
+                    baseline_index = 0;
+                }
 
-    sample_buffer_.col(current_data_index_) = processing_sample_vector;
+                // Update baseline_average
+                baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
+                baseline_matrix.col(baseline_index) = samples;
 
-    // Triggering
-    if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
-        send_trigger();
-        removeTrigger(SeqNo);
-    }
+                // Avoid dividing by zero in baseline_average
+                for (int i = 0; i < baseline_average.size(); ++i) {
+                    if (baseline_average(i) == 0) {
+                        baseline_average(i) = 1; // Prevent division by zero
+                    }
+                }
 
-    // Timestamp, triggers and buffer index update
-    time_stamp_buffer_(current_data_index_) = time_stamp;
-    trigger_buffer_(current_data_index_) = trigger;
-    current_sequence_number_ = SeqNo;
-    current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+                // Update processing_sample_vector
+                processing_sample_vector = processing_sample_vector.cwiseQuotient(baseline_average);
+
+                // Update baseline_index
+                baseline_index = (baseline_index + 1) % baseline_length;
+            } else {
+                std::cerr << "Error: baseline_length is zero or negative." << std::endl;
+            }
+        }
+
+        // Filtering
+        if (Apply_filter) {
+            processing_sample_vector = RTfilter_.processSample(processing_sample_vector);
+        }
+
+        // Debug: Check buffer capacity before indexing
+        if (current_data_index_ >= buffer_capacity_) {
+            std::cerr << "Error: current_data_index exceeds buffer capacity." << std::endl;
+            return;
+        }
+        sample_buffer_.col(current_data_index_) = processing_sample_vector;
+
+        // Triggering
+        if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
+            send_trigger();
+            removeTrigger(SeqNo);
+        }
+
+        // Timestamp, triggers, and buffer index update
+        time_stamp_buffer_(current_data_index_) = time_stamp;
+        trigger_buffer_(current_data_index_) = trigger;
+        current_sequence_number_ = SeqNo;
+        current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 
     } catch (const std::exception& e) {
-    std::cerr << "Datahandler exception: " << e.what() << '\n';
-    std::cerr << boost::stacktrace::stacktrace();
+        std::cerr << "Datahandler exception: " << e.what() << '\n';
+        std::cerr << boost::stacktrace::stacktrace();  // Ensure boost stacktrace is linked correctly
     }
 }
+
 
 // Returns number_of_samples data points form all channels in chronological order
 Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
@@ -220,26 +233,36 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
 
 // Returns current sequence number and saves number_of_samples data points to output form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
+    output.resize(channel_count_, number_of_samples); // Ensure matrix is resized correctly
+    size_t channel_index = 0; // Unused variable, consider removing if not needed later.
 
-    output.resize(channel_count_, number_of_samples);
-    size_t channel_index = 0;
-
-    // Calculate the number of samples that fit before reaching the end
+    // Calculate the number of samples that fit before reaching the end of the buffer
     int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
     int overflow = number_of_samples - fitToEnd;
-    
-    
-    std::lock_guard<std::mutex> lock(this->dataMutex);
+
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+
+    // Debugging check before accessing rightCols and middleCols
     if (fitToEnd > 0) {
-        output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+        if (current_data_index_ >= fitToEnd && sample_buffer_.cols() >= (current_data_index_ - fitToEnd + fitToEnd)) {
+            output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+        } else {
+            std::cerr << "Error: fitToEnd calculation is out of bounds. Requested cols: " << (current_data_index_ - fitToEnd + fitToEnd) << ", Available cols: " << sample_buffer_.cols() << '\n';
+        }
     }
-    
+
+    // Debugging check before accessing leftCols and middleCols
     if (overflow > 0) {
-        output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+        if (sample_buffer_.cols() >= buffer_capacity_ && sample_buffer_.cols() >= overflow) {
+            output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+        } else {
+            std::cerr << "Error: Overflow calculation is out of bounds. Requested cols from end: " << overflow << ", Buffer capacity: " << buffer_capacity_ << ", Available cols: " << sample_buffer_.cols() << '\n';
+        }
     }
 
     return current_sequence_number_;
 }
+
 
 // Returns data from the specified channels in chronological order
 Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
@@ -342,21 +365,42 @@ Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
 
 
 
-// Trigger sending
+// MAGPRO FUNCTIONS
 
 int dataHandler::connectTriggerPort() {
-    return magPro_.connectTriggerPort();
+    return magPro_3G.connectTriggerPort();
 }
 
 void dataHandler::send_trigger() {
-    magPro_.trig();
+    magPro_3G.trig();
 }
 
 void dataHandler::set_enable(bool status) {
-    magPro_.set_enable(status);
+    magPro_3G.set_enable(status);
     triggerEnableState = status;
 }
 
 void dataHandler::set_amplitude(int amplitude) {
-    magPro_.set_amplitude(amplitude);
+    magPro_3G.set_amplitude(amplitude);
+}
+
+void dataHandler::magPro_set_mode(int mode, int direction, int waveform, int burst_pulses, float ipi, float ba_ratio, bool delay) {
+    magPro_3G.set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
+}
+
+void dataHandler::magPro_request_mode_info() {
+    magPro_3G.request_G3_to_send_mode_info();
+    magPro_3G.sleep(0.3);
+    magPro_3G.handle_input_queue();
+    magPro_3G.sleep(0.3);
+}
+
+void dataHandler::get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled) {
+    mode = magPro_3G.get_current_mode();
+    direction = magPro_3G.get_current_direction();
+    waveform = magPro_3G.get_current_waveform();
+    burst_pulses = magPro_3G.get_current_burst_pulses();
+    ipi = magPro_3G.get_current_ipi();
+    ba_ratio = magPro_3G.get_current_ba_ratio();
+    enabled = magPro_3G.get_current_enabled();
 }

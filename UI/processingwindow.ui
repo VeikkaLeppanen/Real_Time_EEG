@@ -69,7 +69,17 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="9" column="1">
+       <item row="16" column="1">
+        <widget class="QLineEdit" name="phaseShift">
+         <property name="maximumSize">
+          <size>
+           <width>100</width>
+           <height>16777215</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
         <widget class="QLineEdit" name="downsampling">
          <property name="maximumSize">
           <size>
@@ -79,30 +89,13 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="scaleMax"/>
+       </item>
        <item row="11" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="15" column="0">
-        <widget class="QLabel" name="label_3">
+        <widget class="QLabel" name="label_5">
          <property name="text">
-          <string>hilbert length</string>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="text">
-          <string>removeBCG</string>
+          <string>edge</string>
          </property>
         </widget>
        </item>
@@ -119,77 +112,6 @@
          </property>
         </spacer>
        </item>
-       <item row="17" column="0">
-        <widget class="QLabel" name="label_9">
-         <property name="text">
-          <string>Stimulation</string>
-         </property>
-        </widget>
-       </item>
-       <item row="10" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>delay</string>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>down sampling</string>
-         </property>
-        </widget>
-       </item>
-       <item row="15" column="1">
-        <widget class="QLineEdit" name="hilbertLength">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0">
-        <spacer name="verticalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="14" column="1">
-        <widget class="QLineEdit" name="modelOrder">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="0">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Phase estimate</string>
-         </property>
-        </widget>
-       </item>
-       <item row="18" column="1">
-        <widget class="QLineEdit" name="stimulationTarget">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="0">
         <widget class="QLabel" name="label_14">
          <property name="text">
@@ -197,23 +119,14 @@
          </property>
         </widget>
        </item>
-       <item row="21" column="1">
-        <widget class="QPushButton" name="stopButton">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_10">
          <property name="text">
-          <string>Stop</string>
+          <string>removeBCG</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="scaleMin"/>
-       </item>
-       <item row="13" column="1">
+       <item row="11" column="1">
         <widget class="QLineEdit" name="edge">
          <property name="maximumSize">
           <size>
@@ -223,27 +136,51 @@
          </property>
         </widget>
        </item>
-       <item row="13" column="0">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>edge</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_11">
-         <property name="text">
-          <string>Num samples</string>
-         </property>
-        </widget>
-       </item>
-       <item row="19" column="1">
-        <widget class="QLineEdit" name="phaseShift">
+       <item row="12" column="1">
+        <widget class="QLineEdit" name="modelOrder">
          <property name="maximumSize">
           <size>
            <width>100</width>
            <height>16777215</height>
           </size>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>delay</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="text">
+          <string>Max</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>down sampling</string>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="1">
+        <widget class="QLineEdit" name="hilbertLength">
+         <property name="maximumSize">
+          <size>
+           <width>100</width>
+           <height>16777215</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Phase estimate</string>
          </property>
         </widget>
        </item>
@@ -263,8 +200,39 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="1">
-        <widget class="QLineEdit" name="delay">
+       <item row="12" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>model order</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>Num samples</string>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>hilbert length</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="checkBox">
+         <property name="text">
+          <string>Custom scale</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="scaleMin"/>
+       </item>
+       <item row="15" column="1">
+        <widget class="QLineEdit" name="stimulationTarget">
          <property name="maximumSize">
           <size>
            <width>100</width>
@@ -273,14 +241,27 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_12">
+       <item row="18" column="1">
+        <widget class="QPushButton" name="stopButton">
+         <property name="maximumSize">
+          <size>
+           <width>100</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="text">
-          <string>Max</string>
+          <string>Stop</string>
          </property>
         </widget>
        </item>
-       <item row="21" column="0">
+       <item row="14" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>Stimulation</string>
+         </property>
+        </widget>
+       </item>
+       <item row="18" column="0">
         <widget class="QPushButton" name="startButton">
          <property name="maximumSize">
           <size>
@@ -293,10 +274,17 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="scaleMax"/>
+       <item row="9" column="1">
+        <widget class="QLineEdit" name="delay">
+         <property name="maximumSize">
+          <size>
+           <width>100</width>
+           <height>16777215</height>
+          </size>
+         </property>
+        </widget>
        </item>
-       <item row="19" column="0">
+       <item row="16" column="0">
         <widget class="QLabel" name="label">
          <property name="maximumSize">
           <size>
@@ -309,37 +297,10 @@
          </property>
         </widget>
        </item>
-       <item row="16" column="0">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="14" column="0">
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>model order</string>
-         </property>
-        </widget>
-       </item>
-       <item row="18" column="0">
+       <item row="15" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>stimulation target</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="checkBox">
-         <property name="text">
-          <string>Custom scale</string>
          </property>
         </widget>
        </item>

@@ -129,7 +129,6 @@ void MainWindow::on_processing_clicked()
     processingWindow->raise();
     processingWindow->activateWindow();
     connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startProcessing);
-    connect(this, &MainWindow::updateProcessingChannelNames_signal, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
 }
 
 void MainWindow::resetProcessingWindowPointer() {
@@ -158,7 +157,7 @@ void MainWindow::startProcessing(processingParameters& parameters)
         });
 
         thread->start();
-        QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, this, &MainWindow::updateProcessingChannelNames_slot);
+        QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
     } else {
         std::cout << "Processing start failed" << '\n';
     }

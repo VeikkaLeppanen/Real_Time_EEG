@@ -71,6 +71,7 @@ private:
 
     processingParameters params;
     Eigen::MatrixXd &processed_data;
+    std::mutex dataMutex;
 
     volatile std::sig_atomic_t &processingWorkerRunning;
 };

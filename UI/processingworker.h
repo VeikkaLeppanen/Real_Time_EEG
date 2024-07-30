@@ -4,6 +4,7 @@
 #include <QObject>
 #include <csignal>
 #include <iostream>
+#include <cstdlib>
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
 #include "../dataProcessor/processingFunctions.h"
@@ -27,8 +28,8 @@ struct processingParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = M_PI * 0.5;
-    int phase_shift = 0;                        // for 5000Hz
+    double stimulation_target = 0;          //M_PI * 0.5;
+    int phase_shift = 0;                    // for 5000Hz
 };
 
 inline std::ostream& operator<<(std::ostream& os, const processingParameters& params) {
@@ -63,17 +64,16 @@ public slots:
     void process();
     void process_timing();
     void process_testing();
+    void process_stimulation_testing();
 
 private:
     dataHandler &handler;
     Eigen::MatrixXd &processed_data;
+    std::mutex dataMutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
     const processingParameters &params;
 
-    // Filtering parameters
-    std::vector<double> filterCoeffs_;
-    std::vector<double> b; 
-    std::vector<double> a;
+    const bool debug = false;
 };
 
 #endif // PROCESSINGWORKER_H

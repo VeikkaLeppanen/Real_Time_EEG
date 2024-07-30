@@ -55,6 +55,7 @@ void ProcessingWindow::updateData()
     ProcessingGlWidget* processingglWidget = ui->processingGlWidget;
     if (processingglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
+        std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
         processingglWidget->updateMatrix(processed_data);
     }
 }

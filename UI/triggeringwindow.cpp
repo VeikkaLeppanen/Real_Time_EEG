@@ -12,7 +12,24 @@ TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomi
     ui->amplitudeLineEdit->setValidator(new QIntValidator(0, 100, this));
     ui->TimeLimitLineEdit->setValidator(new QIntValidator(100, 100000, this));
 
+    ui->lineEditIPI->setValidator(new QIntValidator(1, 3000, this));
+    ui->lineEditBAratio->setValidator(new QDoubleValidator(0.2, 5.0, 1, this));
+
     ui->TimeLimitLineEdit->setText(QString::number(handler.getTriggerTimeLimit()));
+    ui->lineEditIPI->setText(QString::number(1));
+    ui->lineEditBAratio->setText(QString::number(1));
+    ui->checkBoxDelay->setChecked(true);
+
+    ui->ModeLabel->setText("");
+    ui->DirectionLabel->setText("");
+    ui->WaveformLabel->setText("");
+    ui->BurstPulsesLabel->setText("");
+    ui->IPILabel->setText("");
+    ui->BAratioLabel->setText("");
+    ui->EnabledLabel->setText("");
+    
+    ui->SetModeError->setStyleSheet("QLabel { color : gray; }");
+    ui->RequestInfoError->setStyleSheet("QLabel { color : gray; }");
 }
 
 TriggeringWindow::~TriggeringWindow()
@@ -88,4 +105,66 @@ void TriggeringWindow::on_setAmplitude_clicked()
 }
 
 
+
+
+
+
+void TriggeringWindow::on_SetMode_clicked()
+{
+    if(handler.getTriggerConnectStatus()) {
+        ui->SetModeError->setText("Set mode requested");
+
+        // Get values from comboboxes
+        int mode = ui->comboBoxMode->currentIndex();
+        int direction = ui->comboBoxDirection->currentIndex();
+        int waveform = ui->comboBoxWaveform->currentIndex();
+        int burst_pulses = ui->comboBoxBurstPulses->currentText().toInt();
+
+        // Get values from line edits
+        int ipi = ui->lineEditIPI->text().toInt();
+        double ba_ratio = ui->lineEditBAratio->text().toDouble();
+
+        // Get the state of the checkbox
+        bool delay = ui->checkBoxDelay->isChecked();
+
+        ui->SetModeError->setText("Sending set mode request");
+        handler.magPro_set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
+
+        ui->SetModeError->setText("magPro mode set");
+    } else {
+        QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
+    }
+}
+
+
+void TriggeringWindow::on_RequestInfo_clicked()
+{
+    if(handler.getTriggerConnectStatus()) {
+        ui->RequestInfoError->setText("Mode info requested");
+
+        handler.magPro_request_mode_info();
+        ui->RequestInfoError->setText("Mode info request sent");
+
+        int mode;
+        int direction;
+        int waveform;
+        int burst_pulses;
+        float ipi;
+        float ba_ratio;
+        bool enabled;
+        handler.get_mode_info(mode, direction, waveform, burst_pulses, ipi, ba_ratio, enabled);
+        ui->RequestInfoError->setText("Mode info retrieved");
+
+        ui->ModeLabel->setText(mode_names.at(mode));
+        ui->DirectionLabel->setText(direction ? "Reverse" : "Normal");
+        ui->WaveformLabel->setText(waveform_names.at(waveform));
+        ui->BurstPulsesLabel->setText(QString::number(burst_pulses));
+        ui->IPILabel->setText(QString::number(ipi));
+        ui->BAratioLabel->setText(QString::number(ba_ratio));
+        ui->EnabledLabel->setText(enabled ? "Enabled" : "Disabled");
+
+    } else {
+        QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
+    }
+}
 
