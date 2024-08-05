@@ -40,7 +40,7 @@ public slots:
     void startGACorrection();
     void stopGACorrection();
 
-    void startProcessing(processingParameters& parameters);
+    void startPreprocessing(preprocessingParameters& parameters, phaseEstimateParameters &phaseEstParams);
 
 private slots:
     void handleError(const QString& error);

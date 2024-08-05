@@ -24,8 +24,6 @@ public:
     ~ProcessingWindow();
 
 signals:
-    void startProcessing(processingParameters& params);
-
     void setCustomScaleStatus(bool status);
     void setCustomScaleMin(double min);
     void setCustomScaleMax(double max);
@@ -42,12 +40,6 @@ public slots:
     void on_stopButton_clicked();
 
 private slots:
-    void on_downsampling_editingFinished();
-
-    void on_numberOfSamples_editingFinished();
-
-    void on_delay_editingFinished();
-
     void on_edge_editingFinished();
 
     void on_modelOrder_editingFinished();
@@ -69,7 +61,7 @@ private:
 
     dataHandler &handler;
 
-    processingParameters params;
+    phaseEstimateParameters phaseEstParams;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
 

@@ -4,7 +4,9 @@ Glwidget::Glwidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     QTimer *timer = new QTimer(this);
-    dataMatrix_ = Eigen::MatrixXd::Zero(1, 10000);
+    n_channels = 1;
+    matrixCapasity = 10000;
+    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels, matrixCapasity);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -22,23 +24,21 @@ void Glwidget::resizeGL(int w, int h)
 
 void Glwidget::paintGL()
 {
-    if (channelCheckStates_.size() == 0) return;  // Ensure there is data to draw
-
+    if (!draw_graphs) return;  // Ensure there is data to draw
+    
     // Initializing positional parameters
     int windowHeight = height();
-    int enabled_channel_count = std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);
-    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
+    int rowHeight = windowHeight / n_channels;
 
     // min max values for y axis
-    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
-    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
+    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels);
+    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels);
     
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Draw graphs for enabled channels
     int graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
         
         // Set viewport for this row
         glViewport(0, graph_index * rowHeight, width(), rowHeight);
@@ -53,7 +53,7 @@ void Glwidget::paintGL()
         glLoadIdentity();
 
         // Prepare data and draw the line strip
-        Eigen::VectorXd dataVector = dataMatrix_.row(n_channels - 1 - row);
+        Eigen::VectorXd dataVector = dataMatrix_.row(row);
         double minVal = dataVector.minCoeff();
         min_coeffs(row) = minVal;
         double maxVal = dataVector.maxCoeff();
@@ -80,13 +80,12 @@ void Glwidget::paintGL()
 
     graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
 
         // Draw channel name for each channel
         int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
         if (row < channelNames_.size()) {
-            name = channelNames_.at(n_channels - 1 - row);
+            name = channelNames_.at(row);
         }
         painter.drawText(10, yPos_name, name);
 
@@ -108,9 +107,46 @@ void Glwidget::paintGL()
     painter.end();
 }
 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix) { 
+    dataMatrix_ = newMatrix;
+    matrixCapasity = newMatrix.cols();
+    n_channels = newMatrix.rows();
+}
+
+void Glwidget::updateChannelDisplayState(std::vector<bool> channelCheckStates) {
+    if (channelCheckStates.size() != n_channels) {
+        std::cerr << "Channel states size mismatch: " << channelCheckStates.size() << " vs. " << n_channels << std::endl;
+        return;
+    }
+
+    channelCheckStates_ = channelCheckStates; 
+}
+
 void Glwidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
-    emit fetchData();
+    // emit fetchData();
     update();  // Request a re-draw
+}
+
+void Glwidget::updateChannelNamesQt(QStringList channelNames) {
+    if (channelNames.size() != n_channels) {
+        std::cerr << "Channel names size mismatch: " << channelNames.size() << " vs. " << n_channels << std::endl;
+        return;
+    }
+
+    channelNames_ = channelNames; 
+}
+
+void Glwidget::updateChannelNamesSTD(std::vector<std::string> channelNames) {
+    if (channelNames.size() != n_channels) {
+        std::cerr << "Channel names size mismatch: " << channelNames.size() << " vs. " << n_channels << std::endl;
+        return;
+    }
+
+    QStringList newNames;
+    for(size_t i = 0; i < channelNames.size(); i++) {
+        newNames.append(QString::fromStdString(channelNames[i])); 
+    }
+    channelNames_ = newNames;
 }

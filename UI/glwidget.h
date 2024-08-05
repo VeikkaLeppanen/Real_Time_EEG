@@ -29,24 +29,16 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(Eigen::MatrixXd &newMatrix) { 
-        dataMatrix_ = newMatrix;
-        matrixCapasity = newMatrix.cols(); 
-        n_channels = newMatrix.rows();
-    }
-    void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
+    void updateMatrix(const Eigen::MatrixXd &newMatrix);
+    void updateChannelDisplayState(std::vector<bool> channelCheckStates);
     void updateGraph();
-    void updateChannelNamesQt(QStringList channelNames) { channelNames_ = channelNames; }
-    void updateChannelNamesSTD(std::vector<std::string> channelNames) {
-        QStringList newNames;
-        for(size_t i = 0; i < channelNames.size(); i++) {
-            newNames.append(QString::fromStdString(channelNames[i])); 
-        }
-        channelNames_ = newNames;
-    }
+    void updateChannelNamesQt(QStringList channelNames);
+    void updateChannelNamesSTD(std::vector<std::string> channelNames);
     void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
+    void drawGraphsStateChanged(bool isChecked) { draw_graphs = isChecked; }
 
 private:
+    bool draw_graphs = false;
     Eigen::MatrixXd dataMatrix_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = false;

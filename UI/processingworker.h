@@ -9,9 +9,10 @@
 #include "../dataHandler/dataHandler.h"
 #include "../dataProcessor/processingFunctions.h"
 #include <boost/stacktrace.hpp>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
 
-
-struct processingParameters {
+struct preprocessingParameters {
 
     // Number of samples to use for the processing
     int numberOfSamples = 10000;
@@ -21,7 +22,9 @@ struct processingParameters {
 
     // removeBCG
     int delay = 11;
+};
 
+struct phaseEstimateParameters {
     // phase estimate
     size_t edge = 35;
     size_t modelOrder = 15;
@@ -32,15 +35,25 @@ struct processingParameters {
     int phase_shift = 0;                    // for 5000Hz
 };
 
-inline std::ostream& operator<<(std::ostream& os, const processingParameters& params) {
-    os << "Number of Samples: " << params.numberOfSamples
-       << "\nDownsampling Factor: " << params.downsampling_factor
-       << "\nDelay: " << params.delay
-       << "\nEdge: " << params.edge
-       << "\nModel Order: " << params.modelOrder
-       << "\nHilbert Window Length: " << params.hilbertWinLength
-       << "\nStimulation Target: " << params.stimulation_target
-       << "\nPhase Shift: " << params.phase_shift;
+enum class displayState {
+    RAW = 0,
+    DOWNSAMPLED = 1,
+    CWL = 2
+};
+
+inline std::ostream& operator<<(std::ostream& os, const preprocessingParameters& prepParams) {
+    os << "Number of Samples: " << prepParams.numberOfSamples
+       << "\nDownsampling Factor: " << prepParams.downsampling_factor
+       << "\nDelay: " << prepParams.delay;
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const phaseEstimateParameters& phaseEstParams) {
+    os << "\nEdge: " << phaseEstParams.edge
+       << "\nModel Order: " << phaseEstParams.modelOrder
+       << "\nHilbert Window Length: " << phaseEstParams.hilbertWinLength
+       << "\nStimulation Target: " << phaseEstParams.stimulation_target
+       << "\nPhase Shift: " << phaseEstParams.phase_shift;
     return os;
 }
 
@@ -51,7 +64,8 @@ public:
     explicit ProcessingWorker(dataHandler &handler, 
                           Eigen::MatrixXd &processed_data, 
                volatile std::sig_atomic_t &processingWorkerRunning, 
-               const processingParameters &params, 
+                  preprocessingParameters &prepParams, 
+                  phaseEstimateParameters &phaseEstParams, 
                                   QObject* parent = nullptr);
     ~ProcessingWorker();
 
@@ -59,21 +73,39 @@ signals:
     void finished();
     void error(QString err);
     void updateProcessingChannelNames(std::vector<std::string> processing_channel_names);
+    void updateDisplayedData(const Eigen::MatrixXd &newMatrix);
 
 public slots:
+    void process_start() {
+        process_future = QtConcurrent::run([this]() { process(); });
+    };
+    void updateViewState(int index) {
+        display_state = static_cast<displayState>(index);
+    };
+
+private:
     void process();
-    void process_timing();
     void process_testing();
     void process_stimulation_testing();
 
-private:
+
     dataHandler &handler;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
-    const processingParameters &params;
+    preprocessingParameters &prepParams;
+    phaseEstimateParameters &phaseEstParams;
+    QFuture<void> process_future;
+
+    bool performPreprocessing = true;
+    bool performPhaseEstimation = false;
+
+    displayState display_state = displayState::CWL;
 
     const bool debug = false;
+    void print_debug(std::string msg) {
+        if (debug) std::cout << msg << std::endl;
+    };
 };
 
 #endif // PROCESSINGWORKER_H

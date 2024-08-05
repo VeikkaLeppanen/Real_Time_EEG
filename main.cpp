@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
     dataHandler handler;
 
     QApplication a(argc, argv);
+    // qRegisterMetaType<Eigen::MatrixXd>("Eigen::MatrixXd");
+    // qRegisterMetaType<Eigen::MatrixXd&>("Eigen::MatrixXd&");
     MainWindow w(handler, signal_received);
     w.show();
     return a.exec();

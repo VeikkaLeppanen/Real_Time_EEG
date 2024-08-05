@@ -1,10 +1,14 @@
 #include "eegwindow.h"
 
-eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent) 
+eegWindow::eegWindow(dataHandler &handler, 
+      volatile std::sig_atomic_t &signal_received,
+      volatile std::sig_atomic_t &processingWorkerRunning,
+                         QWidget *parent) 
     : QMainWindow(parent), 
       ui(new Ui::EegWindow),
       handler(handler),
-      signal_received(signal_received)
+      signal_received(signal_received),
+      processingWorkerRunning(processingWorkerRunning)
     {
         ui->setupUi(this);
 
@@ -21,6 +25,9 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         ui->lineEditGAaverage->setText(QString::number(GAAverage));
         ui->filter1->setChecked(handler.getFilterState());
         ui->checkBox_2->setChecked(handler.getBaselineState());
+        ui->numberOfSamples->setText(QString::number(prepParams.numberOfSamples));
+        ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
+        ui->delay->setText(QString::number(prepParams.delay));
 
         setWindowTitle("EEG Window");
         resize(1280, 720);
@@ -28,9 +35,9 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         checkHandlerTimer = new QTimer(this);
         connect(checkHandlerTimer, &QTimer::timeout, this, &eegWindow::checkHandlerReady);
 
-        Glwidget* glWidget = ui->openglWidget;
+        glWidget = ui->openglWidget;
         if (glWidget) {
-            connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
+            // connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
             connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
             connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
             connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
@@ -60,7 +67,7 @@ void eegWindow::handleError(const QString &error)
 void eegWindow::updateData() 
 {
     Glwidget* glWidget = ui->openglWidget;
-    if (glWidget && handler.isReady()) {
+    if (glWidget && processingWorkerRunning) {
         Eigen::MatrixXd newMatrix = handler.returnLatestDataInOrder(samples_to_display);
     
         glWidget->updateMatrix(newMatrix);
@@ -275,5 +282,62 @@ void eegWindow::on_checkBox_2_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     handler.setBaselineState(isChecked);
+}
+
+
+void eegWindow::on_numberOfSamples_editingFinished()
+{
+    bool ok;
+    int value = ui->numberOfSamples->text().toInt(&ok);
+    if (ok) {
+        prepParams.numberOfSamples = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void eegWindow::on_downsampling_editingFinished()
+{
+    bool ok;
+    int value = ui->downsampling->text().toInt(&ok);
+    if (ok && (value > 0)) {
+        prepParams.downsampling_factor = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+
+void eegWindow::on_delay_editingFinished()
+{
+    bool ok;
+    int value = ui->delay->text().toInt(&ok);
+    if (ok) {
+        prepParams.delay = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void eegWindow::on_startButton_clicked()
+{
+    if(processingWorkerRunning) {
+        QMessageBox::warning(this, "Error", "Processing is already running.");
+    } else {
+        std::cout << "Preprocessing start" << '\n';
+        emit startPreprocessing(prepParams, phaseEstParams);
+        glWidget->drawGraphsStateChanged(true);
+            // connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
+    }
+}
+
+void eegWindow::on_stopButton_clicked()
+{
+    processingWorkerRunning = 0;
+}
+
+void eegWindow::on_comboBox_view_currentIndexChanged(int index)
+{
+    emit viewStateChanged(index);
 }
 

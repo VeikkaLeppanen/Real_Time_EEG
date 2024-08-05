@@ -93,7 +93,7 @@ void MainWindow::stopGACorrection() {
 void MainWindow::on_EEG_clicked()
 {
     if (!eegwindow) {
-        eegwindow = new eegWindow(handler, signal_received, this);
+        eegwindow = new eegWindow(handler, signal_received, processingWorkerRunning, this);
         eegwindow->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
         connect(eegwindow, &eegWindow::destroyed, this, &MainWindow::resetEegWindowPointer);
     }
@@ -104,11 +104,11 @@ void MainWindow::on_EEG_clicked()
     connect(eegwindow, &eegWindow::applyGACorrection, this, &MainWindow::setGACorrection);
     connect(eegwindow, &eegWindow::startGACorrection, this, &MainWindow::startGACorrection);
     connect(eegwindow, &eegWindow::stopGACorrection, this, &MainWindow::stopGACorrection);
+    connect(eegwindow, &eegWindow::startPreprocessing, this, &MainWindow::startPreprocessing);
     
     MainGlWidget* mainglWidget = ui->mainGlWidget;
     if (mainglWidget) {
-        connect(eegwindow, &eegWindow::updateChannelNamesQt, mainglWidget, &MainGlWidget::updateChannelNamesQt);
-        // emit updateChannelNamesSTD(handler.getChannelNames());
+        // connect(eegwindow, &ProcessingWorker::updateChannelNamesQt, mainglWidget, &MainGlWidget::updateChannelNamesQt);
     } else {
         qWarning("Glwidget not found in UI!");
     }
@@ -128,24 +128,25 @@ void MainWindow::on_processing_clicked()
     processingWindow->show();
     processingWindow->raise();
     processingWindow->activateWindow();
-    connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startProcessing);
+
+    // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
+    // connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startPreprocessing);
 }
 
 void MainWindow::resetProcessingWindowPointer() {
     processingWindow = nullptr;  // Reset the pointer after the window is destroyed
 }
 
-void MainWindow::startProcessing(processingParameters& parameters)
+void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEstimateParameters &phaseEstParams)
 {
-    std::cout << "Processing start" << '\n';
     if (!processingWorkerRunning && handler.isReady()) {
         processingWorkerRunning = 1;
 
         QThread* thread = new QThread;
-        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, parameters);
+        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, prepParams, phaseEstParams);
         worker->moveToThread(thread);
 
-        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process);       // Switch between differentprocessing functions here
+        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_start);       // Switch between differentprocessing functions here
         QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
         QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
         QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
@@ -157,7 +158,11 @@ void MainWindow::startProcessing(processingParameters& parameters)
         });
 
         thread->start();
-        QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
+
+        // QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
+        QObject::connect(worker, &ProcessingWorker::updateDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+        QObject::connect(eegwindow, &eegWindow::viewStateChanged, worker, &ProcessingWorker::updateViewState);
+        emit eegwindow->viewStateChanged(0);
     } else {
         std::cout << "Processing start failed" << '\n';
     }
