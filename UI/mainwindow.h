@@ -77,6 +77,7 @@ private:
     eegWindow *eegwindow = nullptr;
     ProcessingWindow *processingWindow = nullptr;
     TriggeringWindow *triggeringWindow = nullptr;
+    ProcessingWorker *worker = nullptr;
 
     volatile std::sig_atomic_t &signal_received;
     volatile std::sig_atomic_t processingWorkerRunning = 0;

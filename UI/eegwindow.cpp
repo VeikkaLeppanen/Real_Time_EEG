@@ -37,7 +37,7 @@ eegWindow::eegWindow(dataHandler &handler,
 
         glWidget = ui->openglWidget;
         if (glWidget) {
-            // connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
+            connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
             connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
             connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
             connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
@@ -66,11 +66,11 @@ void eegWindow::handleError(const QString &error)
 
 void eegWindow::updateData() 
 {
-    Glwidget* glWidget = ui->openglWidget;
-    if (glWidget && processingWorkerRunning) {
-        Eigen::MatrixXd newMatrix = handler.returnLatestDataInOrder(samples_to_display);
-    
-        glWidget->updateMatrix(newMatrix);
+    if (processingWorkerRunning) return;
+
+    glWidget = ui->openglWidget;
+    if (glWidget && handler.isReady()) {
+        glWidget->updateMatrix(handler.returnLatestDataInOrder(samples_to_display));
     }
 }
 
@@ -326,7 +326,6 @@ void eegWindow::on_startButton_clicked()
     } else {
         std::cout << "Preprocessing start" << '\n';
         emit startPreprocessing(prepParams, phaseEstParams);
-        glWidget->drawGraphsStateChanged(true);
             // connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
     }
 }

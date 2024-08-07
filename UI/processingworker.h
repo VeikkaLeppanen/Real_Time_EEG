@@ -72,8 +72,10 @@ public:
 signals:
     void finished();
     void error(QString err);
-    void updateProcessingChannelNames(std::vector<std::string> processing_channel_names);
-    void updateDisplayedData(const Eigen::MatrixXd &newMatrix);
+    void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
+    void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
+    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix);
+    void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix);
 
 public slots:
     void process_start() {
@@ -82,6 +84,8 @@ public slots:
     void updateViewState(int index) {
         display_state = static_cast<displayState>(index);
     };
+    void setFilterState(bool isChecked) { filter_state = isChecked; }
+    void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
 
 private:
     void process();
@@ -98,9 +102,14 @@ private:
     QFuture<void> process_future;
 
     bool performPreprocessing = true;
-    bool performPhaseEstimation = false;
+    bool performPhaseEstimation = true;
+    bool performSNRcheck = false;
+
+    int spatial_channel_index = 0;
+    bool filter_state = false;
 
     displayState display_state = displayState::CWL;
+    bool phasEst_display_all_EEG_channels = false;
 
     const bool debug = false;
     void print_debug(std::string msg) {

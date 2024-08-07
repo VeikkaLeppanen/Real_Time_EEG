@@ -51,14 +51,13 @@ void ProcessingWorker::process()
         int n_CWL_channels_to_use = 7;
 
         // FIR filters
-        Eigen::VectorXd LSFIR_coeffs_1;
         Eigen::VectorXd LSFIR_coeffs_2;
-        getLSFIRCoeffs_0_80Hz(LSFIR_coeffs_1);
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
+        int filter2_length = 250;
 
         // phase estimate
         size_t edge = phaseEstParams.edge;
-        int edge_cut_cols = downsampled_cols - 2 * edge;
+        int edge_cut_cols = filter2_length - 2 * edge;
         size_t modelOrder = phaseEstParams.modelOrder;
         size_t hilbertWinLength = phaseEstParams.hilbertWinLength;
         size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
@@ -79,7 +78,7 @@ void ProcessingWorker::process()
         Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
-        Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(downsampled_cols);
+        Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(filter2_length);
         std::vector<double> EEG_predicted(estimationLength, 0.0);
         std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
         Eigen::VectorXd phaseAngles(estimationLength);
@@ -88,12 +87,12 @@ void ProcessingWorker::process()
         // Data visualization matrices
         Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
         int display_length = downsampled_cols + estimationLength - edge;
-        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(6, display_length);
+        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(8, display_length);
         print_debug("Visualization matrices initialized");
 
         // Set names for each channel in Data_to_display
-        std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle", "stimulation point"};
-        emit updateProcessingChannelNames(processing_channel_names);
+        std::vector<std::string> EEG_channel_names;
+        std::vector<std::string> PhaseEst_channel_names;
         print_debug("Channel names set");
 
         int seq_num_tracker = 0;
@@ -101,7 +100,9 @@ void ProcessingWorker::process()
         while(processingWorkerRunning) {
             print_debug("Processing start");
             if (!performPreprocessing) continue;
-
+    
+            PhaseEst_channel_names.clear();
+            EEG_channel_names = handler.getChannelNames();
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
             
             // Check if current sample is processed
@@ -116,77 +117,115 @@ void ProcessingWorker::process()
             print_debug("Checks passed");
 
             // Downsampling
-            downsample(all_channels, EEG_downsampled, downsampling_factor);
             print_debug("Downsampled");
+            downsample(all_channels, EEG_downsampled, downsampling_factor);
 
             // CWL
+            print_debug("Delay Embedding");
             if (delay > 0) {
                 // Perform delay embedding if delay is positive
                 delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
             } else {
                 expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
             }
-            print_debug("Delay Embedding");
 
-            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
             print_debug("removeBCG");
+            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
             
+            // Update the EEG window graph data
             switch (display_state) 
             {
                 case displayState::RAW:
-                    emit updateDisplayedData(all_channels);
+                    emit updateEEGDisplayedData(all_channels);
+                    emit updateEEGwindowNames(EEG_channel_names);
                     break;
                 case displayState::DOWNSAMPLED:
-                    emit updateDisplayedData(EEG_downsampled);
+                    emit updateEEGDisplayedData(EEG_downsampled);
+                    emit updateEEGwindowNames(EEG_channel_names);
                     break;
                 case displayState::CWL:
-                    emit updateDisplayedData(EEG_corrected);
+                    emit updateEEGDisplayedData(EEG_corrected);
+                    emit updateEEGwindowNames(EEG_channel_names);
                     break;
             }
+
             if (!performPhaseEstimation) continue;
 
-            EEG_spatial = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
             print_debug("Spatial filtering");
+            if (spatial_channel_index >= 0 && spatial_channel_index < EEG_corrected.rows()) {
+                
+                Eigen::VectorXd sum_of_all_rows = EEG_corrected.colwise().sum();
+                sum_of_all_rows -= EEG_corrected.row(spatial_channel_index).transpose();
+
+                Eigen::VectorXd mean_of_remaining = sum_of_all_rows / (EEG_corrected.rows() - 1);
+                EEG_spatial = EEG_corrected.row(spatial_channel_index) - mean_of_remaining.transpose();
+
+            } else {
+                // Handle the case where the index is out of bounds
+                std::cerr << "Error: Row index is out of bounds." << std::endl;
+            }
             
             // SNR check
-            double SNR = calculateSNR(EEG_spatial, 64, 500, 500.0, 10.0, 2.0);
-            if (SNR < 1.0) {
-                std::cout << "SNR too small: " << SNR << '\n';
-                seq_num_tracker = sequence_number;
-                continue;
+            if (performSNRcheck) {
+                print_debug("SNR check");
+                double SNR = calculateSNR(EEG_spatial, 64, 500, 500.0, 10.0, 2.0);
+                if (SNR < 1.0) {
+                    std::cout << "SNR too small: " << SNR << '\n';
+                    seq_num_tracker = sequence_number;
+                    continue;
+                }
             }
-            print_debug("SNR check");
 
             // Filter2
-            EEG_filter2 = zeroPhaseLSFIR(EEG_spatial, LSFIR_coeffs_2);
             print_debug("Second filtering");
+            if (filter_state) {
+                EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.tail(filter2_length), LSFIR_coeffs_2);
+            } else {
+                EEG_filter2 = EEG_spatial.tail(filter2_length);
+            }
 
             // Phase estimation
-            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             print_debug("AR predicted");
+            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             
             // Hilbert transform
-            EEG_hilbert = hilbertTransform(EEG_predicted);
             print_debug("Hilbert transform");
+            EEG_hilbert = hilbertTransform(EEG_predicted);
             
             // Trigger phase targeting
+            print_debug("Phase targeting");
             int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
             if (trigger_seqNum) { 
                 handler.insertTrigger(trigger_seqNum); 
                 if (stimulation_tracker < 0) stimulation_tracker++;
             }
-            print_debug("Phase targeting");
 
-            // Trigger visualization
-            if (stimulation_tracker > stim_window_delay) {
-                int stim_length = (stim_window_delay + stimulation_tracker) / downsampling_factor;
-                int stim_length_cut = (stim_window_delay * 2) / downsampling_factor;
-                Data_to_display.row(5).segment(downsampled_cols - stim_length_cut, stim_length_cut) = EEG_filter2.tail(stim_length).head(stim_length_cut);
-                stimulation_tracker = -1;
-            } else if (stimulation_tracker > -1) {
-                stimulation_tracker += sequence_number - seq_num_tracker;
+            Data_to_display.topLeftCorner(5, downsampled_cols) = EEG_corrected;
+            Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
+            Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - edge) = EEG_filter2.head(filter2_length - edge);
+
+            Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
+            Data_to_display.row(7).tail(estimationLength) = phaseAngles.tail(estimationLength);
+
+            if (phasEst_display_all_EEG_channels) {
+                for (int i = 0; i < n_EEG_channels_to_use; ++i) {
+                    if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
+                    else PhaseEst_channel_names.push_back("Undefined");
+                }
+                emit updatePhaseEstDisplayedData(Data_to_display);
+            } else {
+                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use));
             }
-            print_debug("Stimulation tracking");
+            
+            if (spatial_channel_index >= 0 && spatial_channel_index < EEG_channel_names.size()) {
+                PhaseEst_channel_names.push_back("Spatial filtered(" + EEG_channel_names[spatial_channel_index] + ")");
+            } else {
+                PhaseEst_channel_names.push_back("Spatial filtered(Undefined)");
+            }
+
+            PhaseEst_channel_names.push_back("Band-pass filtered 9-13Hz & Prediction");
+            PhaseEst_channel_names.push_back("Phase angles");
+            emit updatePhaseEstwindowNames(PhaseEst_channel_names);
 
             seq_num_tracker = sequence_number;
 
@@ -282,7 +321,7 @@ void ProcessingWorker::process_testing()
 
         // Set names for each channel in Data_to_display
         std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle"};
-        emit updateProcessingChannelNames(processing_channel_names);
+        emit updatePhaseEstwindowNames(processing_channel_names);
         
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
@@ -423,9 +462,7 @@ void ProcessingWorker::process_stimulation_testing()
         int n_CWL_channels_to_use = 7;
 
         // FIR filters
-        Eigen::VectorXd LSFIR_coeffs_1;
         Eigen::VectorXd LSFIR_coeffs_2;
-        getLSFIRCoeffs_0_80Hz(LSFIR_coeffs_1);
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
 
         // phase estimate
@@ -461,7 +498,7 @@ void ProcessingWorker::process_stimulation_testing()
 
         // Set names for each channel in Data_to_display
         std::vector<std::string> processing_channel_names = {"Filter1 & downsample (channel 0)", "removeBCG (channel 0)", "spatial filter", "Filter2 & phase estimation", "phase angle", "Stimulation"};
-        emit updateProcessingChannelNames(processing_channel_names);
+        emit updatePhaseEstwindowNames(processing_channel_names);
 
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;

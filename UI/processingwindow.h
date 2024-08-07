@@ -23,6 +23,8 @@ public:
                                   QWidget *parent = nullptr);
     ~ProcessingWindow();
 
+    ProcessingGlWidget* getProcessingGlWidget() { return processingglWidget; }
+
 signals:
     void setCustomScaleStatus(bool status);
     void setCustomScaleMin(double min);
@@ -31,6 +33,8 @@ signals:
     bool getCustomScaleStatus();
     double getCustomScaleMin();
     double getCustomScaleMax();
+    void setFilterState(bool isChecked);
+    void setEEGViewState(bool isChecked);
 
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
@@ -56,8 +60,13 @@ private slots:
 
     void on_checkBox_stateChanged(int arg1);
 
+    void on_Filter_checkbox_stateChanged(int arg1);
+
+    void on_checkBox_Channels_stateChanged(int arg1);
+
 private:
     Ui::ProcessingWindow *ui;
+    ProcessingGlWidget *processingglWidget;
 
     dataHandler &handler;
 

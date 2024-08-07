@@ -35,10 +35,8 @@ public slots:
     void updateChannelNamesQt(QStringList channelNames);
     void updateChannelNamesSTD(std::vector<std::string> channelNames);
     void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
-    void drawGraphsStateChanged(bool isChecked) { draw_graphs = isChecked; }
 
 private:
-    bool draw_graphs = false;
     Eigen::MatrixXd dataMatrix_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = false;

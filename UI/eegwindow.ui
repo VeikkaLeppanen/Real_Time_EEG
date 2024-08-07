@@ -280,13 +280,6 @@
                  <item row="3" column="0" colspan="2">
                   <widget class="QComboBox" name="comboBox"/>
                  </item>
-                 <item row="4" column="0" colspan="2">
-                  <widget class="QCheckBox" name="checkBox">
-                   <property name="text">
-                    <string>Display graph scales</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -594,6 +587,13 @@
               <string>STEP 3</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox">
+            <property name="text">
+             <string>Display graph scales</string>
+            </property>
            </widget>
           </item>
          </layout>

@@ -24,7 +24,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     setWindowTitle("Processing Window");
     resize(1280, 720);
 
-    ProcessingGlWidget* processingglWidget = ui->processingGlWidget;
+    processingglWidget = ui->processingGlWidget;
     if (processingglWidget) {
 
         connect(processingglWidget, &ProcessingGlWidget::fetchData, this, &ProcessingWindow::updateData);
@@ -49,7 +49,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
 
 void ProcessingWindow::updateData()
 {
-    ProcessingGlWidget* processingglWidget = ui->processingGlWidget;
+    processingglWidget = ui->processingGlWidget;
     if (processingglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
         std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
@@ -169,5 +169,19 @@ void ProcessingWindow::on_checkBox_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setCustomScaleStatus(isChecked);
+}
+
+
+void ProcessingWindow::on_Filter_checkbox_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setFilterState(isChecked);
+}
+
+
+void ProcessingWindow::on_checkBox_Channels_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setEEGViewState(isChecked);
 }
 

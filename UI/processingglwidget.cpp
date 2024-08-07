@@ -4,10 +4,6 @@ ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     QTimer *timer = new QTimer(this);
-    matrixCapasity_ = 30000;
-    n_channels_ = 0;
-    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
-
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -25,12 +21,11 @@ void ProcessingGlWidget::resizeGL(int w, int h)
 
 void ProcessingGlWidget::paintGL()
 {
-    if (n_channels_ == 0) return;  // Ensure there is data to draw
+    if (dataMatrix_.rows() == 0) return;
     
     // Initializing positional parameters
     int windowHeight = height();
-    int enabled_channel_count = n_channels_;
-    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
+    int rowHeight = windowHeight / n_channels_;
 
     // min max values for y axis
     Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels_);
@@ -82,6 +77,7 @@ void ProcessingGlWidget::paintGL()
         graph_index++;
     }
     
+    /*
     // Draw a vertical line at a specific index of the last graph
     int specific_index = 750; // Replace this with your specific index
 
@@ -102,6 +98,7 @@ void ProcessingGlWidget::paintGL()
     glVertex2f(x, -1.0f);
     glVertex2f(x, 1.0f);
     glEnd();
+    */
 
     // QPainter for text overlays
     QPainter painter(this);
@@ -136,9 +133,32 @@ void ProcessingGlWidget::paintGL()
     painter.end();
 }
 
+void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix) {
+    // Check if dimensions differ
+    if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
+        // Resize dataMatrix_ to match the dimensions of newMatrix
+        dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+    }
+
+    // Assign the new matrix
+    dataMatrix_ = newMatrix;
+
+    // Update other attributes based on the new matrix
+    matrixCapasity_ = newMatrix.cols(); 
+    n_channels_ = newMatrix.rows();
+}
+
 void ProcessingGlWidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
-    emit fetchData();
+    // emit fetchData();
     update();  // Request a re-draw
+}
+
+void ProcessingGlWidget::updateChannelNamesSTD(std::vector<std::string> channelNames) {
+    QStringList newNames;
+    for(size_t i = 0; i < channelNames.size(); i++) {
+        newNames.append(QString::fromStdString(channelNames[i])); 
+    }
+    channelNames_ = newNames;
 }

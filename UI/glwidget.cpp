@@ -4,9 +4,6 @@ Glwidget::Glwidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     QTimer *timer = new QTimer(this);
-    n_channels = 1;
-    matrixCapasity = 10000;
-    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels, matrixCapasity);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -24,8 +21,8 @@ void Glwidget::resizeGL(int w, int h)
 
 void Glwidget::paintGL()
 {
-    if (!draw_graphs) return;  // Ensure there is data to draw
-    
+    if (dataMatrix_.rows() == 0) return;
+
     // Initializing positional parameters
     int windowHeight = height();
     int rowHeight = windowHeight / n_channels;
@@ -114,36 +111,21 @@ void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix) {
 }
 
 void Glwidget::updateChannelDisplayState(std::vector<bool> channelCheckStates) {
-    if (channelCheckStates.size() != n_channels) {
-        std::cerr << "Channel states size mismatch: " << channelCheckStates.size() << " vs. " << n_channels << std::endl;
-        return;
-    }
-
     channelCheckStates_ = channelCheckStates; 
 }
 
 void Glwidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
-    // emit fetchData();
+    emit fetchData();
     update();  // Request a re-draw
 }
 
 void Glwidget::updateChannelNamesQt(QStringList channelNames) {
-    if (channelNames.size() != n_channels) {
-        std::cerr << "Channel names size mismatch: " << channelNames.size() << " vs. " << n_channels << std::endl;
-        return;
-    }
-
     channelNames_ = channelNames; 
 }
 
 void Glwidget::updateChannelNamesSTD(std::vector<std::string> channelNames) {
-    if (channelNames.size() != n_channels) {
-        std::cerr << "Channel names size mismatch: " << channelNames.size() << " vs. " << n_channels << std::endl;
-        return;
-    }
-
     QStringList newNames;
     for(size_t i = 0; i < channelNames.size(); i++) {
         newNames.append(QString::fromStdString(channelNames[i])); 

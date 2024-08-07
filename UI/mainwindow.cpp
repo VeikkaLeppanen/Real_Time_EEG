@@ -129,6 +129,13 @@ void MainWindow::on_processing_clicked()
     processingWindow->raise();
     processingWindow->activateWindow();
 
+    if (worker) {
+        QObject::connect(worker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
+        QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
+        QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
+        QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
+    }
+
     // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
     // connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startPreprocessing);
 }
@@ -143,7 +150,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
         processingWorkerRunning = 1;
 
         QThread* thread = new QThread;
-        ProcessingWorker* worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, prepParams, phaseEstParams);
+        worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, prepParams, phaseEstParams);
         worker->moveToThread(thread);
 
         QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_start);       // Switch between differentprocessing functions here
@@ -160,7 +167,8 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
         thread->start();
 
         // QObject::connect(worker, &ProcessingWorker::updateProcessingChannelNames, processingWindow, &ProcessingWindow::updateWidgetChannelNames);
-        QObject::connect(worker, &ProcessingWorker::updateDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+        QObject::connect(worker, &ProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+        QObject::connect(worker, &ProcessingWorker::updateEEGwindowNames, eegwindow->getGlWidget(), &Glwidget::updateChannelNamesSTD);
         QObject::connect(eegwindow, &eegWindow::viewStateChanged, worker, &ProcessingWorker::updateViewState);
         emit eegwindow->viewStateChanged(0);
     } else {
