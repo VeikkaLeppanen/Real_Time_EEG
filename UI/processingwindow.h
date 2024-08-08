@@ -35,13 +35,15 @@ signals:
     double getCustomScaleMax();
     void setFilterState(bool isChecked);
     void setEEGViewState(bool isChecked);
+    void setStimulationState(bool isChecked);
+    void setphaseEstimateState(bool isChecked);
+
+    void setPhaseEstParams(phaseEstimateParameters phaseEstParams);
 
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
 public slots:
     void updateData();
-    void on_startButton_clicked();
-    void on_stopButton_clicked();
 
 private slots:
     void on_edge_editingFinished();
@@ -63,6 +65,14 @@ private slots:
     void on_Filter_checkbox_stateChanged(int arg1);
 
     void on_checkBox_Channels_stateChanged(int arg1);
+
+    void on_checkBox_Stimulation_stateChanged(int arg1);
+
+    void on_checkBox_phaseEstimate_stateChanged(int arg1);
+
+    void on_setParamsButton_clicked();
+
+    void on_comboBox_currentIndexChanged(int index);
 
 private:
     Ui::ProcessingWindow *ui;

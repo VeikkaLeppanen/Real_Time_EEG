@@ -109,14 +109,37 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
-              <item row="8" column="0">
+              <item row="9" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
                  <string>model order</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
+              <item row="10" column="1">
+               <widget class="QLineEdit" name="hilbertLength">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QComboBox" name="comboBox"/>
+              </item>
+              <item row="9" column="1">
+               <widget class="QLineEdit" name="modelOrder">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0">
                <widget class="QLabel" name="label">
                 <property name="maximumSize">
                  <size>
@@ -129,75 +152,14 @@
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
-               <widget class="QLabel" name="label_9">
+              <item row="11" column="0">
+               <widget class="QCheckBox" name="checkBox_Stimulation">
                 <property name="text">
                  <string>Stimulation</string>
                 </property>
                </widget>
               </item>
               <item row="12" column="1">
-               <widget class="QLineEdit" name="phaseShift">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_8">
-                <property name="text">
-                 <string>Phase estimate</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_5">
-                <property name="text">
-                 <string>edge</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="1">
-               <widget class="QLineEdit" name="modelOrder">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="1">
-               <widget class="QLineEdit" name="edge">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="1">
-               <widget class="QLineEdit" name="hilbertLength">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>stimulation target</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="1">
                <widget class="QLineEdit" name="stimulationTarget">
                 <property name="maximumSize">
                  <size>
@@ -207,43 +169,17 @@
                 </property>
                </widget>
               </item>
-              <item row="14" column="0">
-               <widget class="QPushButton" name="startButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Start</string>
-                </property>
-               </widget>
-              </item>
-              <item row="14" column="1">
-               <widget class="QPushButton" name="stopButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Stop</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
+              <item row="10" column="0">
                <widget class="QLabel" name="label_3">
                 <property name="text">
                  <string>hilbert length</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QCheckBox" name="Filter_checkbox">
+              <item row="12" column="0">
+               <widget class="QLabel" name="label_2">
                 <property name="text">
-                 <string>Filter 9-13Hz</string>
+                 <string>stimulation target</string>
                 </property>
                </widget>
               </item>
@@ -254,10 +190,61 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
-               <widget class="QComboBox" name="comboBox"/>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>edge</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QLineEdit" name="edge">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="1">
+               <widget class="QLineEdit" name="phaseShift">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QCheckBox" name="Filter_checkbox">
+                <property name="text">
+                 <string>Filter 9-13Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="checkBox_phaseEstimate">
+                <property name="text">
+                 <string>Phase estimate</string>
+                </property>
+               </widget>
               </item>
              </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="setParamsButton">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Set parameters</string>
+             </property>
             </widget>
            </item>
           </layout>

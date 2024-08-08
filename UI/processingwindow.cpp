@@ -62,23 +62,6 @@ ProcessingWindow::~ProcessingWindow()
     delete ui;
 }
 
-void ProcessingWindow::on_startButton_clicked()
-{
-    if(processingWorkerRunning) {
-        QMessageBox::warning(this, "Error", "Processing is already running.");
-    } else {
-        std::cout << "Phase estimate start start" << '\n';
-        
-        // PHASE ESTIMATE BEGIN SIGNAL HERE
-        // emit startProcessing(params);
-    }
-}
-
-void ProcessingWindow::on_stopButton_clicked()
-{
-    processingWorkerRunning = 0;
-}
-
 void ProcessingWindow::on_edge_editingFinished()
 {
     bool ok;
@@ -183,5 +166,30 @@ void ProcessingWindow::on_checkBox_Channels_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setEEGViewState(isChecked);
+}
+
+
+void ProcessingWindow::on_checkBox_Stimulation_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setStimulationState(isChecked);
+}
+
+
+void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setphaseEstimateState(isChecked);
+}
+
+
+void ProcessingWindow::on_setParamsButton_clicked()
+{
+    emit setPhaseEstParams(phaseEstParams);
+}
+
+void ProcessingWindow::on_comboBox_currentIndexChanged(int index)
+{
+
 }
 

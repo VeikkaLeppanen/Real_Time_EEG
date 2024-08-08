@@ -42,53 +42,33 @@ void ProcessingWorker::process()
 
         //  downsampling
         int downsampling_factor = prepParams.downsampling_factor;
-        int downsampled_cols = (samples_to_process + downsampling_factor - 1) / downsampling_factor;
+        downsampled_cols = (samples_to_process + downsampling_factor - 1) / downsampling_factor;
 
         // removeBCG
         int delay = prepParams.delay;
-        int step = (1+2*delay);
-        int n_EEG_channels_to_use = 5;
+        int n_EEG_channels_to_use = 5;      
         int n_CWL_channels_to_use = 7;
 
         // FIR filters
         Eigen::VectorXd LSFIR_coeffs_2;
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
-        int filter2_length = 250;
 
         // phase estimate
-        size_t edge = phaseEstParams.edge;
-        int edge_cut_cols = filter2_length - 2 * edge;
-        size_t modelOrder = phaseEstParams.modelOrder;
-        size_t hilbertWinLength = phaseEstParams.hilbertWinLength;
-        size_t estimationLength = edge + std::ceil(hilbertWinLength / 2);
-
-        // stimulation
-        double stimulation_target = phaseEstParams.stimulation_target;
-        int phase_shift = phaseEstParams.phase_shift;
-        int stim_window_delay = 2500;
+        setPhaseEstimateParameters(phaseEstParams);
 
         int n_channels = handler.get_channel_count();
         
         print_debug("Params initialized");
 
-        // Memory preallocation for processing matrices
+        // Memory preallocation for preprocessing matrices
         Eigen::MatrixXd all_channels = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
         Eigen::MatrixXd EEG_downsampled = Eigen::MatrixXd::Zero(n_channels, downsampled_cols);
-        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * step, downsampled_cols);
+        Eigen::MatrixXd expCWL = Eigen::MatrixXd::Zero(n_CWL_channels_to_use * (1+2*delay), downsampled_cols);
         Eigen::MatrixXd pinvCWL = Eigen::MatrixXd::Zero(downsampled_cols, downsampled_cols);
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
-        Eigen::VectorXd EEG_filter2 = Eigen::VectorXd::Zero(filter2_length);
-        std::vector<double> EEG_predicted(estimationLength, 0.0);
-        std::vector<std::complex<double>> EEG_hilbert(estimationLength, std::complex<double>(0.0, 0.0));
-        Eigen::VectorXd phaseAngles(estimationLength);
-        print_debug("Memory allocated");
 
-        // Data visualization matrices
-        Eigen::VectorXd EEG_predicted_EIGEN = Eigen::VectorXd::Zero(EEG_predicted.size());
-        int display_length = downsampled_cols + estimationLength - edge;
-        Eigen::MatrixXd Data_to_display = Eigen::MatrixXd::Zero(8, display_length);
-        print_debug("Visualization matrices initialized");
+        print_debug("Memory allocated");
 
         // Set names for each channel in Data_to_display
         std::vector<std::string> EEG_channel_names;
@@ -178,7 +158,7 @@ void ProcessingWorker::process()
 
             // Filter2
             print_debug("Second filtering");
-            if (filter_state) {
+            if (performFiltering) {
                 EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.tail(filter2_length), LSFIR_coeffs_2);
             } else {
                 EEG_filter2 = EEG_spatial.tail(filter2_length);
@@ -186,23 +166,29 @@ void ProcessingWorker::process()
 
             // Phase estimation
             print_debug("AR predicted");
-            EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+            if (performEstimation) {
+                EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(phaseEstParams.edge, edge_cut_cols), phaseEstParams.modelOrder, estimationLength);
+            }
             
             // Hilbert transform
             print_debug("Hilbert transform");
-            EEG_hilbert = hilbertTransform(EEG_predicted);
-            
+            if (performHilbertTransform) {
+                EEG_hilbert = hilbertTransform(EEG_predicted);
+            }
+
             // Trigger phase targeting
             print_debug("Phase targeting");
-            int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
-            if (trigger_seqNum) { 
-                handler.insertTrigger(trigger_seqNum); 
-                if (stimulation_tracker < 0) stimulation_tracker++;
+            if (performPhaseTargeting) {
+                int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, phaseEstParams.edge, phaseEstParams.phase_shift, phaseEstParams.stimulation_target);
+                if (trigger_seqNum) { 
+                    handler.insertTrigger(trigger_seqNum); 
+                    if (stimulation_tracker < 0) stimulation_tracker++;
+                }
             }
 
             Data_to_display.topLeftCorner(5, downsampled_cols) = EEG_corrected;
             Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
-            Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - edge) = EEG_filter2.head(filter2_length - edge);
+            Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - phaseEstParams.edge) = EEG_filter2.head(filter2_length - phaseEstParams.edge);
 
             Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             Data_to_display.row(7).tail(estimationLength) = phaseAngles.tail(estimationLength);

@@ -1071,9 +1071,7 @@ std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data) {
 
     fftw_free(in);
     fftw_free(out_fftw);
-    for (int i = 0; i < out.size(); ++i) {
-        std::cout << "Freq Bin " << i << ": Magnitude = " << std::abs(out[i]) << std::endl;
-    }
+    
     return out;
 }   
 

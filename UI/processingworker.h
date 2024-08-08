@@ -25,6 +25,10 @@ struct preprocessingParameters {
 };
 
 struct phaseEstimateParameters {
+
+    // Filter 9-13Hz
+    int filter2_length = 250;
+
     // phase estimate
     size_t edge = 35;
     size_t modelOrder = 15;
@@ -84,8 +88,33 @@ public slots:
     void updateViewState(int index) {
         display_state = static_cast<displayState>(index);
     };
-    void setFilterState(bool isChecked) { filter_state = isChecked; }
+
+    void setPhaseEstimationState(bool isChecked) { performPhaseEstimation = isChecked; }
+
+    void setFilterState(bool isChecked) { performFiltering = isChecked; }
+    void setEstimationState(bool isChecked) { performEstimation = isChecked; }
+    void setHilbertTransformState(bool isChecked) { performHilbertTransform = isChecked; }
+    void setPhaseTargetingState(bool isChecked) { performPhaseTargeting = isChecked; }
     void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
+
+    void setPhaseEstimateParameters(phaseEstimateParameters newParams) {
+        phaseEstParams.edge = newParams.edge;
+        phaseEstParams.modelOrder = newParams.modelOrder;
+        phaseEstParams.hilbertWinLength = newParams.hilbertWinLength; 
+        phaseEstParams.stimulation_target = newParams.stimulation_target;
+        phaseEstParams.phase_shift = newParams.phase_shift;
+
+        edge_cut_cols = filter2_length - 2 * newParams.edge;
+        estimationLength = newParams.edge + std::ceil(newParams.hilbertWinLength / 2);
+        display_length = downsampled_cols + estimationLength - newParams.edge;
+
+        EEG_filter2 = Eigen::VectorXd::Zero(filter2_length);
+        EEG_predicted.resize(estimationLength, 0.0);
+        EEG_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
+        phaseAngles = Eigen::VectorXd::Zero(estimationLength);
+
+        Data_to_display = Eigen::MatrixXd::Zero(8, display_length);
+    }
 
 private:
     void process();
@@ -101,15 +130,30 @@ private:
     phaseEstimateParameters &phaseEstParams;
     QFuture<void> process_future;
 
+    int downsampled_cols;
+
     bool performPreprocessing = true;
-    bool performPhaseEstimation = true;
+    bool performPhaseEstimation = false;
     bool performSNRcheck = false;
+    bool performFiltering = false;
+    bool performEstimation = true;
+    bool performHilbertTransform = true;
+    bool performPhaseTargeting = false;
 
     int spatial_channel_index = 0;
-    bool filter_state = false;
+    int filter2_length = 250;
+    int edge_cut_cols;
+    size_t estimationLength;
+
+    Eigen::VectorXd EEG_filter2;
+    std::vector<double> EEG_predicted;
+    std::vector<std::complex<double>> EEG_hilbert;
+    Eigen::VectorXd phaseAngles;
 
     displayState display_state = displayState::CWL;
     bool phasEst_display_all_EEG_channels = false;
+    int display_length;
+    Eigen::MatrixXd Data_to_display;
 
     const bool debug = false;
     void print_debug(std::string msg) {

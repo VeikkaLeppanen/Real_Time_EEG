@@ -134,6 +134,9 @@ void MainWindow::on_processing_clicked()
         QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
         QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
         QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
+        QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
+        QObject::connect(processingWindow, &ProcessingWindow::setStimulationState, worker, &ProcessingWorker::setPhaseTargetingState);
+        QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
     }
 
     // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
