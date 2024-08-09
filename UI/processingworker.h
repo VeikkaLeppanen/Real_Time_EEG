@@ -81,6 +81,8 @@ signals:
     void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix);
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix);
 
+    void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
+
 public slots:
     void process_start() {
         process_future = QtConcurrent::run([this]() { process(); });
@@ -96,6 +98,7 @@ public slots:
     void setHilbertTransformState(bool isChecked) { performHilbertTransform = isChecked; }
     void setPhaseTargetingState(bool isChecked) { performPhaseTargeting = isChecked; }
     void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
+    void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
     void setPhaseEstimateParameters(phaseEstimateParameters newParams) {
         phaseEstParams.edge = newParams.edge;

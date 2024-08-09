@@ -57,6 +57,11 @@ void ProcessingWindow::updateData()
     }
 }
 
+void ProcessingWindow::updateSpatialChannelNames(std::vector<std::string> names) 
+{
+    spatial_channel_names = names;
+}
+
 ProcessingWindow::~ProcessingWindow()
 {
     delete ui;
@@ -173,6 +178,7 @@ void ProcessingWindow::on_checkBox_Stimulation_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setStimulationState(isChecked);
+    handler.setTriggerEnableStatus(isChecked);
 }
 
 
@@ -188,8 +194,18 @@ void ProcessingWindow::on_setParamsButton_clicked()
     emit setPhaseEstParams(phaseEstParams);
 }
 
-void ProcessingWindow::on_comboBox_currentIndexChanged(int index)
+void ProcessingWindow::on_comboBox_spatialTarget_currentIndexChanged(int index)
 {
+    emit setSpatilaTargetChannel(index);
+}
 
+void ProcessingWindow::on_refreshButton_clicked()
+{
+    ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it
+
+    for (const auto &name : spatial_channel_names)
+    {
+        ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
+    }
 }
 

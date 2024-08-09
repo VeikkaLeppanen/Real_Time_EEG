@@ -97,6 +97,7 @@ public:
     void setTriggerConnectStatus(bool value) { triggerPortState = value; }
     bool getTriggerConnectStatus() { return triggerPortState; }
 
+    void setTriggerEnableStatus(bool value) { triggerEnableState = value; }
     bool getTriggerEnableStatus() { return triggerEnableState; }
 
     void setTriggerTimeLimit(double value) { magPro_3G.setTriggerTimeLimit(value); }

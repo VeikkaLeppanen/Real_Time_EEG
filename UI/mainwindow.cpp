@@ -132,11 +132,13 @@ void MainWindow::on_processing_clicked()
     if (worker) {
         QObject::connect(worker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
         QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
+        QObject::connect(worker, &ProcessingWorker::updateSpatialChannelNames, processingWindow, &ProcessingWindow::updateSpatialChannelNames);
         QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
         QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
         QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
         QObject::connect(processingWindow, &ProcessingWindow::setStimulationState, worker, &ProcessingWorker::setPhaseTargetingState);
         QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
+        QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
     }
 
     // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
@@ -174,6 +176,19 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
         QObject::connect(worker, &ProcessingWorker::updateEEGwindowNames, eegwindow->getGlWidget(), &Glwidget::updateChannelNamesSTD);
         QObject::connect(eegwindow, &eegWindow::viewStateChanged, worker, &ProcessingWorker::updateViewState);
         emit eegwindow->viewStateChanged(0);
+
+        if (processingWindow) {
+            QObject::connect(worker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
+            QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
+            QObject::connect(worker, &ProcessingWorker::updateSpatialChannelNames, processingWindow, &ProcessingWindow::updateSpatialChannelNames);
+            QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
+            QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
+            QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
+            QObject::connect(processingWindow, &ProcessingWindow::setStimulationState, worker, &ProcessingWorker::setPhaseTargetingState);
+            QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
+            QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
+        }
+
     } else {
         std::cout << "Processing start failed" << '\n';
     }

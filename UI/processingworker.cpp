@@ -83,6 +83,12 @@ void ProcessingWorker::process()
     
             PhaseEst_channel_names.clear();
             EEG_channel_names = handler.getChannelNames();
+
+            if (EEG_channel_names.size() >= n_EEG_channels_to_use) { 
+                std::vector<std::string> EEG_spatial_channel_names(EEG_channel_names.begin(), EEG_channel_names.begin() + n_EEG_channels_to_use);
+                emit updateSpatialChannelNames(EEG_spatial_channel_names);
+            }
+
             int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
             
             // Check if current sample is processed

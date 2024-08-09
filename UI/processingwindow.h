@@ -37,6 +37,7 @@ signals:
     void setEEGViewState(bool isChecked);
     void setStimulationState(bool isChecked);
     void setphaseEstimateState(bool isChecked);
+    void setSpatilaTargetChannel(int index);
 
     void setPhaseEstParams(phaseEstimateParameters phaseEstParams);
 
@@ -44,6 +45,7 @@ signals:
 
 public slots:
     void updateData();
+    void updateSpatialChannelNames(std::vector<std::string> names);
 
 private slots:
     void on_edge_editingFinished();
@@ -72,7 +74,9 @@ private slots:
 
     void on_setParamsButton_clicked();
 
-    void on_comboBox_currentIndexChanged(int index);
+    void on_comboBox_spatialTarget_currentIndexChanged(int index);
+
+    void on_refreshButton_clicked();
 
 private:
     Ui::ProcessingWindow *ui;
@@ -81,6 +85,7 @@ private:
     dataHandler &handler;
 
     phaseEstimateParameters phaseEstParams;
+    std::vector<std::string> spatial_channel_names;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
 

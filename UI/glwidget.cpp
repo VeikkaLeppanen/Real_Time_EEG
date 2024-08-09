@@ -50,7 +50,7 @@ void Glwidget::paintGL()
         glLoadIdentity();
 
         // Prepare data and draw the line strip
-        Eigen::VectorXd dataVector = dataMatrix_.row(row);
+        Eigen::VectorXd dataVector = dataMatrix_.row(n_channels - 1 - row);
         double minVal = dataVector.minCoeff();
         min_coeffs(row) = minVal;
         double maxVal = dataVector.maxCoeff();
@@ -82,7 +82,7 @@ void Glwidget::paintGL()
         int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
         if (row < channelNames_.size()) {
-            name = channelNames_.at(row);
+            name = channelNames_.at(n_channels - 1 - row);
         }
         painter.drawText(10, yPos_name, name);
 
