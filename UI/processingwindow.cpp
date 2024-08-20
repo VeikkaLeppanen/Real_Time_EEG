@@ -21,7 +21,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     ui->stimulationTarget->setText(QString::number(phaseEstParams.stimulation_target));
     ui->phaseShift->setText(QString::number(phaseEstParams.phase_shift));
 
-    setWindowTitle("Processing Window");
+    setWindowTitle("Phase Estimation Window");
     resize(1280, 720);
 
     processingglWidget = ui->processingGlWidget;

@@ -49,6 +49,7 @@ private slots:
     void resetEegWindowPointer();
 
     void on_processing_clicked();
+    void connect_processing_worker();
     void resetProcessingWindowPointer();
 
     void on_triggering_clicked();

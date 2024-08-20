@@ -82,9 +82,6 @@ private slots:
 
     void on_lineEditGALength_editingFinished();
     void on_lineEditGAaverage_editingFinished();
-    void on_HandlerApplyButton_clicked();
-    void on_GACorrectionStart_clicked();
-    void on_GACorrectionStop_clicked();
     void on_checkBox_stateChanged(int arg1);
     
     void on_filter1_stateChanged(int arg1);
@@ -98,6 +95,8 @@ private slots:
     void on_delay_editingFinished();
 
     void on_comboBox_view_currentIndexChanged(int index);
+
+    void on_checkBox_GA_stateChanged(int arg1);
 
 private:
     Ui::EegWindow *ui;

@@ -30,6 +30,8 @@ TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomi
     
     ui->SetModeError->setStyleSheet("QLabel { color : gray; }");
     ui->RequestInfoError->setStyleSheet("QLabel { color : gray; }");
+
+    setWindowTitle("TMS Window");
 }
 
 TriggeringWindow::~TriggeringWindow()

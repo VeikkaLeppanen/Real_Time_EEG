@@ -78,7 +78,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             std::vector<uint16_t> trigger_channel_sources;
             for (size_t i = 0; i < SourceChannels.size(); i++) {
                 uint16_t source = SourceChannels[i];
-                if(source < 65535) { 
+                if(source < 65524) { 
                     data_channel_sources.push_back(source);
                 } else {
                     trigger_channel_sources.push_back(source); 

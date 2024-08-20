@@ -105,6 +105,13 @@ void MainWindow::on_EEG_clicked()
     connect(eegwindow, &eegWindow::startGACorrection, this, &MainWindow::startGACorrection);
     connect(eegwindow, &eegWindow::stopGACorrection, this, &MainWindow::stopGACorrection);
     connect(eegwindow, &eegWindow::startPreprocessing, this, &MainWindow::startPreprocessing);
+
+    if (worker) {
+        QObject::connect(worker, &ProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+        QObject::connect(worker, &ProcessingWorker::updateEEGwindowNames, eegwindow->getGlWidget(), &Glwidget::updateChannelNamesSTD);
+        QObject::connect(eegwindow, &eegWindow::viewStateChanged, worker, &ProcessingWorker::updateViewState);
+        emit eegwindow->viewStateChanged(0);
+    }
     
     MainGlWidget* mainglWidget = ui->mainGlWidget;
     if (mainglWidget) {
@@ -129,6 +136,14 @@ void MainWindow::on_processing_clicked()
     processingWindow->raise();
     processingWindow->activateWindow();
 
+    connect_processing_worker();
+
+    // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
+    // connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startPreprocessing);
+}
+
+void MainWindow::connect_processing_worker()
+{
     if (worker) {
         QObject::connect(worker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
         QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
@@ -140,9 +155,6 @@ void MainWindow::on_processing_clicked()
         QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
         QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
     }
-
-    // REPLACE WITH A PHASE ESTIMATE BEGIN CONNECT
-    // connect(processingWindow, &ProcessingWindow::startProcessing, this, &MainWindow::startPreprocessing);
 }
 
 void MainWindow::resetProcessingWindowPointer() {

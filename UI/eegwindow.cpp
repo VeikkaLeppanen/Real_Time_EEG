@@ -29,6 +29,8 @@ eegWindow::eegWindow(dataHandler &handler,
         ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
         ui->delay->setText(QString::number(prepParams.delay));
 
+        ui->tabWidget->setTabText(0, "Device");
+        ui->tabWidget->setTabText(1, "Preprocessing");
         setWindowTitle("EEG Window");
         resize(1280, 720);
 
@@ -98,7 +100,7 @@ void eegWindow::checkHandlerReady() {
             channelNames_ = QchannelNames;
 
             emit updateChannelNamesQt(QchannelNames);
-            setupComboBox();
+            // setupComboBox();
         }
     }
 }
@@ -160,7 +162,7 @@ void eegWindow::setupChannelNames()
     channelNames_ = QchannelNames;
 
     emit updateChannelNamesQt(QchannelNames);
-    setupComboBox();
+    // setupComboBox();
 }
 
 void eegWindow::setupComboBox() {
@@ -176,7 +178,7 @@ void eegWindow::setupComboBox() {
         model->setItem(i, 0, item);
     }
 
-    ui->comboBox->setModel(model);
+    // ui->comboBox->setModel(model);
     connect(model, &QStandardItemModel::itemChanged, this, &eegWindow::handleCheckboxChange);
     emit updateChannelDisplayState(channelCheckStates_);
 }
@@ -185,9 +187,8 @@ void eegWindow::setupComboBox() {
 void eegWindow::handleCheckboxChange(QStandardItem* item) {
     int row = item->row();
     bool isChecked = item->checkState() == Qt::Checked;
-    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;  // Directly set the boolean state
+    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;
 
-    // You might want to do something immediately after the change or just store the state.
     emit updateChannelDisplayState(channelCheckStates_);
 }
 
@@ -232,6 +233,9 @@ void eegWindow::on_lineEditGALength_editingFinished()
     int value = ui->lineEditGALength->text().toInt(&ok);
     if (ok) {
         GALength = value;
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        emit startGACorrection();
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 500000.");
     }
@@ -243,26 +247,14 @@ void eegWindow::on_lineEditGAaverage_editingFinished()
     int value = ui->lineEditGAaverage->text().toInt(&ok);
     if (ok) {
         GAAverage = value;
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        emit startGACorrection();
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 1000.");
     }
 }
 
-void eegWindow::on_HandlerApplyButton_clicked()
-{
-    emit applyGACorrection(GALength, GAAverage);
-}
-
-void eegWindow::on_GACorrectionStart_clicked()
-{
-    emit startGACorrection();
-}
-
-
-void eegWindow::on_GACorrectionStop_clicked()
-{
-    emit stopGACorrection();
-}
 
 void eegWindow::on_checkBox_stateChanged(int arg1)
 {
@@ -338,5 +330,20 @@ void eegWindow::on_stopButton_clicked()
 void eegWindow::on_comboBox_view_currentIndexChanged(int index)
 {
     emit viewStateChanged(index);
+}
+
+
+void eegWindow::on_checkBox_GA_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    if (isChecked) {
+        // if (handler.get_TA_length() != GALength || handler.get_GA_average_length() != GAAverage) {
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        // }
+        emit startGACorrection();
+    } else {
+        emit stopGACorrection();
+    }
 }
 

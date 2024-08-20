@@ -270,16 +270,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_8">
-                   <property name="text">
-                    <string>Channel focus:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0" colspan="2">
-                  <widget class="QComboBox" name="comboBox"/>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -293,6 +283,56 @@
            <string>Tab 2</string>
           </attribute>
           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QFrame" name="frame_10">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_6">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="stopButton">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="startButton">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Start</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
            <item>
             <widget class="QLabel" name="label_3">
              <property name="text">
@@ -321,113 +361,52 @@
               <property name="bottomMargin">
                <number>3</number>
               </property>
-              <item row="8" column="0">
-               <widget class="QPushButton" name="GACorrectionStart">
-                <property name="minimumSize">
-                 <size>
-                  <width>100</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Continue</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="1">
-               <widget class="QPushButton" name="GACorrectionStop">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Pause</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0" colspan="2">
-               <widget class="QPushButton" name="HandlerApplyButton">
-                <property name="text">
-                 <string>Start gradient correction</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>Window length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="lineEditGALength">
-                <property name="text">
-                 <string>5000</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QCheckBox" name="checkBox_2">
-                <property name="text">
-                 <string>Baseline</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="1">
-               <widget class="QLineEdit" name="numberOfSamples">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="baseSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>TA length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_7">
-                <property name="text">
-                 <string>Average</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
+              <item row="6" column="1">
                <widget class="QLineEdit" name="lineEditGAaverage">
                 <property name="text">
                  <string>25</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="8" column="0">
                <widget class="QCheckBox" name="filter1">
                 <property name="text">
                  <string>Filter 0-80Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QCheckBox" name="checkBox_GA">
+                <property name="text">
+                 <string>Gradient correction</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>TA length</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="lineEditGALength">
+                <property name="text">
+                 <string>5000</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Average</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="checkBox_2">
+                <property name="text">
+                 <string>Baseline</string>
                 </property>
                </widget>
               </item>
@@ -464,6 +443,29 @@
                <widget class="QLabel" name="label_13">
                 <property name="text">
                  <string>down sampling</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLineEdit" name="numberOfSamples">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="baseSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Window length</string>
                 </property>
                </widget>
               </item>
@@ -511,32 +513,6 @@
                   <width>100</width>
                   <height>16777215</height>
                  </size>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1">
-               <widget class="QPushButton" name="stopButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Stop</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QPushButton" name="startButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Start</string>
                 </property>
                </widget>
               </item>
