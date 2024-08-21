@@ -70,6 +70,36 @@ void Glwidget::paintGL()
         graph_index++;
     }
 
+    // Set viewport to cover the entire widget for drawing triggers
+    glViewport(0, 0, width(), windowHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+    
+    // Draw triggers over all graphs
+    int totalDataPoints = triggers_A_.size();
+    for (int i = 0; i < triggers_A_.size(); ++i) {
+        if (triggers_A_(i) == 1) {
+            float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;
+            glColor3f(0.0, 0.0, 1.0);
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+    }
+
+    for (int i = 0; i < triggers_B_.size(); ++i) {
+        if (triggers_B_(i) == 1) {
+            float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;
+            glColor3f(0.0, 1.0, 0.0);
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+    }
+
     // QPainter for text overlays
     QPainter painter(this);
     painter.setPen(Qt::red);
@@ -104,10 +134,12 @@ void Glwidget::paintGL()
     painter.end();
 }
 
-void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix) { 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B) { 
     dataMatrix_ = newMatrix;
     matrixCapasity = newMatrix.cols();
     n_channels = newMatrix.rows();
+    triggers_A_ = triggers_A;
+    triggers_B_ = triggers_B;
 }
 
 void Glwidget::updateChannelDisplayState(std::vector<bool> channelCheckStates) {

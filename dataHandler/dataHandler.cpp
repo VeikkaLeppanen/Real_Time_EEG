@@ -3,9 +3,6 @@
 // Resets the buffers for new channelcount and sampling rates
 void dataHandler::reset_handler(int channel_count, int sampling_rate, int simulation_delivery_rate) {
 
-    // Stop processing
-    // processor_.stopProcessing();
-
     channel_count_ = channel_count;
     sampling_rate_ = sampling_rate;
     simulation_delivery_rate_ = simulation_delivery_rate;
@@ -17,84 +14,25 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
         std::lock_guard<std::mutex> lock(this->dataMutex);
         sample_buffer_ = Eigen::MatrixXd::Zero(channel_count, buffer_capacity_);
         time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
-        trigger_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
+        trigger_buffer_A = Eigen::VectorXi::Zero(buffer_capacity_);
+        trigger_buffer_B = Eigen::VectorXi::Zero(buffer_capacity_);
     }
 
     processing_sample_vector = Eigen::VectorXd::Zero(channel_count);
 
     GACorr_ = GACorrection(channel_count, GA_average_length, TA_length);
 
-    // baseline_average = Eigen::VectorXd(channel_count);
+    RTfilter_.reset_filter(channel_count);
 
     handler_state = WAITING_FOR_STOP;
-
-    RTfilter_.reset_filter(channel_count);
 }
     
 void dataHandler::reset_GACorr(int TA_length_input, int GA_average_length_input) {
     TA_length = TA_length_input; 
     GA_average_length = GA_average_length_input;
     GACorr_ = GACorrection(channel_count_, GA_average_length, TA_length);
-    stimulation_tracker = 10000000;
+    TA_tracker = 10000000;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int dataHandler::simulateData_sin() {
-    auto startTime = std::chrono::high_resolution_clock::now();
-    double time = 0.0;
-
-    Eigen::VectorXd sample(channel_count_);
-    const Eigen::VectorXd linspace_example = Eigen::VectorXd::LinSpaced(channel_count_, 0, channel_count_);
-
-    int stimulation_interval = 10000;
-    int stimulation_tracker = 0;
-    while (true) { // Adjust this condition as needed
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - startTime;
-        double time_stamp = 0.0;
-        int trigger = 0;
-        
-        // Check if it's time to generate the next sample
-        if (elapsed.count() >= 1.0 / sampling_rate_) {
-            startTime = currentTime;
-
-            double SIN = 3.0 * M_PI * time;
-            sample = linspace_example.unaryExpr([SIN](double x) { return std::sin(SIN * (5.0 + x)) * 20; });
-            time_stamp = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-            
-            if (stimulation_tracker == stimulation_interval) {
-                trigger = 1;
-                stimulation_tracker = 0;
-            } else {
-                trigger = 0;
-            }
-            
-            time += 1.0 / sampling_rate_;
-
-            this->addData(sample, time_stamp, trigger, 0);
-
-            stimulation_tracker++;
-        }
-    }
-
-    return 0;
-}
-
-
 
 
 
@@ -113,7 +51,7 @@ int dataHandler::simulateData_sin() {
 
 // Buffer functions
 // Add a single sample to each channel
-void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo) {
+void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger_A, const int &trigger_B, const int &SeqNo) {
 
     try {
         // Debug: Validate sample size
@@ -122,24 +60,24 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             return;
         }
 
-        if (trigger == 1) { 
-            stimulation_tracker = 0;
+        if (trigger_A == 1) { 
+            TA_tracker = 0;
         }
 
         // Gradient artifact correction
-        if (Apply_GACorr && stimulation_tracker < TA_length) {
+        if (Apply_GACorr && TA_tracker < TA_length) {
 
             {
                 std::lock_guard<std::mutex> lock(this->dataMutex);
-                // if (stimulation_tracker >= GACorr_.getTemplateSize()) {
-                //     std::cerr << "Error: stimulation_tracker exceeds GACorr template size." << std::endl;
+                // if (TA_tracker >= GACorr_.getTemplateSize()) {
+                //     std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
                 //     return;
                 // }
-                processing_sample_vector = samples - GACorr_.getTemplateCol(stimulation_tracker);
+                processing_sample_vector = samples - GACorr_.getTemplateCol(TA_tracker);
             }
             
-            GACorr_.update_template(stimulation_tracker, samples);
-            stimulation_tracker++;
+            GACorr_.update_template(TA_tracker, samples);
+            TA_tracker++;
         } else {
             std::lock_guard<std::mutex> lock(this->dataMutex);
             processing_sample_vector = samples;
@@ -197,7 +135,8 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
         // Timestamp, triggers, and buffer index update
         time_stamp_buffer_(current_data_index_) = time_stamp;
-        trigger_buffer_(current_data_index_) = trigger;
+        trigger_buffer_A(current_data_index_) = trigger_A;
+        trigger_buffer_B(current_data_index_) = trigger_B;
         current_sequence_number_ = SeqNo;
         current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
 
@@ -234,7 +173,6 @@ Eigen::MatrixXd dataHandler::returnLatestDataInOrder(int number_of_samples) {
 // Returns current sequence number and saves number_of_samples data points to output form all channels in chronological order
 int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples) {
     output.resize(channel_count_, number_of_samples); // Ensure matrix is resized correctly
-    size_t channel_index = 0; // Unused variable, consider removing if not needed later.
 
     // Calculate the number of samples that fit before reaching the end of the buffer
     int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
@@ -263,6 +201,35 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     return current_sequence_number_;
 }
 
+int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, int number_of_samples) {
+
+    // Ensure matrices are resized correctly
+    if (output.rows() != channel_count_ || output.cols() != number_of_samples) output.resize(channel_count_, number_of_samples);
+    if (triggers_A.cols() != number_of_samples) triggers_A.resize(number_of_samples);
+    if (triggers_B.cols() != number_of_samples) triggers_B.resize(number_of_samples);
+
+    // Calculate the number of samples that fit before reaching the end of the buffer
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
+
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+
+    // Debugging check before accessing rightCols and middleCols
+    if (fitToEnd > 0) {
+        output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
+        triggers_A.tail(fitToEnd) = trigger_buffer_A.segment(current_data_index_ - fitToEnd, fitToEnd);
+        triggers_B.tail(fitToEnd) = trigger_buffer_B.segment(current_data_index_ - fitToEnd, fitToEnd);
+    }
+
+    // Debugging check before accessing leftCols and middleCols
+    if (overflow > 0) {
+        output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
+        triggers_A.head(overflow) = trigger_buffer_A.segment(buffer_capacity_ - overflow, overflow);
+        triggers_B.head(overflow) = trigger_buffer_B.segment(buffer_capacity_ - overflow, overflow);
+    }
+
+    return current_sequence_number_;
+}
 
 // Returns data from the specified channels in chronological order
 Eigen::MatrixXd dataHandler::getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples) {
@@ -319,45 +286,75 @@ Eigen::MatrixXd dataHandler::getBlockChannelDataInOrder(int first_channel_index,
 }
 
 // Retrieves data from the time stamp channel in chronological order
-Eigen::VectorXd dataHandler::getTimeStampsInOrder(int downSamplingFactor) {
+Eigen::VectorXd dataHandler::getTimeStampsInOrder(int number_of_samples) {
 
-    std::lock_guard<std::mutex> lock(this->dataMutex);
+    Eigen::VectorXd output(number_of_samples); // Ensure matrix is resized correctly
 
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
+    // Calculate the number of samples that fit before reaching the end of the buffer
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
 
-    // Calculate the effective size after downsampling
-    size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
-    Eigen::VectorXd downSampledData(downSampledSize);
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
 
-    for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
-        // Calculate the index in the circular buffer accounting for wrap-around
-        size_t index = (current_data_index_ + i) % buffer_capacity_;
-        downSampledData(j) = time_stamp_buffer_(index);
+    // Debugging check before accessing rightCols and middleCols
+    if (fitToEnd > 0) {
+        output.tail(fitToEnd) = time_stamp_buffer_.segment(current_data_index_ - fitToEnd, fitToEnd);
     }
 
-    return downSampledData;
+    // Debugging check before accessing leftCols and middleCols
+    if (overflow > 0) {
+        output.head(overflow) = time_stamp_buffer_.segment(buffer_capacity_ - overflow, overflow);
+    }
+
+    return output;
 }
 
 // Retrieves data from the trigger channel in chronological order
-Eigen::VectorXd dataHandler::getTriggersInOrder(int downSamplingFactor) {
+Eigen::VectorXi dataHandler::getTriggersAInOrder(int number_of_samples) {
 
-    std::lock_guard<std::mutex> lock(this->dataMutex);
+    Eigen::VectorXi output(number_of_samples); // Ensure matrix is resized correctly
 
-    if (downSamplingFactor == 0) throw std::invalid_argument("downSamplingFactor must be greater than 0");
+    // Calculate the number of samples that fit before reaching the end of the buffer
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
 
-    // Calculate the effective size after downsampling
-    size_t downSampledSize = (buffer_capacity_ + downSamplingFactor - 1) / downSamplingFactor;
-    Eigen::VectorXd downSampledData(downSampledSize);
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
 
-    for (size_t i = 0, j = 0; i < buffer_capacity_; i += downSamplingFactor, ++j) {
-        // Calculate the index in the circular buffer accounting for wrap-around
-        size_t index = (current_data_index_ + i) % buffer_capacity_;
-        downSampledData(j) = trigger_buffer_(index);
+    // Debugging check before accessing rightCols and middleCols
+    if (fitToEnd > 0) {
+        output.tail(fitToEnd) = trigger_buffer_A.segment(current_data_index_ - fitToEnd, fitToEnd);
     }
 
-    return downSampledData;
+    // Debugging check before accessing leftCols and middleCols
+    if (overflow > 0) {
+        output.head(overflow) = trigger_buffer_A.segment(buffer_capacity_ - overflow, overflow);
+    }
+
+    return output;
 }
 
+Eigen::VectorXi dataHandler::getTriggersBInOrder(int number_of_samples) {
+
+    Eigen::VectorXi output(number_of_samples); // Ensure matrix is resized correctly
+
+    // Calculate the number of samples that fit before reaching the end of the buffer
+    int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
+    int overflow = number_of_samples - fitToEnd;
+
+    std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+
+    // Debugging check before accessing rightCols and middleCols
+    if (fitToEnd > 0) {
+        output.tail(fitToEnd) = trigger_buffer_B.segment(current_data_index_ - fitToEnd, fitToEnd);
+    }
+
+    // Debugging check before accessing leftCols and middleCols
+    if (overflow > 0) {
+        output.head(overflow) = trigger_buffer_B.segment(buffer_capacity_ - overflow, overflow);
+    }
+
+    return output;
+}
 
 
 

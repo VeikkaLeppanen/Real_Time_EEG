@@ -68,6 +68,10 @@ void ProcessingWorker::process()
         Eigen::MatrixXd EEG_corrected = Eigen::MatrixXd::Zero(n_EEG_channels_to_use, downsampled_cols);
         Eigen::VectorXd EEG_spatial = Eigen::VectorXd::Zero(downsampled_cols);
 
+        // Input triggers
+        Eigen::VectorXi triggers_A = Eigen::VectorXi::Zero(samples_to_process);
+        Eigen::VectorXi triggers_B = Eigen::VectorXi::Zero(samples_to_process);
+
         print_debug("Memory allocated");
 
         // Set names for each channel in Data_to_display
@@ -89,7 +93,7 @@ void ProcessingWorker::process()
                 emit updateSpatialChannelNames(EEG_spatial_channel_names);
             }
 
-            int sequence_number = handler.getLatestDataInOrder(all_channels, samples_to_process);
+            int sequence_number = handler.getLatestDataAndTriggers(all_channels, triggers_A, triggers_B, samples_to_process);
             
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) continue;
@@ -122,15 +126,15 @@ void ProcessingWorker::process()
             switch (display_state) 
             {
                 case displayState::RAW:
-                    emit updateEEGDisplayedData(all_channels);
+                    emit updateEEGDisplayedData(all_channels, triggers_A, triggers_B);
                     emit updateEEGwindowNames(EEG_channel_names);
                     break;
                 case displayState::DOWNSAMPLED:
-                    emit updateEEGDisplayedData(EEG_downsampled);
+                    emit updateEEGDisplayedData(EEG_downsampled, triggers_A, triggers_B);
                     emit updateEEGwindowNames(EEG_channel_names);
                     break;
                 case displayState::CWL:
-                    emit updateEEGDisplayedData(EEG_corrected);
+                    emit updateEEGDisplayedData(EEG_corrected, triggers_A, triggers_B);
                     emit updateEEGwindowNames(EEG_channel_names);
                     break;
             }

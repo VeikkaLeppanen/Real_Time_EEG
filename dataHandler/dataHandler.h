@@ -39,19 +39,20 @@ public:
 
     bool isReady() { return (handler_state == WAITING_FOR_STOP); }
 
-    int simulateData_sin();
 
     // Data handling
-    void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger, const int &SeqNo);
+    void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger_A, const int &trigger_B, const int &SeqNo);
 
     int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
+    int getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, int number_of_samples);
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
 
-    Eigen::VectorXd getTimeStampsInOrder(int downSamplingFactor);
-    Eigen::VectorXd getTriggersInOrder(int downSamplingFactor);
+    Eigen::VectorXd getTimeStampsInOrder(int number_of_samples);
+    Eigen::VectorXi getTriggersAInOrder(int number_of_samples);
+    Eigen::VectorXi getTriggersBInOrder(int number_of_samples);
 
     int get_buffer_capacity() { return buffer_capacity_; }
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
@@ -73,13 +74,13 @@ public:
     // Gradient artifact correction
     void GACorr_off() { Apply_GACorr = false; }
     void GACorr_on() {
-        int stimulation_tracker = 10000000;
+        int TA_tracker = 10000000;
         Apply_GACorr = true; 
     }
 
     void reset_GACorr(int TA_length_input, int GA_average_length_input);
     void reset_GACorr_tracker() { 
-        stimulation_tracker = 10000000;
+        TA_tracker = 10000000;
         GACorr_.reset_index();
     }
     int get_TA_length() { return TA_length; }
@@ -141,7 +142,8 @@ private:
     std::vector<std::string> channel_names_;
     Eigen::MatrixXd sample_buffer_;
     Eigen::VectorXd time_stamp_buffer_;
-    Eigen::VectorXd trigger_buffer_;
+    Eigen::VectorXi trigger_buffer_A;
+    Eigen::VectorXi trigger_buffer_B;
     size_t current_data_index_ = 0;
     int current_sequence_number_ = 0;
     int buffer_length_in_seconds_ = 20;
@@ -159,7 +161,7 @@ private:
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;
-    int stimulation_tracker = 10000000;
+    int TA_tracker = 10000000;
 
     // Baseline correction
     bool Apply_baseline = false;

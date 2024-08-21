@@ -78,7 +78,7 @@ signals:
     void error(QString err);
     void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
     void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
-    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix);
+    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B);
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);

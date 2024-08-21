@@ -72,7 +72,11 @@ void eegWindow::updateData()
 
     glWidget = ui->openglWidget;
     if (glWidget && handler.isReady()) {
-        glWidget->updateMatrix(handler.returnLatestDataInOrder(samples_to_display));
+        Eigen::MatrixXd data;
+        Eigen::VectorXi triggers_A;
+        Eigen::VectorXi triggers_B;
+        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, samples_to_display);
+        glWidget->updateMatrix(data, triggers_A, triggers_B);
     }
 }
 
