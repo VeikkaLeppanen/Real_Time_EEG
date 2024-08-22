@@ -201,16 +201,19 @@ void ProcessingWorker::process()
             Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - phaseEstParams.edge) = EEG_filter2.head(filter2_length - phaseEstParams.edge);
 
             Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
-            Data_to_display.row(7).tail(estimationLength) = phaseAngles.tail(estimationLength);
+            
+            int phase_length = 32;
+            int phase_start = phaseEstParams.edge - phase_length / 2;
+            Data_to_display.row(7).segment(downsampled_cols - phase_length / 2, phase_length) = phaseAngles.segment(phase_start, phase_length);
 
             if (phasEst_display_all_EEG_channels) {
                 for (int i = 0; i < n_EEG_channels_to_use; ++i) {
                     if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
                     else PhaseEst_channel_names.push_back("Undefined");
                 }
-                emit updatePhaseEstDisplayedData(Data_to_display);
+                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, downsampled_cols, estimationLength - phaseEstParams.edge);
             } else {
-                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use));
+                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, downsampled_cols, estimationLength - phaseEstParams.edge);
             }
             
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_channel_names.size()) {

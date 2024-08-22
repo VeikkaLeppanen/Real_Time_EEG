@@ -1261,18 +1261,18 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
                           int phase_shift,
                           double stimulation_target) 
 {
-
-    for (std::size_t i = edge; i < hilbert_signal.size(); ++i) {
+    bool target_found = false;
+    int target_seqNum = 0;
+    for (std::size_t i = 0; i < hilbert_signal.size(); ++i) {
         phaseAngles(i) = std::arg(hilbert_signal[i]);
-        if (i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
+        if (!target_found && i > 0 && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
             int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
-            // std::cout << "Target phase found: " << phaseAngles(best_index) << '\n';
-            int trigger_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
-            return trigger_seqNum;
+            target_seqNum = sequence_number + best_index * downsampling_factor + phase_shift;
+            target_found = true;
         }
     }
 
-    return 0;
+    return target_seqNum;
 }
 
 double ang_diff(double x, double y) {

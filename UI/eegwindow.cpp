@@ -31,6 +31,8 @@ eegWindow::eegWindow(dataHandler &handler,
 
         ui->tabWidget->setTabText(0, "Device");
         ui->tabWidget->setTabText(1, "Preprocessing");
+        ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
+        ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
         setWindowTitle("EEG Window");
         resize(1280, 720);
 
@@ -44,6 +46,12 @@ eegWindow::eegWindow(dataHandler &handler,
             connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
             connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
             connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
+            connect(this, &eegWindow::setShowTriggers_A, glWidget, &Glwidget::setShowTriggers_A);
+            connect(this, &eegWindow::setShowTriggers_B, glWidget, &Glwidget::setShowTriggers_B);
+            connect(this, &eegWindow::switchPause, glWidget, &Glwidget::switchPause);
+
+            ui->checkBox_triggers_A->setChecked(glWidget->getShowTriggers_A());
+            ui->checkBox_triggers_B->setChecked(glWidget->getShowTriggers_B());
             
             emit updateChannelNamesSTD(handler.getChannelNames());
         } else {
@@ -349,5 +357,25 @@ void eegWindow::on_checkBox_GA_stateChanged(int arg1)
     } else {
         emit stopGACorrection();
     }
+}
+
+
+void eegWindow::on_checkBox_triggers_A_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_A(isChecked);
+}
+
+
+void eegWindow::on_checkBox_triggers_B_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_B(isChecked);
+}
+
+
+void eegWindow::on_pushButton_pauseView_clicked()
+{
+    emit switchPause();
 }
 

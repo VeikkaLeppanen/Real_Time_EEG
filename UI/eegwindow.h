@@ -63,6 +63,10 @@ signals:
 
     void startPreprocessing(preprocessingParameters& prepParams, phaseEstimateParameters &phaseEstParams);
     void viewStateChanged(int index);
+    void setShowTriggers_A(bool isChecked);
+    void setShowTriggers_B(bool isChecked);
+    void switchPause();
+
 
 private slots:
     void handleError(const QString& error);
@@ -97,6 +101,12 @@ private slots:
     void on_comboBox_view_currentIndexChanged(int index);
 
     void on_checkBox_GA_stateChanged(int arg1);
+
+    void on_checkBox_triggers_A_stateChanged(int arg1);
+
+    void on_checkBox_triggers_B_stateChanged(int arg1);
+
+    void on_pushButton_pauseView_clicked();
 
 private:
     Ui::EegWindow *ui;

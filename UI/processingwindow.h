@@ -41,10 +41,13 @@ signals:
 
     void setPhaseEstParams(phaseEstimateParameters phaseEstParams);
 
+    void setShowTriggers_A(bool isChecked);
+    void setShowTriggers_B(bool isChecked);
+    void switchPause();
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
 public slots:
-    void updateData();
+    // void updateData();
     void updateSpatialChannelNames(std::vector<std::string> names);
 
 private slots:
@@ -77,6 +80,12 @@ private slots:
     void on_comboBox_spatialTarget_currentIndexChanged(int index);
 
     void on_refreshButton_clicked();
+
+    void on_pushButton_pause_view_clicked();
+
+    void on_checkBox_triggers_A_stateChanged(int arg1);
+
+    void on_checkBox_triggers_B_stateChanged(int arg1);
 
 private:
     Ui::ProcessingWindow *ui;

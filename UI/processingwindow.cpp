@@ -21,13 +21,13 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     ui->stimulationTarget->setText(QString::number(phaseEstParams.stimulation_target));
     ui->phaseShift->setText(QString::number(phaseEstParams.phase_shift));
 
+    ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
+    ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
     setWindowTitle("Phase Estimation Window");
     resize(1280, 720);
 
     processingglWidget = ui->processingGlWidget;
     if (processingglWidget) {
-
-        connect(processingglWidget, &ProcessingGlWidget::fetchData, this, &ProcessingWindow::updateData);
         connect(this, &ProcessingWindow::setCustomScaleStatus, processingglWidget, &ProcessingGlWidget::setCustomScaleStatus);
         connect(this, &ProcessingWindow::setCustomScaleMin, processingglWidget, &ProcessingGlWidget::setCustomScaleMin);
         connect(this, &ProcessingWindow::setCustomScaleMax, processingglWidget, &ProcessingGlWidget::setCustomScaleMax);
@@ -35,25 +35,20 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
         connect(this, &ProcessingWindow::getCustomScaleStatus, processingglWidget, &ProcessingGlWidget::getCustomScaleStatus);
         connect(this, &ProcessingWindow::getCustomScaleMin, processingglWidget, &ProcessingGlWidget::getCustomScaleMin);
         connect(this, &ProcessingWindow::getCustomScaleMax, processingglWidget, &ProcessingGlWidget::getCustomScaleMax);
+        connect(this, &ProcessingWindow::setShowTriggers_A, processingglWidget, &ProcessingGlWidget::setShowTriggers_A);
+        connect(this, &ProcessingWindow::setShowTriggers_B, processingglWidget, &ProcessingGlWidget::setShowTriggers_B);
+        connect(this, &ProcessingWindow::switchPause, processingglWidget, &ProcessingGlWidget::switchPause);
 
         connect(this, &ProcessingWindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
 
         ui->checkBox->setChecked(emit getCustomScaleStatus());
         ui->scaleMin->setText(QString::number(emit getCustomScaleMin()));
         ui->scaleMax->setText(QString::number(emit getCustomScaleMax()));
+        ui->checkBox_triggers_A->setChecked(processingglWidget->getShowTriggers_A());
+        ui->checkBox_triggers_B->setChecked(processingglWidget->getShowTriggers_B());
     } else {
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
-    }
-}
-
-void ProcessingWindow::updateData()
-{
-    processingglWidget = ui->processingGlWidget;
-    if (processingglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
-
-        std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
-        processingglWidget->updateMatrix(processed_data);
     }
 }
 
@@ -207,5 +202,25 @@ void ProcessingWindow::on_refreshButton_clicked()
     {
         ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
     }
+}
+
+
+void ProcessingWindow::on_pushButton_pause_view_clicked()
+{
+    emit switchPause();
+}
+
+
+void ProcessingWindow::on_checkBox_triggers_A_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_A(isChecked);
+}
+
+
+void ProcessingWindow::on_checkBox_triggers_B_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_B(isChecked);
 }
 

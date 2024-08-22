@@ -32,6 +32,10 @@ void ProcessingGlWidget::paintGL()
     Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels_);
     
     glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_LINE_STIPPLE);
+
+    float currentTimePosition = static_cast<float>(numPastElements_) / (numPastElements_ + numFutureElements_);
+    float glX = currentTimePosition * 2.0f - 1.0f; // Convert to OpenGL's coordinate system
 
     // Draw graphs for enabled channels
     int graph_index = 0;
@@ -77,28 +81,50 @@ void ProcessingGlWidget::paintGL()
         graph_index++;
     }
     
-    /*
-    // Draw a vertical line at a specific index of the last graph
-    int specific_index = 750; // Replace this with your specific index
-
-    // Calculate the x-coordinate in NDC
-    float x = (float)specific_index / (matrixCapasity_ - 1) * 2.0f - 1.0f;
-
-    // Set viewport for the last graph
-    glViewport(0, 0, width(), rowHeight);
+    // Set viewport to cover the entire widget for drawing triggers
+    glViewport(0, 0, width(), windowHeight);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);  // Set the coordinate system to cover [-1,1] in both axes
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+    
+    // Draw triggers over all graphs
+    int totalDataPoints = triggers_A_.size();
+    if (show_triggers_A) {
+        for (int i = 0; i < triggers_A_.size(); ++i) {
+            if (triggers_A_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 0.0, 1.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
 
-    // Draw the vertical line
-    glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
+    if (show_triggers_B) {
+        for (int i = 0; i < triggers_B_.size(); ++i) {
+            if (triggers_B_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 1.0, 0.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
+    
+    // Enable and configure line stipple for dashed line
+    glEnable(GL_LINE_STIPPLE);
+    glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+
+    // Draw the current time line across the full height
+    glColor3f(1.0, 0.0, 0.0); // Red for the current time line
     glBegin(GL_LINES);
-    glVertex2f(x, -1.0f);
-    glVertex2f(x, 1.0f);
+    glVertex2f(glX, -1.0);
+    glVertex2f(glX, 1.0);
     glEnd();
-    */
 
     // QPainter for text overlays
     QPainter painter(this);
@@ -133,19 +159,25 @@ void ProcessingGlWidget::paintGL()
     painter.end();
 }
 
-void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix) {
-    // Check if dimensions differ
-    if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
-        // Resize dataMatrix_ to match the dimensions of newMatrix
-        dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, int numPastElements, int numFutureElements) {
+    if (!pause_view) {
+        // Check if dimensions differ
+        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
+            // Resize dataMatrix_ to match the dimensions of newMatrix
+            dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+        }
+
+        // Assign the new matrix
+        dataMatrix_ = newMatrix;
+
+        // Update other attributes based on the new matrix
+        matrixCapasity_ = newMatrix.cols(); 
+        n_channels_ = newMatrix.rows();
+        numPastElements_ = numPastElements;
+        numFutureElements_ = numFutureElements;
+        triggers_A_ = triggers_A;
+        triggers_B_ = triggers_B;
     }
-
-    // Assign the new matrix
-    dataMatrix_ = newMatrix;
-
-    // Update other attributes based on the new matrix
-    matrixCapasity_ = newMatrix.cols(); 
-    n_channels_ = newMatrix.rows();
 }
 
 void ProcessingGlWidget::updateGraph()

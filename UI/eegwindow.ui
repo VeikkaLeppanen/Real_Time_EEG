@@ -566,9 +566,30 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="pushButton_pauseView">
+            <property name="text">
+             <string>Pause/Resume View</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="checkBox">
             <property name="text">
              <string>Display graph scales</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_triggers_A">
+            <property name="text">
+             <string>Trigger port A</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_triggers_B">
+            <property name="text">
+             <string>Trigger port B</string>
             </property>
            </widget>
           </item>

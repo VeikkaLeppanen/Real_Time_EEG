@@ -79,7 +79,7 @@ signals:
     void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
     void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
     void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B);
-    void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix);
+    void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B, int numPastElements, int numFutureElements);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
 

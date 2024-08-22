@@ -29,7 +29,7 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(const Eigen::MatrixXd &newMatrix);
+    void updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, int numPastElements, int numFutureElements);
 
     void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
     void updateGraph();
@@ -44,12 +44,25 @@ public slots:
     bool getCustomScaleStatus() { return useCustomScale_; }
     double getCustomScaleMin() { return min_scale_; }
     double getCustomScaleMax() { return max_scale_; }
+    void setShowTriggers_A(bool isChecked) { show_triggers_A = isChecked; }
+    bool getShowTriggers_A() { return show_triggers_A; }
+    void setShowTriggers_B(bool isChecked) { show_triggers_B = isChecked; }
+    bool getShowTriggers_B() { return show_triggers_B; }
+    void switchPause() { pause_view = !pause_view; }
 
 private:
     Eigen::MatrixXd dataMatrix_;
+    Eigen::VectorXi triggers_A_;
+    Eigen::VectorXi triggers_B_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = true;
+    bool show_triggers_A = true;
+    bool show_triggers_B = true;
+    bool pause_view = false;
     QStringList channelNames_;
+
+    int numPastElements_;
+    int numFutureElements_;
 
     // Custom scale
     bool useCustomScale_ = false;
