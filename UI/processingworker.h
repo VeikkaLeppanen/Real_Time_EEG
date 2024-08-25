@@ -116,13 +116,32 @@ public slots:
         EEG_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
         phaseAngles = Eigen::VectorXd::Zero(estimationLength);
 
-        Data_to_display = Eigen::MatrixXd::Zero(8, display_length);
+        phase_diff_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
+        phaseDifference = Eigen::VectorXd::Zero(downsampled_cols - newParams.edge);
+
+        Data_to_display = Eigen::MatrixXd::Zero(9, display_length);
+    }
+
+    Eigen::VectorXd getPhaseDifference_vector() {
+        if (phaseDifference_current_index == 0) return phaseDifference;
+        
+        std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
+
+        int N = downsampled_cols - phaseEstParams.edge;
+        Eigen::VectorXd output(N); // Corrected initialization
+
+        // Calculate the number of samples in each segment
+        int right = N - phaseDifference_current_index;
+
+        output.head(right) = phaseDifference.tail(right);
+        
+        output.tail(phaseDifference_current_index) = phaseDifference.head(phaseDifference_current_index);
+
+        return output;
     }
 
 private:
     void process();
-    void process_testing();
-    void process_stimulation_testing();
 
 
     dataHandler &handler;
@@ -142,6 +161,7 @@ private:
     bool performEstimation = true;
     bool performHilbertTransform = true;
     bool performPhaseTargeting = false;
+    bool performPhaseDifference = true;
 
     int spatial_channel_index = 0;
     int filter2_length = 250;
@@ -152,6 +172,13 @@ private:
     std::vector<double> EEG_predicted;
     std::vector<std::complex<double>> EEG_hilbert;
     Eigen::VectorXd phaseAngles;
+
+    // Phase difference/error
+    std::vector<std::complex<double>> phase_diff_hilbert;
+    Eigen::VectorXd phaseDifference;
+    int phaseDifference_current_index = 0;
+    double last_phase = 0.0;
+    int last_phase_seqnum = -1;
 
     displayState display_state = displayState::CWL;
     bool phasEst_display_all_EEG_channels = false;

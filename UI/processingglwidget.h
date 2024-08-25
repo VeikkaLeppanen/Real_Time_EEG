@@ -29,7 +29,11 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, int numPastElements, int numFutureElements);
+    void updateMatrix(const Eigen::MatrixXd &newMatrix, 
+                      const Eigen::VectorXi &triggers_A, 
+                      const Eigen::VectorXi &triggers_B, 
+                                        int numPastElements, 
+                                        int numFutureElements);
 
     void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
     void updateGraph();
