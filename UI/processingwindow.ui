@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>979</width>
-    <height>649</height>
+    <width>1054</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -109,24 +109,10 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_7">
+              <item row="12" column="2">
+               <widget class="QCheckBox" name="checkBox_Stimulation">
                 <property name="text">
-                 <string>Center electrode</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QLabel" name="label_5">
-                <property name="text">
-                 <string>Edge length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="12" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>Stimulation target</string>
+                 <string>Stimulation</string>
                 </property>
                </widget>
               </item>
@@ -134,23 +120,13 @@
                <widget class="QComboBox" name="comboBox_spatialTarget"/>
               </item>
               <item row="10" column="0">
-               <widget class="QLabel" name="label_3">
+               <widget class="QLabel" name="label_4">
                 <property name="text">
-                 <string>Hilbert length</string>
+                 <string>Model order</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="2">
-               <widget class="QLineEdit" name="edge">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="13" column="0">
+              <item row="14" column="0">
                <widget class="QLabel" name="label">
                 <property name="maximumSize">
                  <size>
@@ -163,33 +139,6 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QCheckBox" name="Filter_checkbox">
-                <property name="text">
-                 <string>Filter 9-13Hz</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="2">
-               <widget class="QLineEdit" name="modelOrder">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="12" column="2">
-               <widget class="QLineEdit" name="stimulationTarget">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="0">
                <widget class="QCheckBox" name="checkBox_phaseEstimate">
                 <property name="text">
@@ -197,14 +146,7 @@
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
-               <widget class="QCheckBox" name="checkBox_Stimulation">
-                <property name="text">
-                 <string>Stimulation</string>
-                </property>
-               </widget>
-              </item>
-              <item row="10" column="2">
+              <item row="11" column="2">
                <widget class="QLineEdit" name="hilbertLength">
                 <property name="maximumSize">
                  <size>
@@ -214,8 +156,32 @@
                 </property>
                </widget>
               </item>
+              <item row="10" column="2">
+               <widget class="QLineEdit" name="modelOrder">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QCheckBox" name="Filter_checkbox">
+                <property name="text">
+                 <string>Filter 9-13Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Hilbert length</string>
+                </property>
+               </widget>
+              </item>
               <item row="13" column="2">
-               <widget class="QLineEdit" name="phaseShift">
+               <widget class="QLineEdit" name="stimulationTarget">
                 <property name="maximumSize">
                  <size>
                   <width>100</width>
@@ -225,9 +191,30 @@
                </widget>
               </item>
               <item row="9" column="0">
-               <widget class="QLabel" name="label_4">
+               <widget class="QLabel" name="label_5">
                 <property name="text">
-                 <string>Model order</string>
+                 <string>Edge length</string>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Stimulation target</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Center electrode</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0">
+               <widget class="QCheckBox" name="checkBox_PhaseTargeting">
+                <property name="text">
+                 <string>Phase trgt</string>
                 </property>
                </widget>
               </item>
@@ -243,6 +230,36 @@
                  <string>refresh</string>
                 </property>
                </widget>
+              </item>
+              <item row="9" column="2">
+               <widget class="QLineEdit" name="edge">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="2">
+               <widget class="QLineEdit" name="phaseShift">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>Outer electrodes</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QComboBox" name="comboBox_outElectrodes"/>
               </item>
              </layout>
             </widget>
@@ -353,7 +370,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>979</width>
+     <width>1054</width>
      <height>22</height>
     </rect>
    </property>

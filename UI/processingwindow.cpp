@@ -169,13 +169,17 @@ void ProcessingWindow::on_checkBox_Channels_stateChanged(int arg1)
 }
 
 
+void ProcessingWindow::on_checkBox_PhaseTargeting_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setPhaseTargetingState(isChecked);
+}
+
 void ProcessingWindow::on_checkBox_Stimulation_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
-    emit setStimulationState(isChecked);
     handler.setTriggerEnableStatus(isChecked);
 }
-
 
 void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
 {
@@ -192,24 +196,66 @@ void ProcessingWindow::on_setParamsButton_clicked()
 void ProcessingWindow::on_comboBox_spatialTarget_currentIndexChanged(int index)
 {
     emit setSpatilaTargetChannel(index);
+    setupComboBox_OuterElectrode(index);
 }
 
 void ProcessingWindow::on_refreshButton_clicked()
 {
-    ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it
+    if (handler.channelNamesSet()) {
+        ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it
 
-    for (const auto &name : spatial_channel_names)
-    {
-        ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
+        for (const auto &name : spatial_channel_names)
+        {
+            ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
+        }
+
+        setupComboBox_OuterElectrode(0);
+
+    } else {
+        QMessageBox::warning(this, "Channel Naming Error", "Please load channel map in the EEG window.");
     }
 }
 
+void ProcessingWindow::setupComboBox_OuterElectrode(int spatial_target_index) {
+
+    // Setup outer channel names
+    outer_channel_names.clear();
+    bool skip_first = true;
+
+    for (int i = 0; i < spatial_channel_names.size(); i++)
+    {
+        if (i != spatial_target_index) {
+            outer_channel_names.append(QString::fromStdString(spatial_channel_names[i]));
+        }
+    }
+
+    // Setup combobox
+    QStandardItemModel* model = new QStandardItemModel(numOuterElectrodes, 1, this);
+    outerElectrodeCheckStates_.resize(numOuterElectrodes, true);
+
+    for (int i = 0; i < numOuterElectrodes; ++i) {
+        QStandardItem* item = new QStandardItem(outer_channel_names.at(i));
+        item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+        item->setData(Qt::Checked, Qt::CheckStateRole);
+        model->setItem(i, 0, item);
+    }
+
+    ui->comboBox_outElectrodes->setModel(model);
+    connect(model, &QStandardItemModel::itemChanged, this, &ProcessingWindow::handleCheckboxChange);
+}
+
+void ProcessingWindow::handleCheckboxChange(QStandardItem* item) {
+    int row = item->row();
+    bool isChecked = item->checkState() == Qt::Checked;
+    outerElectrodeCheckStates_[row] = isChecked;
+    
+    emit outerElectrodesStateChanged(outerElectrodeCheckStates_);
+}
 
 void ProcessingWindow::on_pushButton_pause_view_clicked()
 {
     emit switchPause();
 }
-
 
 void ProcessingWindow::on_checkBox_triggers_A_stateChanged(int arg1)
 {
@@ -217,10 +263,11 @@ void ProcessingWindow::on_checkBox_triggers_A_stateChanged(int arg1)
     emit setShowTriggers_A(isChecked);
 }
 
-
 void ProcessingWindow::on_checkBox_triggers_B_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setShowTriggers_B(isChecked);
 }
+
+
 

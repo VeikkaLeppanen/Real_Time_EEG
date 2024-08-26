@@ -100,6 +100,8 @@ public slots:
     void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
+    void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
+
     void setPhaseEstimateParameters(phaseEstimateParameters newParams) {
         phaseEstParams.edge = newParams.edge;
         phaseEstParams.modelOrder = newParams.modelOrder;
@@ -118,6 +120,8 @@ public slots:
 
         phase_diff_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
         phaseDifference = Eigen::VectorXd::Zero(downsampled_cols - newParams.edge);
+
+        outerElectrodeCheckStates_.resize(numOuterElectrodes, true);
 
         Data_to_display = Eigen::MatrixXd::Zero(9, display_length);
     }
@@ -164,6 +168,8 @@ private:
     bool performPhaseDifference = true;
 
     int spatial_channel_index = 0;
+    int numOuterElectrodes = 4;
+    std::vector<bool> outerElectrodeCheckStates_;
     int filter2_length = 250;
     int edge_cut_cols;
     size_t estimationLength;

@@ -151,9 +151,10 @@ void MainWindow::connect_processing_worker()
         QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
         QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
         QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
-        QObject::connect(processingWindow, &ProcessingWindow::setStimulationState, worker, &ProcessingWorker::setPhaseTargetingState);
+        QObject::connect(processingWindow, &ProcessingWindow::setPhaseTargetingState, worker, &ProcessingWorker::setPhaseTargetingState);
         QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
         QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
+        QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, worker, &ProcessingWorker::outerElectrodesStateChanged);
     }
 }
 
@@ -196,9 +197,10 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
             QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
             QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
             QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
-            QObject::connect(processingWindow, &ProcessingWindow::setStimulationState, worker, &ProcessingWorker::setPhaseTargetingState);
+            QObject::connect(processingWindow, &ProcessingWindow::setPhaseTargetingState, worker, &ProcessingWorker::setPhaseTargetingState);
             QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
             QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
+            QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, worker, &ProcessingWorker::outerElectrodesStateChanged);
         }
 
     } else {

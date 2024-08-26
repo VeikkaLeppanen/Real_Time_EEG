@@ -144,11 +144,23 @@ void ProcessingWorker::process()
             print_debug("Spatial filtering");
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_corrected.rows()) {
                 
-                Eigen::VectorXd sum_of_all_rows = EEG_corrected.colwise().sum();
-                sum_of_all_rows -= EEG_corrected.row(spatial_channel_index).transpose();
-
-                Eigen::VectorXd mean_of_remaining = sum_of_all_rows / (EEG_corrected.rows() - 1);
-                EEG_spatial = EEG_corrected.row(spatial_channel_index) - mean_of_remaining.transpose();
+                Eigen::VectorXd sum_of_rows = Eigen::VectorXd::Zero(downsampled_cols);
+                int outer_channel_index = 0;
+                for (int i = 0; i < EEG_corrected.rows(); i++) {
+                    if (i == spatial_channel_index) continue;
+                        
+                    if (outerElectrodeCheckStates_[outer_channel_index]) {
+                            sum_of_rows += EEG_corrected.row(i);
+                    }
+                    outer_channel_index++;
+                }
+                
+                int trueCount = std::count(outerElectrodeCheckStates_.begin(), outerElectrodeCheckStates_.end(), true);
+                if (trueCount > 0) {
+                    EEG_spatial = EEG_corrected.row(spatial_channel_index) - (sum_of_rows / trueCount).transpose();
+                } else {
+                    EEG_spatial = EEG_corrected.row(spatial_channel_index);
+                }
 
             } else {
                 // Handle the case where the index is out of bounds

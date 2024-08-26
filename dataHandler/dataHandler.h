@@ -68,7 +68,11 @@ public:
     }
     Eigen::VectorXi getSourceChannels() const { return source_channels_; }
     
-    void setChannelNames(std::vector<std::string> channel_names) { channel_names_ = channel_names; }
+    void setChannelNames(std::vector<std::string> channel_names) { 
+        channel_names_ = channel_names;
+        channel_names_set = true;
+    }
+    bool channelNamesSet() { return channel_names_set; }
     std::vector<std::string> getChannelNames() { return channel_names_; }
 
     // Gradient artifact correction
@@ -139,6 +143,7 @@ private:
     std::mutex dataMutex;
     int triggerSource;
     Eigen::VectorXi source_channels_;
+    bool channel_names_set = false;
     std::vector<std::string> channel_names_;
     Eigen::MatrixXd sample_buffer_;
     Eigen::VectorXd time_stamp_buffer_;

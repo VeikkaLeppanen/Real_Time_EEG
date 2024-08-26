@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QStandardItemModel>
+#include <QStandardItem>
 
 #include "processingglwidget.h"
 #include "processingworker.h"
@@ -35,7 +37,7 @@ signals:
     double getCustomScaleMax();
     void setFilterState(bool isChecked);
     void setEEGViewState(bool isChecked);
-    void setStimulationState(bool isChecked);
+    void setPhaseTargetingState(bool isChecked);
     void setphaseEstimateState(bool isChecked);
     void setSpatilaTargetChannel(int index);
 
@@ -46,45 +48,33 @@ signals:
     void switchPause();
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
+    void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates);
+
 public slots:
     // void updateData();
     void updateSpatialChannelNames(std::vector<std::string> names);
 
 private slots:
     void on_edge_editingFinished();
-
     void on_modelOrder_editingFinished();
-
     void on_hilbertLength_editingFinished();
-
     void on_stimulationTarget_editingFinished();
-
     void on_phaseShift_editingFinished();
-
     void on_scaleMax_editingFinished();
-
     void on_scaleMin_editingFinished();
-
     void on_checkBox_stateChanged(int arg1);
-
     void on_Filter_checkbox_stateChanged(int arg1);
-
     void on_checkBox_Channels_stateChanged(int arg1);
-
+    void on_checkBox_PhaseTargeting_stateChanged(int arg1);
     void on_checkBox_Stimulation_stateChanged(int arg1);
-
     void on_checkBox_phaseEstimate_stateChanged(int arg1);
-
     void on_setParamsButton_clicked();
-
     void on_comboBox_spatialTarget_currentIndexChanged(int index);
-
     void on_refreshButton_clicked();
-
+    void setupComboBox_OuterElectrode(int spatial_target_index);
+    void handleCheckboxChange(QStandardItem* item);
     void on_pushButton_pause_view_clicked();
-
     void on_checkBox_triggers_A_stateChanged(int arg1);
-
     void on_checkBox_triggers_B_stateChanged(int arg1);
 
 private:
@@ -95,8 +85,12 @@ private:
 
     phaseEstimateParameters phaseEstParams;
     std::vector<std::string> spatial_channel_names;
+    QStringList outer_channel_names;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
+
+    int numOuterElectrodes = 4;
+    std::vector<bool> outerElectrodeCheckStates_;
 
     volatile std::sig_atomic_t &processingWorkerRunning;
 };
