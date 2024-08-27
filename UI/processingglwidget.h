@@ -54,6 +54,18 @@ public slots:
     bool getShowTriggers_B() { return show_triggers_B; }
     void switchPause() { pause_view = !pause_view; }
 
+    void updateWindowLength_seconds(double windowLength) {
+        windowLength_seconds = windowLength;
+        totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;
+    }
+
+    void updateTLineSpacing(int LineSpacing) {
+        time_line_spacing = LineSpacing;
+        totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;
+    }
+    void setDrawXaxis(bool isChecked) { drawXaxis = isChecked; }
+    bool getDrawXaxis() { return drawXaxis; }
+    
 private:
     Eigen::MatrixXd dataMatrix_;
     Eigen::VectorXi triggers_A_;
@@ -75,6 +87,11 @@ private:
 
     int matrixCapasity_;
     int n_channels_;
+
+    double windowLength_seconds;
+    int time_line_spacing;
+    int totalTimeLines;
+    bool drawXaxis = true;
 };
 
 #endif // PROCESSINGGLWIDGET_H

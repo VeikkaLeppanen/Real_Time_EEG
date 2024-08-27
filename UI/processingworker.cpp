@@ -111,17 +111,18 @@ void ProcessingWorker::process()
             downsample(all_channels, EEG_downsampled, downsampling_factor);
 
             // CWL
-            print_debug("Delay Embedding");
-            if (delay > 0) {
-                // Perform delay embedding if delay is positive
-                delayEmbed(EEG_downsampled.middleRows(5, n_CWL_channels_to_use), expCWL, delay);
-            } else {
-                expCWL = EEG_downsampled.middleRows(5, n_CWL_channels_to_use);
+            if (performRemoveBCG) {
+                print_debug("Delay Embedding");
+                if (delay > 0) { delayEmbed(EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use), expCWL, delay); } 
+                else { expCWL = EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use); }
+
+                print_debug("removeBCG");
+                removeBCG(EEG_downsampled.topRows(n_EEG_channels_to_use), expCWL, pinvCWL, EEG_corrected);
+            } 
+            else {
+                EEG_corrected = EEG_downsampled.topRows(n_EEG_channels_to_use);
             }
 
-            print_debug("removeBCG");
-            removeBCG(EEG_downsampled.middleRows(0, 5), expCWL, pinvCWL, EEG_corrected);
-            
             // Update the EEG window graph data
             switch (display_state) 
             {
@@ -139,7 +140,12 @@ void ProcessingWorker::process()
                     break;
             }
 
-            if (!performPhaseEstimation) continue;
+            if (!performPhaseEstimation) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                continue;
+            }
+
+            emit sendNumSamples(samples_to_process);
 
             print_debug("Spatial filtering");
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_corrected.rows()) {

@@ -20,6 +20,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     ui->hilbertLength->setText(QString::number(phaseEstParams.hilbertWinLength));
     ui->stimulationTarget->setText(QString::number(phaseEstParams.stimulation_target));
     ui->phaseShift->setText(QString::number(phaseEstParams.phase_shift));
+    ui->lineEdit_XaxisSpacing->setText(QString::number(500));
 
     ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
     ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
@@ -40,12 +41,15 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
         connect(this, &ProcessingWindow::switchPause, processingglWidget, &ProcessingGlWidget::switchPause);
 
         connect(this, &ProcessingWindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
+        connect(this, &ProcessingWindow::setDrawXaxis, processingglWidget, &ProcessingGlWidget::setDrawXaxis);
+        connect(this, &ProcessingWindow::updateTLineSpacing, processingglWidget, &ProcessingGlWidget::updateTLineSpacing);
 
         ui->checkBox->setChecked(emit getCustomScaleStatus());
         ui->scaleMin->setText(QString::number(emit getCustomScaleMin()));
         ui->scaleMax->setText(QString::number(emit getCustomScaleMax()));
         ui->checkBox_triggers_A->setChecked(processingglWidget->getShowTriggers_A());
         ui->checkBox_triggers_B->setChecked(processingglWidget->getShowTriggers_B());
+        ui->checkBox_Xaxis->setChecked(processingglWidget->getDrawXaxis());
     } else {
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
@@ -183,8 +187,23 @@ void ProcessingWindow::on_checkBox_Stimulation_stateChanged(int arg1)
 
 void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
 {
-    bool isChecked = (arg1 == Qt::Checked);
-    emit setphaseEstimateState(isChecked);
+    if (handler.channelNamesSet()) {
+        sampling_rate_ = handler.getSamplingRate();
+        bool isChecked = (arg1 == Qt::Checked);
+        emit setphaseEstimateState(isChecked);
+        
+        ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it
+
+        for (const auto &name : spatial_channel_names)
+        {
+            ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
+        }
+
+        setupComboBox_OuterElectrode(0);
+    
+    } else {
+        QMessageBox::warning(this, "Channel Naming Error", "Please load channel map in the EEG window.");
+    }
 }
 
 
@@ -197,23 +216,6 @@ void ProcessingWindow::on_comboBox_spatialTarget_currentIndexChanged(int index)
 {
     emit setSpatilaTargetChannel(index);
     setupComboBox_OuterElectrode(index);
-}
-
-void ProcessingWindow::on_refreshButton_clicked()
-{
-    if (handler.channelNamesSet()) {
-        ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it
-
-        for (const auto &name : spatial_channel_names)
-        {
-            ui->comboBox_spatialTarget->addItem(QString::fromStdString(name)); // Convert std::string to QString and add to combo box
-        }
-
-        setupComboBox_OuterElectrode(0);
-
-    } else {
-        QMessageBox::warning(this, "Channel Naming Error", "Please load channel map in the EEG window.");
-    }
 }
 
 void ProcessingWindow::setupComboBox_OuterElectrode(int spatial_target_index) {
@@ -269,5 +271,26 @@ void ProcessingWindow::on_checkBox_triggers_B_stateChanged(int arg1)
     emit setShowTriggers_B(isChecked);
 }
 
+void ProcessingWindow::on_checkBox_phaseError_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setPhaseError(isChecked);
+}
 
+void ProcessingWindow::on_checkBox_Xaxis_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setDrawXaxis(isChecked);
+}
+
+void ProcessingWindow::on_lineEdit_XaxisSpacing_editingFinished()
+{
+    bool ok;
+    int value = ui->lineEdit_XaxisSpacing->text().toInt(&ok);
+    if (ok) {
+        emit updateTLineSpacing(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
 

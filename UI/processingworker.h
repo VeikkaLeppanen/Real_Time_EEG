@@ -82,6 +82,7 @@ signals:
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B, int numPastElements, int numFutureElements);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
+    void sendNumSamples(int numSamples);
 
 public slots:
     void process_start() {
@@ -93,11 +94,13 @@ public slots:
 
     void setPhaseEstimationState(bool isChecked) { performPhaseEstimation = isChecked; }
 
+    void setRemoveBCG(bool isChecked) { performRemoveBCG = isChecked; }
     void setFilterState(bool isChecked) { performFiltering = isChecked; }
     void setEstimationState(bool isChecked) { performEstimation = isChecked; }
     void setHilbertTransformState(bool isChecked) { performHilbertTransform = isChecked; }
     void setPhaseTargetingState(bool isChecked) { performPhaseTargeting = isChecked; }
     void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
+    void setPhaseDifference(bool isChecked) { performPhaseDifference = isChecked; };
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
@@ -161,11 +164,12 @@ private:
     bool performPreprocessing = true;
     bool performPhaseEstimation = false;
     bool performSNRcheck = false;
+    bool performRemoveBCG = false;
     bool performFiltering = false;
     bool performEstimation = true;
     bool performHilbertTransform = true;
     bool performPhaseTargeting = false;
-    bool performPhaseDifference = true;
+    bool performPhaseDifference = false;
 
     int spatial_channel_index = 0;
     int numOuterElectrodes = 4;

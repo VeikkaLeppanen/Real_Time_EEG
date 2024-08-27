@@ -45,7 +45,10 @@ signals:
 
     void setShowTriggers_A(bool isChecked);
     void setShowTriggers_B(bool isChecked);
+    void setPhaseError(bool isChecked);
     void switchPause();
+    void setDrawXaxis(bool isChecked);
+    void updateTLineSpacing(int value);
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates);
@@ -53,6 +56,7 @@ signals:
 public slots:
     // void updateData();
     void updateSpatialChannelNames(std::vector<std::string> names);
+    void setNumSamples(int numSamples) { if (processingglWidget) processingglWidget->updateWindowLength_seconds(numSamples / sampling_rate_); }
 
 private slots:
     void on_edge_editingFinished();
@@ -70,12 +74,14 @@ private slots:
     void on_checkBox_phaseEstimate_stateChanged(int arg1);
     void on_setParamsButton_clicked();
     void on_comboBox_spatialTarget_currentIndexChanged(int index);
-    void on_refreshButton_clicked();
     void setupComboBox_OuterElectrode(int spatial_target_index);
     void handleCheckboxChange(QStandardItem* item);
     void on_pushButton_pause_view_clicked();
     void on_checkBox_triggers_A_stateChanged(int arg1);
     void on_checkBox_triggers_B_stateChanged(int arg1);
+    void on_checkBox_phaseError_stateChanged(int arg1);
+    void on_checkBox_Xaxis_stateChanged(int arg1);
+    void on_lineEdit_XaxisSpacing_editingFinished();
 
 private:
     Ui::ProcessingWindow *ui;
@@ -91,6 +97,9 @@ private:
 
     int numOuterElectrodes = 4;
     std::vector<bool> outerElectrodeCheckStates_;
+
+    int numSamples_ = 10000;
+    int sampling_rate_ = 5000;
 
     volatile std::sig_atomic_t &processingWorkerRunning;
 };

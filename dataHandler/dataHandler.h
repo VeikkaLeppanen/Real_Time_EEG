@@ -58,6 +58,7 @@ public:
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }
     int get_channel_count() { return channel_count_; }
     int get_current_data_index() { return current_data_index_; }
+    int getSamplingRate() { return sampling_rate_; }
 
     void setTriggerSource(uint16_t source) { triggerSource = source; }
     void setSourceChannels(std::vector<uint16_t> SourceChannels) {

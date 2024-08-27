@@ -3,6 +3,9 @@
 Glwidget::Glwidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
+    windowLength_seconds = 2;   // Total time in seconds displayed
+    time_line_spacing = 500;    // Line spacing in milliseconds
+    totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
@@ -102,6 +105,35 @@ void Glwidget::paintGL()
                 glEnd();
             }
         }
+    }
+
+    if (drawXaxis) {
+        // Enable stipple for dashed lines
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+
+        // Draw each vertical line
+        for (int i = 0; i < totalTimeLines; i++) {
+            float x = ((float)i / totalTimeLines) * 2.0f - 1.0f;  // Convert index to OpenGL coordinates
+
+            // Check if the current line is at a whole second
+            if ((i * time_line_spacing) % 1000 == 0) {
+                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
+                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
+            } else {
+                glEnable(GL_LINE_STIPPLE);
+                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
+                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+            }
+
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+
+        glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
     }
 
     // QPainter for text overlays

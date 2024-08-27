@@ -57,6 +57,7 @@ signals:
     void applyGACorrection(int GALength, int GAAverage);
     void startGACorrection();
     void stopGACorrection();
+    void setRemoveBCG(bool isChecked);
     void updateChannelNamesSTD(std::vector<std::string> channelNames);
     void updateChannelNamesQt(QStringList channelNames);
     void scaleDrawStateChanged(bool isChecked);
@@ -66,6 +67,8 @@ signals:
     void setShowTriggers_A(bool isChecked);
     void setShowTriggers_B(bool isChecked);
     void switchPause();
+    void setDrawXaxis(bool isChecked);
+    void updateTLineSpacing(int value);
 
 
 private slots:
@@ -107,6 +110,12 @@ private slots:
     void on_checkBox_triggers_B_stateChanged(int arg1);
 
     void on_pushButton_pauseView_clicked();
+
+    void on_checkBox_removeBCG_stateChanged(int arg1);
+
+    void on_checkBox_Xaxis_stateChanged(int arg1);
+
+    void on_lineEdit_XaxisSpacing_editingFinished();
 
 private:
     Ui::EegWindow *ui;

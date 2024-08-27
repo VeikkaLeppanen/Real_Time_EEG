@@ -3,6 +3,9 @@
 ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
+    windowLength_seconds = 2;   // Total time in seconds displayed
+    time_line_spacing = 500;    // Line spacing in milliseconds
+    totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
@@ -87,7 +90,7 @@ void ProcessingGlWidget::paintGL()
     glLoadIdentity();
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
     
-    // Draw triggers over all graphs
+    // Draw trigger lines for triggers_A
     int totalDataPoints = triggers_A_.size();
     if (show_triggers_A) {
         for (int i = 0; i < triggers_A_.size(); ++i) {
@@ -102,6 +105,7 @@ void ProcessingGlWidget::paintGL()
         }
     }
 
+    // Draw trigger lines for triggers_B
     if (show_triggers_B) {
         for (int i = 0; i < triggers_B_.size(); ++i) {
             if (triggers_B_(i) == 1) {
@@ -115,18 +119,46 @@ void ProcessingGlWidget::paintGL()
         }
     }
     
-    // Enable and configure line stipple for dashed line
+    // Draw the vertical line for the current time
     glEnable(GL_LINE_STIPPLE);
     glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
-
-    // Draw the current time line across the full height
     glColor3f(1.0, 0.0, 0.0); // Red for the current time line
     glBegin(GL_LINES);
     glVertex2f(glX, -1.0);
     glVertex2f(glX, 1.0);
     glEnd();
 
-    // QPainter for text overlays
+
+    if (drawXaxis) {
+        // Enable stipple for dashed lines
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+
+        // Draw each vertical line
+        for (int i = 0; i < totalTimeLines; i++) {
+            float x = ((float)i / totalTimeLines) * (glX + 1) - 1;  // Convert index to OpenGL coordinates
+
+            // Check if the current line is at a whole second
+            if ((i * time_line_spacing) % 1000 == 0) {
+                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
+                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
+            } else {
+                glEnable(GL_LINE_STIPPLE);
+                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
+                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+            }
+
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+
+        glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
+    }
+
+    // Draw the channel names
     QPainter painter(this);
     painter.setPen(Qt::red);
     painter.setFont(QFont("Arial", 10)); // Set font here
