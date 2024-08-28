@@ -205,6 +205,15 @@ std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample
         vec = sample_vector;
     }
 
+    if (SeqNo % 10000 == 0) {
+	Samples.front().back() |= 0x08;
+	//std::cout << "Trigger_A set" << '\n';
+    }
+    if (sample_vector.back() == 1) {
+	Samples.front().back() |= 0x02;
+	//std::cout << "Trigger_B set " << sample_vector.back() << '\n';
+    }
+    
     return serializeSamplePacketData(FrameType, MainUnitNum, Reserved, PacketSeqNo, NumChannels, NumSampleBundles, FirstSampleIndex, FirstSampleTime, Samples);
 }
 
@@ -228,14 +237,16 @@ void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int p
 int main() {
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
     // std::string IP_address = "127.0.0.1"; // Localhost
-    std::string IP_address = "192.168.0.107";
+    std::string IP_address = "192.168.0.100";
+    // std::string IP_address = "192.168.0.107";
 
     sendUDP(MSdata, IP_address, PORT);
     std::cout << "MeasurementStartPackage sent!" << '\n';
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
+    std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
+    // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
