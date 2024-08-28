@@ -87,7 +87,8 @@ void eegWindow::updateData()
         Eigen::MatrixXd data;
         Eigen::VectorXi triggers_A;
         Eigen::VectorXi triggers_B;
-        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, samples_to_display);
+        Eigen::VectorXi triggers_out;
+        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, triggers_out, samples_to_display);
         glWidget->updateMatrix(data, triggers_A, triggers_B);
     }
 }
@@ -118,7 +119,6 @@ void eegWindow::checkHandlerReady() {
             emit updateChannelNamesQt(QchannelNames);
             // setupComboBox();
         }
-        if (glWidget) glWidget->updateWindowLength_seconds(30000 / handler.getSamplingRate());
     }
 }
 
@@ -239,10 +239,7 @@ void eegWindow::on_lineEditGraphSamples_editingFinished()
     int handler_capasity = handler.get_buffer_capacity();
     if (ok && (0 < value) && (value <= handler_capasity)) {
         samples_to_display = value;
-        double length = value / handler.getSamplingRate();
-        if (glWidget) {
-            glWidget->updateWindowLength_seconds(length);
-        }
+        updateChannelLength(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 1 and " + QString::number(handler_capasity));
     }
@@ -303,10 +300,8 @@ void eegWindow::on_numberOfSamples_editingFinished()
     bool ok;
     int value = ui->numberOfSamples->text().toInt(&ok);
     if (ok) {
-        double length = value / handler.getSamplingRate();
-        if (glWidget) {
-            glWidget->updateWindowLength_seconds(length);
-        }
+        prepParams.numberOfSamples = value;
+        updateChannelLength(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -342,7 +337,15 @@ void eegWindow::on_startButton_clicked()
     } else {
         std::cout << "Preprocessing start" << '\n';
         emit startPreprocessing(prepParams, phaseEstParams);
-            // connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
+        
+        bool ok;
+        int value = ui->numberOfSamples->text().toInt(&ok);
+        if (ok) {
+            samples_to_display = value;
+            updateChannelLength(value);
+        } else {
+            QMessageBox::warning(this, "Window Length Error", " ");
+        }
     }
 }
 
@@ -415,3 +418,9 @@ void eegWindow::on_lineEdit_XaxisSpacing_editingFinished()
     }
 }
 
+void eegWindow::updateChannelLength(int value)
+{
+    if (glWidget) {
+        glWidget->updateWindowLength_seconds(value / handler.getSamplingRate());
+    }
+}

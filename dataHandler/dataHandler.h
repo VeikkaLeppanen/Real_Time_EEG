@@ -45,7 +45,12 @@ public:
 
     int getLatestSequenceNumber() { return current_sequence_number_; }
     int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
-    int getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, int number_of_samples);
+    int getLatestDataAndTriggers(Eigen::MatrixXd &output, 
+                                 Eigen::VectorXi &triggers_A, 
+                                 Eigen::VectorXi &triggers_B, 
+                                 Eigen::VectorXi &triggers_out, 
+                                             int number_of_samples);
+
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
     Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
     Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
@@ -106,8 +111,16 @@ public:
     void setTriggerEnableStatus(bool value) { triggerEnableState = value; }
     bool getTriggerEnableStatus() { return triggerEnableState; }
 
-    void setTriggerTimeLimit(double value) { magPro_3G.setTriggerTimeLimit(value); }
-    double getTriggerTimeLimit() { return magPro_3G.getTriggerTimeLimit(); }
+    void setTriggerTimeLimit(int value) { time_limit = std::max(min_time_limit, std::min(max_time_limit, value)); }
+    double getTriggerTimeLimit() { return time_limit; }
+    bool checkTimeLimit() {
+        // Calculate the time difference and compare it to the time_limit
+        auto duration_since_trigger = std::chrono::system_clock::now() - latest_trigger_time;
+        auto duration_limit = std::chrono::milliseconds(time_limit);
+
+        bool enough_time_passed = duration_since_trigger > duration_limit;
+        return enough_time_passed;
+    }
 
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
@@ -150,6 +163,7 @@ private:
     Eigen::VectorXd time_stamp_buffer_;
     Eigen::VectorXi trigger_buffer_A;
     Eigen::VectorXi trigger_buffer_B;
+    Eigen::VectorXi trigger_buffer_out;
     size_t current_data_index_ = 0;
     int current_sequence_number_ = 0;
     int buffer_length_in_seconds_ = 20;
@@ -185,6 +199,12 @@ private:
     magPro magPro_3G;
     bool triggerPortState = false;
     bool triggerEnableState = false;
+
+    // Time limit in milliseconds
+    int time_limit = 100;
+    const int min_time_limit = 100;
+    const int max_time_limit = 100000;
+    std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;

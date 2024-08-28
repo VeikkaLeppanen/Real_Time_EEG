@@ -24,6 +24,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
 
     ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
     ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
+    ui->checkBox_triggers_out->setStyleSheet("QCheckBox { color : cyan; }");
     setWindowTitle("Phase Estimation Window");
     resize(1280, 720);
 
@@ -38,6 +39,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
         connect(this, &ProcessingWindow::getCustomScaleMax, processingglWidget, &ProcessingGlWidget::getCustomScaleMax);
         connect(this, &ProcessingWindow::setShowTriggers_A, processingglWidget, &ProcessingGlWidget::setShowTriggers_A);
         connect(this, &ProcessingWindow::setShowTriggers_B, processingglWidget, &ProcessingGlWidget::setShowTriggers_B);
+        connect(this, &ProcessingWindow::setShowTriggers_out, processingglWidget, &ProcessingGlWidget::setShowTriggers_out);
         connect(this, &ProcessingWindow::switchPause, processingglWidget, &ProcessingGlWidget::switchPause);
 
         connect(this, &ProcessingWindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
@@ -49,6 +51,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
         ui->scaleMax->setText(QString::number(emit getCustomScaleMax()));
         ui->checkBox_triggers_A->setChecked(processingglWidget->getShowTriggers_A());
         ui->checkBox_triggers_B->setChecked(processingglWidget->getShowTriggers_B());
+        ui->checkBox_triggers_out->setChecked(processingglWidget->getShowTriggers_out());
         ui->checkBox_Xaxis->setChecked(processingglWidget->getDrawXaxis());
     } else {
         // Error handling if glWidget is not found
@@ -292,5 +295,18 @@ void ProcessingWindow::on_lineEdit_XaxisSpacing_editingFinished()
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
+}
+
+
+void ProcessingWindow::on_checkBox_triggers_out_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_out(isChecked);
+}
+
+
+void ProcessingWindow::on_comboBox_phaseError_currentIndexChanged(int index)
+{
+    emit setPhaseErrorType(index);
 }
 

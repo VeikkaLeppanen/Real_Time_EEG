@@ -32,6 +32,7 @@ public slots:
     void updateMatrix(const Eigen::MatrixXd &newMatrix, 
                       const Eigen::VectorXi &triggers_A, 
                       const Eigen::VectorXi &triggers_B, 
+                      const Eigen::VectorXi &triggers_out, 
                                         int numPastElements, 
                                         int numFutureElements);
 
@@ -52,6 +53,8 @@ public slots:
     bool getShowTriggers_A() { return show_triggers_A; }
     void setShowTriggers_B(bool isChecked) { show_triggers_B = isChecked; }
     bool getShowTriggers_B() { return show_triggers_B; }
+    void setShowTriggers_out(bool isChecked) { show_triggers_out = isChecked; }
+    bool getShowTriggers_out() { return show_triggers_out; }
     void switchPause() { pause_view = !pause_view; }
 
     void updateWindowLength_seconds(double windowLength) {
@@ -70,10 +73,12 @@ private:
     Eigen::MatrixXd dataMatrix_;
     Eigen::VectorXi triggers_A_;
     Eigen::VectorXi triggers_B_;
+    Eigen::VectorXi triggers_out_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = true;
     bool show_triggers_A = true;
     bool show_triggers_B = true;
+    bool show_triggers_out = true;
     bool pause_view = false;
     QStringList channelNames_;
 

@@ -85,7 +85,7 @@ void TriggeringWindow::on_TimeLimitLineEdit_editingFinished()
 {
     bool ok;
     int value = ui->TimeLimitLineEdit->text().toInt(&ok);
-    if (ok) {
+    if (ok && value >= 100 && value <= 100000) {
         handler.setTriggerTimeLimit(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 100 and 100000.");

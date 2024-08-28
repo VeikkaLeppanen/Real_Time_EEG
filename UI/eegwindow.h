@@ -76,46 +76,30 @@ private slots:
 
     void on_connectButton_clicked();
     void checkHandlerReady();  // Slot to periodically check the handler's readiness
-
     void on_disconnectButton_clicked();
     void on_sourceChannelLoad_clicked();
     void setupComboBox();
     void handleCheckboxChange(QStandardItem* item);
-
     void on_lineEditPort_editingFinished();
     void on_lineEditTimeOut_editingFinished();
-
     void on_lineEditGraphSamples_editingFinished();
-
     void on_lineEditGALength_editingFinished();
     void on_lineEditGAaverage_editingFinished();
     void on_checkBox_stateChanged(int arg1);
-    
     void on_filter1_stateChanged(int arg1);
-
     void on_checkBox_2_stateChanged(int arg1);
-
     void on_downsampling_editingFinished();
-
     void on_numberOfSamples_editingFinished();
-
     void on_delay_editingFinished();
-
     void on_comboBox_view_currentIndexChanged(int index);
-
     void on_checkBox_GA_stateChanged(int arg1);
-
     void on_checkBox_triggers_A_stateChanged(int arg1);
-
     void on_checkBox_triggers_B_stateChanged(int arg1);
-
     void on_pushButton_pauseView_clicked();
-
     void on_checkBox_removeBCG_stateChanged(int arg1);
-
     void on_checkBox_Xaxis_stateChanged(int arg1);
-
     void on_lineEdit_XaxisSpacing_editingFinished();
+    void updateChannelLength(int value);
 
 private:
     Ui::EegWindow *ui;

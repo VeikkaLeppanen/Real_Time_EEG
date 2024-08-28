@@ -79,7 +79,12 @@ signals:
     void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
     void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
     void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B);
-    void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B, int numPastElements, int numFutureElements);
+    void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, 
+                                     const Eigen::VectorXi triggers_A, 
+                                     const Eigen::VectorXi triggers_B, 
+                                     const Eigen::VectorXi triggers_out, 
+                                     int numPastElements, 
+                                     int numFutureElements);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
     void sendNumSamples(int numSamples);
@@ -146,6 +151,7 @@ public slots:
 
         return output;
     }
+    void setPhaseErrorType(int index) { phaseErrorType = index; };
 
 private:
     void process();
@@ -192,6 +198,7 @@ private:
 
     displayState display_state = displayState::CWL;
     bool phasEst_display_all_EEG_channels = false;
+    int phaseErrorType = 0;
     int display_length;
     Eigen::MatrixXd Data_to_display;
 

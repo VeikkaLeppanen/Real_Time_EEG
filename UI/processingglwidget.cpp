@@ -118,6 +118,20 @@ void ProcessingGlWidget::paintGL()
             }
         }
     }
+
+    // Draw trigger lines for triggers_out
+    if (show_triggers_out) {
+        for (int i = 0; i < triggers_out_.size(); ++i) {
+            if (triggers_out_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 1.0, 1.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
     
     // Draw the vertical line for the current time
     glEnable(GL_LINE_STIPPLE);
@@ -194,6 +208,7 @@ void ProcessingGlWidget::paintGL()
 void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix, 
                                       const Eigen::VectorXi &triggers_A, 
                                       const Eigen::VectorXi &triggers_B, 
+                                      const Eigen::VectorXi &triggers_out, 
                                                         int numPastElements, 
                                                         int numFutureElements) 
 {
@@ -214,6 +229,7 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
         numFutureElements_ = numFutureElements;
         triggers_A_ = triggers_A;
         triggers_B_ = triggers_B;
+        triggers_out_ = triggers_out;
     }
 }
 

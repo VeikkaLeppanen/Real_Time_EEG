@@ -45,6 +45,7 @@ signals:
 
     void setShowTriggers_A(bool isChecked);
     void setShowTriggers_B(bool isChecked);
+    void setShowTriggers_out(bool isChecked);
     void setPhaseError(bool isChecked);
     void switchPause();
     void setDrawXaxis(bool isChecked);
@@ -52,6 +53,7 @@ signals:
     void updateWidgetChannelNames(std::vector<std::string> processing_channel_names);
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates);
+    void setPhaseErrorType(int index);
 
 public slots:
     // void updateData();
@@ -82,6 +84,8 @@ private slots:
     void on_checkBox_phaseError_stateChanged(int arg1);
     void on_checkBox_Xaxis_stateChanged(int arg1);
     void on_lineEdit_XaxisSpacing_editingFinished();
+    void on_checkBox_triggers_out_stateChanged(int arg1);
+    void on_comboBox_phaseError_currentIndexChanged(int index);
 
 private:
     Ui::ProcessingWindow *ui;

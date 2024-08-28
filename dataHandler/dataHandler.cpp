@@ -16,6 +16,7 @@ void dataHandler::reset_handler(int channel_count, int sampling_rate, int simula
         time_stamp_buffer_ = Eigen::VectorXd::Zero(buffer_capacity_);
         trigger_buffer_A = Eigen::VectorXi::Zero(buffer_capacity_);
         trigger_buffer_B = Eigen::VectorXi::Zero(buffer_capacity_);
+        trigger_buffer_out = Eigen::VectorXi::Zero(buffer_capacity_);
     }
 
     processing_sample_vector = Eigen::VectorXd::Zero(channel_count);
@@ -128,9 +129,13 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         sample_buffer_.col(current_data_index_) = processing_sample_vector;
 
         // Triggering
-        if (getTriggerEnableStatus() && shouldTrigger(SeqNo)) {
-            send_trigger();
+        if (getTriggerEnableStatus() && shouldTrigger(SeqNo) && checkTimeLimit()) {    
+            latest_trigger_time = std::chrono::system_clock::now();
+            // send_trigger();
             removeTrigger(SeqNo);
+            trigger_buffer_out(current_data_index_) = 1;
+        } else {
+            trigger_buffer_out(current_data_index_) = 0;
         }
 
         // Timestamp, triggers, and buffer index update
@@ -201,12 +206,17 @@ int dataHandler::getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_sam
     return current_sequence_number_;
 }
 
-int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, int number_of_samples) {
+int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output, 
+                                          Eigen::VectorXi &triggers_A, 
+                                          Eigen::VectorXi &triggers_B, 
+                                          Eigen::VectorXi &triggers_out, 
+                                                      int number_of_samples) {
 
     // Ensure matrices are resized correctly
     if (output.rows() != channel_count_ || output.cols() != number_of_samples) output.resize(channel_count_, number_of_samples);
     if (triggers_A.cols() != number_of_samples) triggers_A.resize(number_of_samples);
     if (triggers_B.cols() != number_of_samples) triggers_B.resize(number_of_samples);
+    if (triggers_out.cols() != number_of_samples) triggers_out.resize(number_of_samples);
 
     // Calculate the number of samples that fit before reaching the end of the buffer
     int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
@@ -219,6 +229,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::Vector
         output.rightCols(fitToEnd) = sample_buffer_.middleCols(current_data_index_ - fitToEnd, fitToEnd);
         triggers_A.tail(fitToEnd) = trigger_buffer_A.segment(current_data_index_ - fitToEnd, fitToEnd);
         triggers_B.tail(fitToEnd) = trigger_buffer_B.segment(current_data_index_ - fitToEnd, fitToEnd);
+        triggers_out.tail(fitToEnd) = trigger_buffer_out.segment(current_data_index_ - fitToEnd, fitToEnd);
     }
 
     // Debugging check before accessing leftCols and middleCols
@@ -226,6 +237,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output, Eigen::Vector
         output.leftCols(overflow) = sample_buffer_.middleCols(buffer_capacity_ - overflow, overflow);
         triggers_A.head(overflow) = trigger_buffer_A.segment(buffer_capacity_ - overflow, overflow);
         triggers_B.head(overflow) = trigger_buffer_B.segment(buffer_capacity_ - overflow, overflow);
+        triggers_out.head(overflow) = trigger_buffer_out.segment(buffer_capacity_ - overflow, overflow);
     }
 
     return current_sequence_number_;

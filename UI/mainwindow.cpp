@@ -153,6 +153,7 @@ void MainWindow::connect_processing_worker()
         QObject::connect(processingWindow, &ProcessingWindow::setPhaseError, worker, &ProcessingWorker::setPhaseDifference);
         QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
         QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, worker, &ProcessingWorker::outerElectrodesStateChanged);
+        QObject::connect(processingWindow, &ProcessingWindow::setPhaseErrorType, worker, &ProcessingWorker::setPhaseErrorType);
         QObject::connect(worker, &ProcessingWorker::sendNumSamples, processingWindow, &ProcessingWindow::setNumSamples);
     }
 }
@@ -206,6 +207,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
             QObject::connect(processingWindow, &ProcessingWindow::setPhaseError, worker, &ProcessingWorker::setPhaseDifference);
             QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
             QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, worker, &ProcessingWorker::outerElectrodesStateChanged);
+            QObject::connect(processingWindow, &ProcessingWindow::setPhaseErrorType, worker, &ProcessingWorker::setPhaseErrorType);
             QObject::connect(worker, &ProcessingWorker::sendNumSamples, processingWindow, &ProcessingWindow::setNumSamples);
         }
 

@@ -71,6 +71,7 @@ void ProcessingWorker::process()
         // Input triggers
         Eigen::VectorXi triggers_A = Eigen::VectorXi::Zero(samples_to_process);
         Eigen::VectorXi triggers_B = Eigen::VectorXi::Zero(samples_to_process);
+        Eigen::VectorXi triggers_out = Eigen::VectorXi::Zero(samples_to_process);
 
         print_debug("Memory allocated");
 
@@ -93,7 +94,7 @@ void ProcessingWorker::process()
                 emit updateSpatialChannelNames(EEG_spatial_channel_names);
             }
 
-            int sequence_number = handler.getLatestDataAndTriggers(all_channels, triggers_A, triggers_B, samples_to_process);
+            int sequence_number = handler.getLatestDataAndTriggers(all_channels, triggers_A, triggers_B, triggers_out, samples_to_process);
             
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) continue;
@@ -141,7 +142,7 @@ void ProcessingWorker::process()
             }
 
             if (!performPhaseEstimation) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
             }
 
@@ -230,16 +231,47 @@ void ProcessingWorker::process()
                     last_phase = phaseAngles(phaseEstParams.edge);
                     last_phase_seqnum = sequence_number;
                 } else if (numSkippedSamples > 35) {
-                    phase_diff_hilbert = hilbertTransform(EEG_filter2);
-                    double difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
-                    
-                    // Update the phase difference
-                    phaseDifference(phaseDifference_current_index) = difference;
+                    double difference;
+                    switch (phaseErrorType) {
+                        case 0:
+                            phase_diff_hilbert = hilbertTransform(EEG_filter2);
+                            difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
 
-                    phaseDifference_current_index = (phaseDifference_current_index + 1) % phaseDifference.size();
+                            // Update the phase difference
+                            phaseDifference(phaseDifference_current_index) = difference;
+
+                            phaseDifference_current_index = (phaseDifference_current_index + 1) % phaseDifference.size();
+                            break;
+                        case 1:
+                            phase_diff_hilbert = hilbertTransform(EEG_filter2);
+                            difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - (numSkippedSamples)]));
+
+                            // Update the phase difference
+                            if (phaseDifference_current_index + numSkippedSamples < phaseDifference.size()) {
+                                // Safe to modify the segment without wrapping around
+                                phaseDifference.segment(phaseDifference_current_index, numSkippedSamples).setConstant(difference);
+                            } else {
+                                // Calculate the number of elements that fit until the end of the vector
+                                int fitToEnd = phaseDifference.size() - phaseDifference_current_index;
+
+                                // Update the part that fits
+                                phaseDifference.segment(phaseDifference_current_index, fitToEnd).setConstant(difference);
+
+                                // Calculate the remaining elements that need to wrap around to the beginning
+                                int overflow = numSkippedSamples - fitToEnd;
+
+                                // Update the wrapped around part
+                                if (overflow > 0) {
+                                    phaseDifference.head(overflow).setConstant(difference);
+                                }
+                            }
+
+                            phaseDifference_current_index = (phaseDifference_current_index + numSkippedSamples) % phaseDifference.size();
+                            break;
+                    }
                     last_phase_seqnum = -1;
+                    Data_to_display.row(8).head(downsampled_cols - phaseEstParams.edge) = getPhaseDifference_vector();
                 }
-                Data_to_display.row(8).head(downsampled_cols - phaseEstParams.edge) = getPhaseDifference_vector();
             }
 
             if (phasEst_display_all_EEG_channels) {
@@ -247,9 +279,9 @@ void ProcessingWorker::process()
                     if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
                     else PhaseEst_channel_names.push_back("Undefined");
                 }
-                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, triggers_out, downsampled_cols, estimationLength - phaseEstParams.edge);
             } else {
-                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, triggers_out, downsampled_cols, estimationLength - phaseEstParams.edge);
             }
             
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_channel_names.size()) {
