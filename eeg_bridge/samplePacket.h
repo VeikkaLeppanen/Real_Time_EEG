@@ -18,6 +18,6 @@ struct sample_packet {
     uint64_t FirstSampleTime;
 };
 
-void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer);
+void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, bool contains_trigger_channel);
 std::vector<std::vector<double>> deserializeSamplePacket_pointer(const uint8_t *buffer, size_t size, sample_packet &packet);
 void printSamplePacket(const sample_packet& packet);

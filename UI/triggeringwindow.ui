@@ -180,7 +180,7 @@
        <item row="4" column="0">
         <widget class="QLabel" name="label_20">
          <property name="text">
-          <string>IPI</string>
+          <string>IPI (ms)</string>
          </property>
         </widget>
        </item>
@@ -190,7 +190,7 @@
        <item row="5" column="0">
         <widget class="QLabel" name="label_21">
          <property name="text">
-          <string>ba ratio</string>
+          <string>B/A ratio</string>
          </property>
         </widget>
        </item>
@@ -325,7 +325,7 @@
        <item row="0" column="0" colspan="2">
         <widget class="QPushButton" name="connectTrigger">
          <property name="text">
-          <string>Connect G3</string>
+          <string>Connect</string>
          </property>
         </widget>
        </item>

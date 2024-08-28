@@ -1,6 +1,6 @@
 #include "samplePacket.h"
 
-void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer) {
+void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sample_packet &packet, Eigen::MatrixXd &packet_handler_buffer, Eigen::VectorXi &triggers_A, Eigen::VectorXi &triggers_B, bool contains_trigger_channel) {
     size_t offset = 0;
 
     if (buffer == nullptr || size < sizeof(sample_packet)) {
@@ -35,17 +35,40 @@ void deserializeSamplePacketEigen_pointer(const uint8_t *buffer, size_t size, sa
     // Initialize an Eigen matrix to store samples. Rows correspond to channels, columns to sample bundles.
     // packet_handler_buffer.resize(packet.NumChannels, packet.NumSampleBundles);
 
+    triggers_A.resize(packet.NumSampleBundles);
+    triggers_B.resize(packet.NumSampleBundles);
+    triggers_A.setZero();
+    triggers_B.setZero();
+
     for (uint16_t bundle = 0; bundle < packet.NumSampleBundles; ++bundle) {
         for (uint16_t channel = 0; channel < packet.NumChannels; ++channel) {
             if (offset + 3 > size) {
                 throw std::runtime_error("Buffer overrun while reading samples.");
             }
-            // Extracting and converting 24-bit signed integer to double
-            int32_t sample = (static_cast<int32_t>(buffer[offset]) << 24) |
-                             (static_cast<int32_t>(buffer[offset + 1]) << 16) |
-                             (static_cast<int32_t>(buffer[offset + 2]) << 8);
-            sample >>= 8; // Sign extension for 24-bit to 32-bit
-            packet_handler_buffer(channel, bundle) = static_cast<double>(sample);
+
+            // Check if a trigger channel is present
+            if (contains_trigger_channel && channel == packet.NumChannels - 1) {
+                // if (static_cast<int>(buffer[offset + 2]) != 0) std::cout << "First byte: " << static_cast<int>(buffer[offset + 2]) << std::endl;
+                // if (static_cast<int>((buffer[offset + 2] & 0x02) != 0))
+                //     std::cout << "Second bit is set in the byte value: " << (buffer[offset + 2] & 0x02) << std::endl;
+                
+                // if (static_cast<int>((buffer[offset + 2] & 0x08) != 0))
+                //     std::cout << "Fourth bit is set in the byte value: " << (buffer[offset + 2] & 0x08) << std::endl;
+
+
+                // Directly check second and fourth bits from the first byte of the sample
+                triggers_A(bundle) = static_cast<int>((buffer[offset + 2] & 0x02) != 0); // Check if the second bit is set
+                triggers_B(bundle) = static_cast<int>((buffer[offset + 2] & 0x08) != 0); // Check if the fourth bit is set
+
+            } else {
+                // Extracting and converting 24-bit signed integer to double
+                int32_t sample = (static_cast<int32_t>(buffer[offset]) << 24) |
+                                 (static_cast<int32_t>(buffer[offset + 1]) << 16) |
+                                 (static_cast<int32_t>(buffer[offset + 2]) << 8);
+                sample >>= 8; // Sign extension for 24-bit to 32-bit
+                packet_handler_buffer(channel, bundle) = static_cast<double>(sample);
+            }
+
             offset += 3;
         }
     }

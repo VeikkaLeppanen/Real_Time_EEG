@@ -1,10 +1,14 @@
 #include "eegwindow.h"
 
-eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent) 
+eegWindow::eegWindow(dataHandler &handler, 
+      volatile std::sig_atomic_t &signal_received,
+      volatile std::sig_atomic_t &processingWorkerRunning,
+                         QWidget *parent) 
     : QMainWindow(parent), 
       ui(new Ui::EegWindow),
       handler(handler),
-      signal_received(signal_received)
+      signal_received(signal_received),
+      processingWorkerRunning(processingWorkerRunning)
     {
         ui->setupUi(this);
 
@@ -19,23 +23,40 @@ eegWindow::eegWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         ui->lineEditTimeOut->setText(QString::number(bridge_timeout)); // Example timeout in milliseconds
         ui->lineEditGALength->setText(QString::number(GALength));
         ui->lineEditGAaverage->setText(QString::number(GAAverage));
+        ui->lineEdit_XaxisSpacing->setText(QString::number(500));
         ui->filter1->setChecked(handler.getFilterState());
         ui->checkBox_2->setChecked(handler.getBaselineState());
+        ui->numberOfSamples->setText(QString::number(prepParams.numberOfSamples));
+        ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
+        ui->delay->setText(QString::number(prepParams.delay));
 
+        ui->tabWidget->setTabText(0, "Device");
+        ui->tabWidget->setTabText(1, "Preprocessing");
+        ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
+        ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
         setWindowTitle("EEG Window");
         resize(1280, 720);
 
         checkHandlerTimer = new QTimer(this);
         connect(checkHandlerTimer, &QTimer::timeout, this, &eegWindow::checkHandlerReady);
 
-        Glwidget* glWidget = ui->openglWidget;
+        glWidget = ui->openglWidget;
         if (glWidget) {
             connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
             connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
             connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
             connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
             connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
-            
+            connect(this, &eegWindow::setShowTriggers_A, glWidget, &Glwidget::setShowTriggers_A);
+            connect(this, &eegWindow::setShowTriggers_B, glWidget, &Glwidget::setShowTriggers_B);
+            connect(this, &eegWindow::switchPause, glWidget, &Glwidget::switchPause);
+            connect(this, &eegWindow::setDrawXaxis, glWidget, &Glwidget::setDrawXaxis);
+            connect(this, &eegWindow::updateTLineSpacing, glWidget, &Glwidget::updateTLineSpacing);
+
+            ui->checkBox_triggers_A->setChecked(glWidget->getShowTriggers_A());
+            ui->checkBox_triggers_B->setChecked(glWidget->getShowTriggers_B());
+            ui->checkBox_Xaxis->setChecked(glWidget->getDrawXaxis());
+
             emit updateChannelNamesSTD(handler.getChannelNames());
         } else {
             // Error handling if glWidget is not found
@@ -59,11 +80,16 @@ void eegWindow::handleError(const QString &error)
 
 void eegWindow::updateData() 
 {
-    Glwidget* glWidget = ui->openglWidget;
+    if (processingWorkerRunning) return;
+
+    glWidget = ui->openglWidget;
     if (glWidget && handler.isReady()) {
-        Eigen::MatrixXd newMatrix = handler.returnLatestDataInOrder(samples_to_display);
-    
-        glWidget->updateMatrix(newMatrix);
+        Eigen::MatrixXd data;
+        Eigen::VectorXi triggers_A;
+        Eigen::VectorXi triggers_B;
+        Eigen::VectorXi triggers_out;
+        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, triggers_out, samples_to_display);
+        glWidget->updateMatrix(data, triggers_A, triggers_B);
     }
 }
 
@@ -91,7 +117,7 @@ void eegWindow::checkHandlerReady() {
             channelNames_ = QchannelNames;
 
             emit updateChannelNamesQt(QchannelNames);
-            setupComboBox();
+            // setupComboBox();
         }
     }
 }
@@ -153,7 +179,7 @@ void eegWindow::setupChannelNames()
     channelNames_ = QchannelNames;
 
     emit updateChannelNamesQt(QchannelNames);
-    setupComboBox();
+    // setupComboBox();
 }
 
 void eegWindow::setupComboBox() {
@@ -169,7 +195,7 @@ void eegWindow::setupComboBox() {
         model->setItem(i, 0, item);
     }
 
-    ui->comboBox->setModel(model);
+    // ui->comboBox->setModel(model);
     connect(model, &QStandardItemModel::itemChanged, this, &eegWindow::handleCheckboxChange);
     emit updateChannelDisplayState(channelCheckStates_);
 }
@@ -178,9 +204,8 @@ void eegWindow::setupComboBox() {
 void eegWindow::handleCheckboxChange(QStandardItem* item) {
     int row = item->row();
     bool isChecked = item->checkState() == Qt::Checked;
-    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;  // Directly set the boolean state
+    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;
 
-    // You might want to do something immediately after the change or just store the state.
     emit updateChannelDisplayState(channelCheckStates_);
 }
 
@@ -214,6 +239,7 @@ void eegWindow::on_lineEditGraphSamples_editingFinished()
     int handler_capasity = handler.get_buffer_capacity();
     if (ok && (0 < value) && (value <= handler_capasity)) {
         samples_to_display = value;
+        updateChannelLength(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 1 and " + QString::number(handler_capasity));
     }
@@ -225,6 +251,9 @@ void eegWindow::on_lineEditGALength_editingFinished()
     int value = ui->lineEditGALength->text().toInt(&ok);
     if (ok) {
         GALength = value;
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        emit startGACorrection();
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 500000.");
     }
@@ -236,26 +265,14 @@ void eegWindow::on_lineEditGAaverage_editingFinished()
     int value = ui->lineEditGAaverage->text().toInt(&ok);
     if (ok) {
         GAAverage = value;
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        emit startGACorrection();
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number between 0 and 1000.");
     }
 }
 
-void eegWindow::on_HandlerApplyButton_clicked()
-{
-    emit applyGACorrection(GALength, GAAverage);
-}
-
-void eegWindow::on_GACorrectionStart_clicked()
-{
-    emit startGACorrection();
-}
-
-
-void eegWindow::on_GACorrectionStop_clicked()
-{
-    emit stopGACorrection();
-}
 
 void eegWindow::on_checkBox_stateChanged(int arg1)
 {
@@ -277,3 +294,133 @@ void eegWindow::on_checkBox_2_stateChanged(int arg1)
     handler.setBaselineState(isChecked);
 }
 
+
+void eegWindow::on_numberOfSamples_editingFinished()
+{
+    bool ok;
+    int value = ui->numberOfSamples->text().toInt(&ok);
+    if (ok) {
+        prepParams.numberOfSamples = value;
+        updateChannelLength(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void eegWindow::on_downsampling_editingFinished()
+{
+    bool ok;
+    int value = ui->downsampling->text().toInt(&ok);
+    if (ok && (value > 0)) {
+        prepParams.downsampling_factor = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+
+void eegWindow::on_delay_editingFinished()
+{
+    bool ok;
+    int value = ui->delay->text().toInt(&ok);
+    if (ok) {
+        prepParams.delay = value;
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void eegWindow::on_startButton_clicked()
+{
+    if(processingWorkerRunning) {
+        QMessageBox::warning(this, "Error", "Processing is already running.");
+    } else {
+        std::cout << "Preprocessing start" << '\n';
+        emit startPreprocessing(prepParams, phaseEstParams);
+        
+        bool ok;
+        int value = ui->numberOfSamples->text().toInt(&ok);
+        if (ok) {
+            samples_to_display = value;
+            updateChannelLength(value);
+        } else {
+            QMessageBox::warning(this, "Window Length Error", " ");
+        }
+    }
+}
+
+void eegWindow::on_stopButton_clicked()
+{
+    processingWorkerRunning = 0;
+}
+
+void eegWindow::on_comboBox_view_currentIndexChanged(int index)
+{
+    emit viewStateChanged(index);
+}
+
+
+void eegWindow::on_checkBox_GA_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    if (isChecked) {
+        // if (handler.get_TA_length() != GALength || handler.get_GA_average_length() != GAAverage) {
+        emit stopGACorrection();
+        emit applyGACorrection(GALength, GAAverage);
+        // }
+        emit startGACorrection();
+    } else {
+        emit stopGACorrection();
+    }
+}
+
+
+void eegWindow::on_checkBox_triggers_A_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_A(isChecked);
+}
+
+
+void eegWindow::on_checkBox_triggers_B_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setShowTriggers_B(isChecked);
+}
+
+
+void eegWindow::on_pushButton_pauseView_clicked()
+{
+    emit switchPause();
+}
+
+
+void eegWindow::on_checkBox_removeBCG_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setRemoveBCG(isChecked);
+}
+
+void eegWindow::on_checkBox_Xaxis_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setDrawXaxis(isChecked);
+}
+
+void eegWindow::on_lineEdit_XaxisSpacing_editingFinished()
+{
+    bool ok;
+    int value = ui->lineEdit_XaxisSpacing->text().toInt(&ok);
+    if (ok) {
+        emit updateTLineSpacing(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void eegWindow::updateChannelLength(int value)
+{
+    if (glWidget) {
+        glWidget->updateWindowLength_seconds(value / handler.getSamplingRate());
+    }
+}

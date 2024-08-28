@@ -142,14 +142,14 @@
           <item>
            <widget class="QPushButton" name="processing">
             <property name="text">
-             <string>Processing</string>
+             <string>Phase estimate</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="triggering">
             <property name="text">
-             <string>Triggering</string>
+             <string>TMS</string>
             </property>
            </widget>
           </item>

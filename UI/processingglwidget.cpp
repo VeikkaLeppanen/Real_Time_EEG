@@ -3,11 +3,10 @@
 ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
+    windowLength_seconds = 2;   // Total time in seconds displayed
+    time_line_spacing = 500;    // Line spacing in milliseconds
+    totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
     QTimer *timer = new QTimer(this);
-    matrixCapasity_ = 30000;
-    n_channels_ = 0;
-    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
-
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -25,16 +24,21 @@ void ProcessingGlWidget::resizeGL(int w, int h)
 
 void ProcessingGlWidget::paintGL()
 {
+    if (dataMatrix_.rows() == 0) return;
+    
     // Initializing positional parameters
     int windowHeight = height();
-    int enabled_channel_count = n_channels_;
-    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
+    int rowHeight = windowHeight / n_channels_;
 
     // min max values for y axis
     Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels_);
     Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels_);
     
     glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_LINE_STIPPLE);
+
+    float currentTimePosition = static_cast<float>(numPastElements_) / (numPastElements_ + numFutureElements_);
+    float glX = currentTimePosition * 2.0f - 1.0f; // Convert to OpenGL's coordinate system
 
     // Draw graphs for enabled channels
     int graph_index = 0;
@@ -77,40 +81,98 @@ void ProcessingGlWidget::paintGL()
         }
         glEnd();
 
-        // // Draw a vertical line at the specific index
-        // int specific_index = 750; // Replace this with your specific index
-        // float x = (float)specific_index / (dataVector.size() - 1) * 2.0f - 1.0f;
-        // glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
-        // glBegin(GL_LINES);
-        // glVertex2f(x, -1.0f);
-        // glVertex2f(x, 1.0f);            
-        // glEnd();
-
         graph_index++;
     }
     
-    // Draw a vertical line at a specific index of the last graph
-    int specific_index = 750; // Replace this with your specific index
-
-    // Calculate the x-coordinate in NDC
-    float x = (float)specific_index / (matrixCapasity_ - 1) * 2.0f - 1.0f;
-
-    // Set viewport for the last graph
-    glViewport(0, 0, width(), rowHeight);
+    // Set viewport to cover the entire widget for drawing triggers
+    glViewport(0, 0, width(), windowHeight);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);  // Set the coordinate system to cover [-1,1] in both axes
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+    
+    // Draw trigger lines for triggers_A
+    int totalDataPoints = triggers_A_.size();
+    if (show_triggers_A) {
+        for (int i = 0; i < triggers_A_.size(); ++i) {
+            if (triggers_A_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 0.0, 1.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
 
-    // Draw the vertical line
-    glColor3f(1.0, 0.0, 0.0); // Set the color to red for the vertical line
+    // Draw trigger lines for triggers_B
+    if (show_triggers_B) {
+        for (int i = 0; i < triggers_B_.size(); ++i) {
+            if (triggers_B_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 1.0, 0.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
+
+    // Draw trigger lines for triggers_out
+    if (show_triggers_out) {
+        for (int i = 0; i < triggers_out_.size(); ++i) {
+            if (triggers_out_(i) == 1) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;
+                glColor3f(0.0, 1.0, 1.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
+    
+    // Draw the vertical line for the current time
+    glEnable(GL_LINE_STIPPLE);
+    glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+    glColor3f(1.0, 0.0, 0.0); // Red for the current time line
     glBegin(GL_LINES);
-    glVertex2f(x, -1.0f);
-    glVertex2f(x, 1.0f);
+    glVertex2f(glX, -1.0);
+    glVertex2f(glX, 1.0);
     glEnd();
 
-    // QPainter for text overlays
+
+    if (drawXaxis) {
+        // Enable stipple for dashed lines
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+
+        // Draw each vertical line
+        for (int i = 0; i < totalTimeLines; i++) {
+            float x = ((float)i / totalTimeLines) * (glX + 1) - 1;  // Convert index to OpenGL coordinates
+
+            // Check if the current line is at a whole second
+            if ((i * time_line_spacing) % 1000 == 0) {
+                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
+                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
+            } else {
+                glEnable(GL_LINE_STIPPLE);
+                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
+                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+            }
+
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+
+        glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
+    }
+
+    // Draw the channel names
     QPainter painter(this);
     painter.setPen(Qt::red);
     painter.setFont(QFont("Arial", 10)); // Set font here
@@ -143,9 +205,45 @@ void ProcessingGlWidget::paintGL()
     painter.end();
 }
 
+void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix, 
+                                      const Eigen::VectorXi &triggers_A, 
+                                      const Eigen::VectorXi &triggers_B, 
+                                      const Eigen::VectorXi &triggers_out, 
+                                                        int numPastElements, 
+                                                        int numFutureElements) 
+{
+    if (!pause_view) {
+        // Check if dimensions differ
+        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
+            // Resize dataMatrix_ to match the dimensions of newMatrix
+            dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+        }
+
+        // Assign the new matrix
+        dataMatrix_ = newMatrix;
+
+        // Update other attributes based on the new matrix
+        matrixCapasity_ = newMatrix.cols(); 
+        n_channels_ = newMatrix.rows();
+        numPastElements_ = numPastElements;
+        numFutureElements_ = numFutureElements;
+        triggers_A_ = triggers_A;
+        triggers_B_ = triggers_B;
+        triggers_out_ = triggers_out;
+    }
+}
+
 void ProcessingGlWidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
-    emit fetchData();
+    // emit fetchData();
     update();  // Request a re-draw
+}
+
+void ProcessingGlWidget::updateChannelNamesSTD(std::vector<std::string> channelNames) {
+    QStringList newNames;
+    for(size_t i = 0; i < channelNames.size(); i++) {
+        newNames.append(QString::fromStdString(channelNames[i])); 
+    }
+    channelNames_ = newNames;
 }

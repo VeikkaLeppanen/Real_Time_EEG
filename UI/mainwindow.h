@@ -40,7 +40,7 @@ public slots:
     void startGACorrection();
     void stopGACorrection();
 
-    void startProcessing(processingParameters& parameters);
+    void startPreprocessing(preprocessingParameters& parameters, phaseEstimateParameters &phaseEstParams);
 
 private slots:
     void handleError(const QString& error);
@@ -49,6 +49,8 @@ private slots:
     void resetEegWindowPointer();
 
     void on_processing_clicked();
+    void connect_processing_worker();
+    void connect_EEG_worker();
     void resetProcessingWindowPointer();
 
     void on_triggering_clicked();
@@ -77,6 +79,7 @@ private:
     eegWindow *eegwindow = nullptr;
     ProcessingWindow *processingWindow = nullptr;
     TriggeringWindow *triggeringWindow = nullptr;
+    ProcessingWorker *worker = nullptr;
 
     volatile std::sig_atomic_t &signal_received;
     volatile std::sig_atomic_t processingWorkerRunning = 0;

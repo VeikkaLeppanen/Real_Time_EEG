@@ -3,8 +3,10 @@
 Glwidget::Glwidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
+    windowLength_seconds = 2;   // Total time in seconds displayed
+    time_line_spacing = 500;    // Line spacing in milliseconds
+    totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
     QTimer *timer = new QTimer(this);
-    dataMatrix_ = Eigen::MatrixXd::Zero(1, 10000);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -22,23 +24,21 @@ void Glwidget::resizeGL(int w, int h)
 
 void Glwidget::paintGL()
 {
-    if (channelCheckStates_.size() == 0) return;  // Ensure there is data to draw
+    if (dataMatrix_.rows() == 0) return;
 
     // Initializing positional parameters
     int windowHeight = height();
-    int enabled_channel_count = std::count(channelCheckStates_.begin(), channelCheckStates_.end(), true);
-    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
+    int rowHeight = windowHeight / n_channels;
 
     // min max values for y axis
-    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
-    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(channelCheckStates_.size());
+    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels);
+    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels);
     
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Draw graphs for enabled channels
     int graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
         
         // Set viewport for this row
         glViewport(0, graph_index * rowHeight, width(), rowHeight);
@@ -73,6 +73,69 @@ void Glwidget::paintGL()
         graph_index++;
     }
 
+    // Set viewport to cover the entire widget for drawing triggers
+    glViewport(0, 0, width(), windowHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+    
+    // Draw triggers over all graphs
+    int totalDataPoints = triggers_A_.size();
+    if (show_triggers_A) {
+        for (int i = 0; i < triggers_A_.size(); ++i) {
+            if (triggers_A_(i) == 1) {
+                float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;
+                glColor3f(0.0, 0.0, 1.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
+
+    if (show_triggers_B) {
+        for (int i = 0; i < triggers_B_.size(); ++i) {
+            if (triggers_B_(i) == 1) {
+                float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;
+                glColor3f(0.0, 1.0, 0.0);
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+            }
+        }
+    }
+
+    if (drawXaxis) {
+        // Enable stipple for dashed lines
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
+        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+
+        // Draw each vertical line
+        for (int i = 0; i < totalTimeLines; i++) {
+            float x = ((float)i / totalTimeLines) * 2.0f - 1.0f;  // Convert index to OpenGL coordinates
+
+            // Check if the current line is at a whole second
+            if ((i * time_line_spacing) % 1000 == 0) {
+                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
+                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
+            } else {
+                glEnable(GL_LINE_STIPPLE);
+                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
+                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+            }
+
+            glBegin(GL_LINES);
+            glVertex2f(x, -1.0);
+            glVertex2f(x, 1.0);
+            glEnd();
+        }
+
+        glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
+    }
+
     // QPainter for text overlays
     QPainter painter(this);
     painter.setPen(Qt::red);
@@ -80,7 +143,6 @@ void Glwidget::paintGL()
 
     graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
-        if (!channelCheckStates_[row]) continue;
 
         // Draw channel name for each channel
         int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
@@ -108,9 +170,35 @@ void Glwidget::paintGL()
     painter.end();
 }
 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B) { 
+    if (!pause_view) {
+        dataMatrix_ = newMatrix;
+        matrixCapasity = newMatrix.cols();
+        n_channels = newMatrix.rows();
+        triggers_A_ = triggers_A;
+        triggers_B_ = triggers_B;
+    }
+}
+
+void Glwidget::updateChannelDisplayState(std::vector<bool> channelCheckStates) {
+    channelCheckStates_ = channelCheckStates; 
+}
+
 void Glwidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
     emit fetchData();
     update();  // Request a re-draw
+}
+
+void Glwidget::updateChannelNamesQt(QStringList channelNames) {
+    channelNames_ = channelNames; 
+}
+
+void Glwidget::updateChannelNamesSTD(std::vector<std::string> channelNames) {
+    QStringList newNames;
+    for(size_t i = 0; i < channelNames.size(); i++) {
+        newNames.append(QString::fromStdString(channelNames[i])); 
+    }
+    channelNames_ = newNames;
 }
