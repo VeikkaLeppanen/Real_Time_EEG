@@ -236,8 +236,8 @@ void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int p
 
 int main() {
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
-    // std::string IP_address = "127.0.0.1"; // Localhost
-    std::string IP_address = "192.168.0.100";
+    std::string IP_address = "127.0.0.1"; // Localhost
+    // std::string IP_address = "192.168.0.100";
     // std::string IP_address = "192.168.0.107";
 
     sendUDP(MSdata, IP_address, PORT);

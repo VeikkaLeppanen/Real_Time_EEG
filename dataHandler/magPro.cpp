@@ -3,6 +3,7 @@
 int magPro::connectTriggerPort() {
 
     // Check if the port exists
+    // REMEMBER TO GIVE PERMISSIONS TO THE PORT sudo chmod 666 /dev/ttyUSB0
     std::string port = "/dev/ttyUSB0";
     if (!std::ifstream(port)) {
         std::cerr << "Error: Port " << port << " not found." << std::endl;
