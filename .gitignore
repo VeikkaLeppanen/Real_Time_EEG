@@ -2,5 +2,3 @@ build
 myenv
 run.sh
 *.csv
-CMakeLists.txt
->>>>>>> Qt_UI

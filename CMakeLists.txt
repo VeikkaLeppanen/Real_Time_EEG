@@ -10,22 +10,21 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 # Find packages
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Charts)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Charts)
-find_package(OpenGL REQUIRED)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets) # Charts)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets) # Charts)
+find_package(OpenGL REQUIRED)  # Added OpenGL package
 find_package(Threads REQUIRED)
 find_package(Boost 1.65 REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 
-# Include directories
 include_directories(/home/veikka/Work/Real_Time_EEG)
+# include_directories(/usr/include/eigen3)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
+# Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR})
-#include_directories(${MKLROOT}/include)
-include_directories(/usr/include/mkl)
 
-# Sources
 set(SOURCES
     main.cpp
     eeg_bridge/eeg_bridge.cpp
@@ -35,7 +34,7 @@ set(SOURCES
     dataHandler/dataHandler.cpp
     dataHandler/GACorrection.cpp 
     dataHandler/magPro.cpp 
-#    dataProcessor/dataProcessor.cpp
+    dataProcessor/dataProcessor.cpp
     dataProcessor/processingFunctions.cpp
     UI/mainwindow.cpp
     UI/mainwindow.h
@@ -60,39 +59,41 @@ set(SOURCES
     UI/mainglwidget.h
 )
 
-add_definitions(-DEIGEN_USE_MKL_ALL)
-add_definitions(-DEIGEN_USE_LAPACKE=0)
+add_executable(real_time_eeg ${SOURCES}
+    UI/triggeringwindow.h UI/triggeringwindow.cpp UI/triggeringwindow.ui)
 
-add_executable(real_time_eeg ${SOURCES})
-
-# Link libraries
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Charts
-    OpenGL::GL
+    Qt${QT_VERSION_MAJOR}::OpenGL
+    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+    OpenGL::GL  # Linking OpenGL
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
-    -m64 -L${MKLROOT}/lib -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(real_time_eeg)
 endif()
 
-# Compiler flags for MKL and Eigen
-target_compile_definitions(real_time_eeg PRIVATE)
+# Use the flag to suppress deprecated declarations warnings
+target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations) # -DEIGEN_USE_MKL_ALL
 
+# Compiler optimization and OpenMP
 include(CheckCXXCompilerFlag)
+# Check and enable FMA instruction set if available
 CHECK_CXX_COMPILER_FLAG("-mfma" COMPILER_SUPPORTS_MFMA)
 if(COMPILER_SUPPORTS_MFMA)
     target_compile_options(real_time_eeg PRIVATE -mfma)
 endif()
 
+# Add compiler and linker options for OpenMP
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_compile_options(real_time_eeg PRIVATE ${OpenMP_CXX_FLAGS})
+    # Linking OpenMP libraries
     target_link_libraries(real_time_eeg PRIVATE ${OpenMP_CXX_LIBRARIES})
 endif()
 
-target_compile_options(real_time_eeg PRIVATE -O3 -DMKL_ILP64 -m64 -I"${MKLROOT}/include")
+# Set other compiler optimizations
+target_compile_options(real_time_eeg PRIVATE -O3)
