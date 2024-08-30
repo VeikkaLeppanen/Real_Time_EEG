@@ -60,7 +60,6 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
         }
 
         unsigned char firstByte = buffer[0];
-
         // Handle packets
         switch (firstByte)
         {
@@ -75,25 +74,28 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
             // Divide channels into data and trigger sources
             std::vector<uint16_t> data_channel_sources;
-            std::vector<uint16_t> trigger_channel_sources;
+            uint16_t trigger_channel_source = -1;
             for (size_t i = 0; i < SourceChannels.size(); i++) {
                 uint16_t source = SourceChannels[i];
-                if(source < 65535) { 
+                if(source < 60000) { 
                     data_channel_sources.push_back(source);
                 } else {
-                    trigger_channel_sources.push_back(source); 
+                    trigger_channel_source = source; 
                 }
             }
 
             numChannels = packet_info.NumChannels;
-            numDataChannels = numChannels - trigger_channel_sources.size();              // Excluding trigger channels
+            
+            if (trigger_channel_source != -1) numDataChannels = numChannels - 1;              // Excluding trigger channel
+            else numDataChannels = numChannels;
+            
             sampling_rate = packet_info.SamplingRateHz;
             lastSequenceNumber = -1;
 
             handler.setSourceChannels(data_channel_sources);
-            handler.setTriggerSource(trigger_channel_sources[0]);
+            handler.setTriggerSource(trigger_channel_source);
 
-            data_handler_samples = Eigen::MatrixXd::Zero(numChannels, 100);
+            data_handler_samples = Eigen::MatrixXd::Zero(numDataChannels, 100);
 
             std::cout << "MeasurementStart package processed!\n";
 
@@ -109,24 +111,19 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
 
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
-            deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples);
+            Eigen::VectorXi triggers_A;
+            Eigen::VectorXi triggers_B;
+
+            deserializeSamplePacketEigen_pointer(buffer, n, packet_info, data_handler_samples, triggers_A, triggers_B, (numChannels > numDataChannels));
+            
             int sequenceNumber = packet_info.PacketSeqNo;
 
-            // Debug: Print matrix dimensions
-            // std::cout << "Data matrix dimensions - Rows: " << data_handler_samples.rows() << ", Cols: " << data_handler_samples.cols() << '\n';
-            if (numDataChannels >= data_handler_samples.rows()) {
-                std::cerr << "Error: numDataChannels is greater than or equal to total rows in data_handler_samples." << '\n';
+            if (numDataChannels != data_handler_samples.rows()) {
+                std::cerr << "Error: numDataChannels is not equal to total rows in data_handler_samples." << '\n';
                 break;
             }
 
-            Eigen::MatrixXd data_samples = ((data_handler_samples.topRows(numDataChannels) * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
-            Eigen::VectorXd triggers;
-            try {
-                triggers = data_handler_samples.row(numDataChannels);
-            } catch (const std::exception& e) {
-                std::cerr << "Exception caught while accessing triggers: " << e.what() << '\n';
-                break;
-            }
+            Eigen::MatrixXd data_samples = ((data_handler_samples * DC_MODE_SCALE) / NANO_TO_MICRO_CONVERSION);
 
             // Ensure column access is valid
             if (packet_info.NumSampleBundles > data_samples.cols()) {
@@ -139,7 +136,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
                     std::cerr << "Error: Column index " << i << " is out of range for data_samples with columns " << data_samples.cols() << '\n';
                     break;
                 }
-                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), static_cast<int>(triggers(i)), sequenceNumber);
+                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), triggers_A(i), triggers_B(i), sequenceNumber);
             }
 
             // Check for dropped packets

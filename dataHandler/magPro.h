@@ -17,9 +17,7 @@ class magPro {
 public:
     magPro()
         : serial(io)
-    { 
-        latest_trigger_time = std::chrono::system_clock::now();
-    }
+    { }
 
     int connectTriggerPort();
     void trig();
@@ -30,8 +28,6 @@ public:
 
     void set_enable(bool status);
     void set_amplitude(int amplitude);
-    void setTriggerTimeLimit(double value) { time_limit = std::max(min_time_limit, std::min(max_time_limit, value)); }
-    double getTriggerTimeLimit() { return time_limit; }
 
     void set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, float ipi = 1, float ba_ratio = 1.0, bool delay = true);
     void handle_input_queue();
@@ -111,12 +107,6 @@ private:
     // Params
     boost::asio::io_service io;
     boost::asio::serial_port serial;
-
-    // Time limit in milliseconds
-    double time_limit = 0.1;
-    const double min_time_limit = 0.1;
-    const double max_time_limit = 10000;
-    std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
 
     bool enable_debug = true;
 
