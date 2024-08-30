@@ -12,4 +12,3 @@ make # VERBOSE=1
 sudo setcap cap_ipc_lock+ep real_time_eeg
 sudo sudo chmod 666 /dev/ttyUSB0
 ./real_time_eeg
-# sudo ./real_time_eeg
