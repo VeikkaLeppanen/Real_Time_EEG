@@ -131,7 +131,9 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         // Triggering
         if (getTriggerEnableStatus() && shouldTrigger(SeqNo) && checkTimeLimit()) {    
             latest_trigger_time = std::chrono::system_clock::now();
-            // send_trigger();
+            
+            if (getTriggerConnectStatus()) send_trigger();
+            
             removeTrigger(SeqNo);
             trigger_buffer_out(current_data_index_) = 1;
         } else {

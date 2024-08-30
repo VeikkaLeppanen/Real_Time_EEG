@@ -14,6 +14,5 @@ cmake ..
 make
 sudo setcap cap_ipc_lock+ep real_time_eeg
 ./real_time_eeg
-# sudo ./real_time_eeg
 
 

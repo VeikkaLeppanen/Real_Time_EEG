@@ -1,9 +1,6 @@
 build
 myenv
 run.sh
-<<<<<<< HEAD
-proj_cmake_run.sh
-
-=======
 *.csv
+CMakeLists.txt
 >>>>>>> Qt_UI
