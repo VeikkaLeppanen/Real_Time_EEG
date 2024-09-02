@@ -50,6 +50,7 @@ public slots:
     void updateData();
     void on_startButton_clicked();
     void on_stopButton_clicked();
+    void newEstStates(phaseEstimateStates states);
 
 signals:
     void connectEegBridge(int port, int timeout);
@@ -70,6 +71,7 @@ signals:
     void setDrawXaxis(bool isChecked);
     void updateTLineSpacing(int value);
 
+    void requestEstStates();
 
 private slots:
     void handleError(const QString& error);
@@ -123,7 +125,11 @@ private:
     phaseEstimateParameters phaseEstParams;
 
     void setupChannelNames();
-    std::vector<std::string> channelMap_;
+    std::vector<std::string> channelMap_ = {"Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2", "F7", "F8", "T7", "T8", "P7", "P8", "Fz",
+                                            "Cz	", "Pz", "Oz", "FC1", "FC2", "CP1", "CP2", "FC5", "FC6", "CP5", "CP6", "TP9", "TP10", "POz", "ECG",
+                                            "F1", "F2", "C1", "C2", "P1", "P2", "AF3", "AF4", "FC3", "FC4", "CP3", "CP4", "PO3", "PO4", "F5", "F6",
+                                            "C5", "C6", "P5", "P6", "AF7", "AF8", "FT7", "FT8", "TP7", "TP8", "PO7", "PO8", "FT9", "FT10", "Fpz",
+                                            "CPz", "CWL1", "CWL2", "CWL3", "CWL4", "CWL5", "CWL6", "CWL7"};
     Eigen::VectorXi source_channels_;
     std::vector<bool> channelCheckStates_;
     QStringList channelNames_;

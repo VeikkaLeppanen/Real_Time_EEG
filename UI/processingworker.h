@@ -39,6 +39,19 @@ struct phaseEstimateParameters {
     int phase_shift = 0;                    // for 5000Hz
 };
 
+struct phaseEstimateStates {
+    bool performPreprocessing = true;
+    bool performPhaseEstimation = false;
+    bool performSNRcheck = false;
+    bool performRemoveBCG = false;
+    bool performFiltering = false;
+    bool performEstimation = true;
+    bool performHilbertTransform = true;
+    bool performPhaseTargeting = false;
+    bool performPhaseDifference = false;
+    bool phasEst_display_all_EEG_channels = false;
+};
+
 enum class displayState {
     RAW = 0,
     DOWNSAMPLED = 1,
@@ -78,7 +91,7 @@ signals:
     void error(QString err);
     void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
     void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
-    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B);
+    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B, const Eigen::VectorXd time_stamps);
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, 
                                      const Eigen::VectorXi triggers_A, 
                                      const Eigen::VectorXi triggers_B, 
@@ -88,6 +101,7 @@ signals:
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
     void sendNumSamples(int numSamples);
+    void newEstStates(phaseEstimateStates states);
 
 public slots:
     void process_start() {
@@ -97,15 +111,15 @@ public slots:
         display_state = static_cast<displayState>(index);
     };
 
-    void setPhaseEstimationState(bool isChecked) { performPhaseEstimation = isChecked; }
+    void setPhaseEstimationState(bool isChecked) { phaseEstStates.performPhaseEstimation = isChecked; }
 
-    void setRemoveBCG(bool isChecked) { performRemoveBCG = isChecked; }
-    void setFilterState(bool isChecked) { performFiltering = isChecked; }
-    void setEstimationState(bool isChecked) { performEstimation = isChecked; }
-    void setHilbertTransformState(bool isChecked) { performHilbertTransform = isChecked; }
-    void setPhaseTargetingState(bool isChecked) { performPhaseTargeting = isChecked; }
-    void setEEGViewState(bool isChecked) { phasEst_display_all_EEG_channels = isChecked; }
-    void setPhaseDifference(bool isChecked) { performPhaseDifference = isChecked; };
+    void setRemoveBCG(bool isChecked) { phaseEstStates.performRemoveBCG = isChecked; }
+    void setFilterState(bool isChecked) { phaseEstStates.performFiltering = isChecked; }
+    void setEstimationState(bool isChecked) { phaseEstStates.performEstimation = isChecked; }
+    void setHilbertTransformState(bool isChecked) { phaseEstStates.performHilbertTransform = isChecked; }
+    void setPhaseTargetingState(bool isChecked) { phaseEstStates.performPhaseTargeting = isChecked; }
+    void setEEGViewState(bool isChecked) { phaseEstStates.phasEst_display_all_EEG_channels = isChecked; }
+    void setPhaseDifference(bool isChecked) { phaseEstStates.performPhaseDifference = isChecked; };
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
@@ -153,6 +167,8 @@ public slots:
     }
     void setPhaseErrorType(int index) { phaseErrorType = index; };
 
+    void sendEstStates() { emit newEstStates(phaseEstStates); }
+
 private:
     void process();
 
@@ -167,15 +183,7 @@ private:
 
     int downsampled_cols;
 
-    bool performPreprocessing = true;
-    bool performPhaseEstimation = false;
-    bool performSNRcheck = false;
-    bool performRemoveBCG = false;
-    bool performFiltering = false;
-    bool performEstimation = true;
-    bool performHilbertTransform = true;
-    bool performPhaseTargeting = false;
-    bool performPhaseDifference = false;
+    phaseEstimateStates phaseEstStates;
 
     int spatial_channel_index = 0;
     int numOuterElectrodes = 4;
@@ -197,7 +205,6 @@ private:
     int last_phase_seqnum = -1;
 
     displayState display_state = displayState::CWL;
-    bool phasEst_display_all_EEG_channels = false;
     int phaseErrorType = 0;
     int display_length;
     Eigen::MatrixXd Data_to_display;

@@ -212,6 +212,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
                                           Eigen::VectorXi &triggers_A, 
                                           Eigen::VectorXi &triggers_B, 
                                           Eigen::VectorXi &triggers_out, 
+                                          Eigen::VectorXd &time_stamps, 
                                                       int number_of_samples) {
 
     // Ensure matrices are resized correctly
@@ -219,6 +220,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
     if (triggers_A.cols() != number_of_samples) triggers_A.resize(number_of_samples);
     if (triggers_B.cols() != number_of_samples) triggers_B.resize(number_of_samples);
     if (triggers_out.cols() != number_of_samples) triggers_out.resize(number_of_samples);
+    if (time_stamps.cols() != number_of_samples) time_stamps.resize(number_of_samples);
 
     // Calculate the number of samples that fit before reaching the end of the buffer
     int fitToEnd = std::min(number_of_samples, static_cast<int>(current_data_index_));
@@ -232,6 +234,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
         triggers_A.tail(fitToEnd) = trigger_buffer_A.segment(current_data_index_ - fitToEnd, fitToEnd);
         triggers_B.tail(fitToEnd) = trigger_buffer_B.segment(current_data_index_ - fitToEnd, fitToEnd);
         triggers_out.tail(fitToEnd) = trigger_buffer_out.segment(current_data_index_ - fitToEnd, fitToEnd);
+        time_stamps.tail(fitToEnd) = time_stamp_buffer_.segment(current_data_index_ - fitToEnd, fitToEnd);
     }
 
     // Debugging check before accessing leftCols and middleCols
@@ -240,6 +243,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
         triggers_A.head(overflow) = trigger_buffer_A.segment(buffer_capacity_ - overflow, overflow);
         triggers_B.head(overflow) = trigger_buffer_B.segment(buffer_capacity_ - overflow, overflow);
         triggers_out.head(overflow) = trigger_buffer_out.segment(buffer_capacity_ - overflow, overflow);
+        time_stamps.head(overflow) = time_stamp_buffer_.segment(buffer_capacity_ - overflow, overflow);
     }
 
     return current_sequence_number_;

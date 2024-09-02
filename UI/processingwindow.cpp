@@ -21,6 +21,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     ui->stimulationTarget->setText(QString::number(phaseEstParams.stimulation_target));
     ui->phaseShift->setText(QString::number(phaseEstParams.phase_shift));
     ui->lineEdit_XaxisSpacing->setText(QString::number(500));
+    ui->checkBox_Stimulation->setChecked(handler.getTriggerEnableStatus());
 
     ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
     ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
@@ -59,6 +60,14 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     }
 }
 
+void ProcessingWindow::newEstStates(phaseEstimateStates states) {
+    ui->checkBox_phaseEstimate->setChecked(states.performPhaseEstimation);
+    ui->Filter_checkbox->setChecked(states.performFiltering);
+    ui->checkBox_PhaseTargeting->setChecked(states.performPhaseTargeting);
+    ui->checkBox_phaseError->setChecked(states.performPhaseDifference);
+    ui->checkBox_Channels->setChecked(states.phasEst_display_all_EEG_channels);
+}
+
 void ProcessingWindow::updateSpatialChannelNames(std::vector<std::string> names) 
 {
     spatial_channel_names = names;
@@ -66,6 +75,7 @@ void ProcessingWindow::updateSpatialChannelNames(std::vector<std::string> names)
 
 ProcessingWindow::~ProcessingWindow()
 {
+    emit setphaseEstimateState(false);
     delete ui;
 }
 
@@ -205,6 +215,7 @@ void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
         setupComboBox_OuterElectrode(0);
     
     } else {
+        ui->checkBox_phaseEstimate->setChecked(false);
         QMessageBox::warning(this, "Channel Naming Error", "Please load channel map in the EEG window.");
     }
 }

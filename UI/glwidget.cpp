@@ -167,16 +167,45 @@ void Glwidget::paintGL()
         graph_index++;
     }
 
+    // Calculate indexes for the timestamps to display
+    int n_display_points = 10;
+    std::vector<int> display_indexes;
+    int interval = totalDataPoints / n_display_points;
+    for (int i = 0; i < n_display_points; ++i) {
+        display_indexes.push_back(i * interval);
+    }
+
+    // Ensure the last point is included
+    if (display_indexes.back() != totalDataPoints - 1) {
+        display_indexes.back() = totalDataPoints - 1;
+    }
+
+    // Set viewport to cover the entire widget for drawing the time axis
+    glViewport(0, 0, width(), windowHeight);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+
+    // Draw the time stamps
+    for (int index : display_indexes) {
+        float x = (float)index / (totalDataPoints - 1) * 2.0f - 1.0f;  // Mapping index to OpenGL x-coordinate
+        QString timeLabel = QString::number(time_stamps_(index) / 1000000.0, 'f', 2) + "s";  // Assuming timestamps are in seconds
+
+        // Map x OpenGL coordinate to QPainter coordinate
+        int painterX = (x + 1.0f) / 2.0f * width();
+        painter.drawText(painterX, windowHeight - 5, timeLabel);  // Draw near the bottom of the window
+    }
     painter.end();
 }
 
-void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B) { 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, const Eigen::VectorXd &time_stamps) { 
     if (!pause_view) {
         dataMatrix_ = newMatrix;
         matrixCapasity = newMatrix.cols();
         n_channels = newMatrix.rows();
         triggers_A_ = triggers_A;
         triggers_B_ = triggers_B;
+        time_stamps_ = time_stamps;
     }
 }
 

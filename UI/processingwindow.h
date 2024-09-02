@@ -55,10 +55,13 @@ signals:
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates);
     void setPhaseErrorType(int index);
 
+    void requestEstStates();
+
 public slots:
     // void updateData();
     void updateSpatialChannelNames(std::vector<std::string> names);
     void setNumSamples(int numSamples) { if (processingglWidget) processingglWidget->updateWindowLength_seconds(numSamples / sampling_rate_); }
+    void newEstStates(phaseEstimateStates states);
 
 private slots:
     void on_edge_editingFinished();

@@ -29,7 +29,7 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B);
+    void updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, const Eigen::VectorXd &time_stamps);
     void updateChannelDisplayState(std::vector<bool> channelCheckStates);
     void updateGraph();
     void updateChannelNamesQt(QStringList channelNames);
@@ -57,6 +57,7 @@ private:
     Eigen::MatrixXd dataMatrix_;
     Eigen::VectorXi triggers_A_;
     Eigen::VectorXi triggers_B_;
+    Eigen::VectorXd time_stamps_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = false;
     bool show_triggers_A = true;

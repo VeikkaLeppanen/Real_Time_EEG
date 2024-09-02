@@ -49,6 +49,7 @@ public:
                                  Eigen::VectorXi &triggers_A, 
                                  Eigen::VectorXi &triggers_B, 
                                  Eigen::VectorXi &triggers_out, 
+                                 Eigen::VectorXd &time_stamps, 
                                              int number_of_samples);
 
     Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
@@ -95,6 +96,7 @@ public:
     }
     int get_TA_length() { return TA_length; }
     int get_GA_average_length() { return GA_average_length; }
+    bool getGAState() { return Apply_GACorr; }
     
     // Filtering
     void setFilterState(bool state) { Apply_filter = state; }

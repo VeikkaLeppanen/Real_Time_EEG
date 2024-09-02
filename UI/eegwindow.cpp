@@ -24,8 +24,9 @@ eegWindow::eegWindow(dataHandler &handler,
         ui->lineEditGALength->setText(QString::number(GALength));
         ui->lineEditGAaverage->setText(QString::number(GAAverage));
         ui->lineEdit_XaxisSpacing->setText(QString::number(500));
-        ui->filter1->setChecked(handler.getFilterState());
+        ui->checkBox_GA->setChecked(handler.getGAState());
         ui->checkBox_2->setChecked(handler.getBaselineState());
+        ui->filter1->setChecked(handler.getFilterState());
         ui->numberOfSamples->setText(QString::number(prepParams.numberOfSamples));
         ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
         ui->delay->setText(QString::number(prepParams.delay));
@@ -72,6 +73,10 @@ eegWindow::~eegWindow() {
     delete ui;
 }
 
+void eegWindow::newEstStates(phaseEstimateStates states) {
+    ui->checkBox_removeBCG->setChecked(states.performRemoveBCG);
+}
+
 void eegWindow::handleError(const QString &error)
 {
     // Error handling code here
@@ -88,8 +93,9 @@ void eegWindow::updateData()
         Eigen::VectorXi triggers_A;
         Eigen::VectorXi triggers_B;
         Eigen::VectorXi triggers_out;
-        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, triggers_out, samples_to_display);
-        glWidget->updateMatrix(data, triggers_A, triggers_B);
+        Eigen::VectorXd time_stamps;
+        handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_display);
+        glWidget->updateMatrix(data, triggers_A, triggers_B, time_stamps);
     }
 }
 
@@ -156,12 +162,12 @@ void eegWindow::on_sourceChannelLoad_clicked()
             // Handle error if the file can't be opened
             qDebug("Failed to open the file for reading.");
         }
-    }
 
-    channelMap_ = channelMapStd;
+        channelMap_ = channelMapStd;
 
-    if (source_channels_.size() > 0) {
-        setupChannelNames();
+        if (source_channels_.size() > 0) {
+            setupChannelNames();
+        }
     }
 }
 
