@@ -27,7 +27,8 @@ void ProcessingGlWidget::paintGL()
     if (dataMatrix_.rows() == 0) return;
     
     // Initializing positional parameters
-    int windowHeight = height();
+    int bottomMarging = 20;
+    int windowHeight = height() - bottomMarging;
     int rowHeight = windowHeight / n_channels_;
 
     // min max values for y axis
@@ -44,7 +45,7 @@ void ProcessingGlWidget::paintGL()
     int graph_index = 0;
     for (int row = 0; row < dataMatrix_.rows(); row++) {
         // Set viewport for this row
-        glViewport(0, graph_index * rowHeight, width(), rowHeight);
+        glViewport(0, bottomMarging + graph_index * rowHeight, width(), rowHeight);
 
         // Set up the projection matrix
         glMatrixMode(GL_PROJECTION);
@@ -85,7 +86,7 @@ void ProcessingGlWidget::paintGL()
     }
     
     // Set viewport to cover the entire widget for drawing triggers
-    glViewport(0, 0, width(), windowHeight);
+    glViewport(0, 0, width(), windowHeight + bottomMarging);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
@@ -142,31 +143,28 @@ void ProcessingGlWidget::paintGL()
     glVertex2f(glX, 1.0);
     glEnd();
 
+    // Initialize tracker to the next whole second
+    double time_line_spacing_seconds = time_line_spacing * 1e-3;
+    double initialTimeInSeconds = time_stamps_(0) / 1e3;
+    double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
 
     if (drawXaxis) {
         // Enable stipple for dashed lines
         glEnable(GL_LINE_STIPPLE);
         glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
-        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+        glColor3f(1.0, 0.0, 0.0);  // Gray color for the lines
 
         // Draw each vertical line
-        for (int i = 0; i < totalTimeLines; i++) {
-            float x = ((float)i / totalTimeLines) * (glX + 1) - 1;  // Convert index to OpenGL coordinates
-
-            // Check if the current line is at a whole second
-            if ((i * time_line_spacing) % 1000 == 0) {
-                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
-                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
-            } else {
-                glEnable(GL_LINE_STIPPLE);
-                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
-                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+        for (int i = 0; i < totalDataPoints; i++) {
+            double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+            if (timeInSeconds >= tracker) {
+                float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;  // Convert index to OpenGL coordinates
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+                tracker += time_line_spacing_seconds;
             }
-
-            glBegin(GL_LINES);
-            glVertex2f(x, -1.0);
-            glVertex2f(x, 1.0);
-            glEnd();
         }
 
         glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
@@ -202,6 +200,23 @@ void ProcessingGlWidget::paintGL()
         graph_index++;
     }
 
+    tracker = std::ceil(initialTimeInSeconds);  // Round up to next whole second
+    painter.setFont(QFont("Arial", 18)); // Set font here
+
+    // Draw the timestamp labels and vertical lines
+    for (int i = 0; i < totalDataPoints; ++i) {
+        double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+        if (timeInSeconds >= tracker) {
+            QString label = QString::number(tracker, 'f', 0); // Label for whole seconds
+            float x = (float)i / totalDataPoints * (width() * currentTimePosition); // Calculate pixel x-coordinate
+
+            // Draw text label
+            painter.drawText(x, windowHeight + bottomMarging, label); // Draw just above the bottom
+
+            tracker += 1.0;  // Increment tracker by one second
+        }
+    }
+
     painter.end();
 }
 
@@ -209,6 +224,7 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
                                       const Eigen::VectorXi &triggers_A, 
                                       const Eigen::VectorXi &triggers_B, 
                                       const Eigen::VectorXi &triggers_out, 
+                                      const Eigen::VectorXd &time_stamps,
                                                         int numPastElements, 
                                                         int numFutureElements) 
 {
@@ -230,6 +246,7 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
         triggers_A_ = triggers_A;
         triggers_B_ = triggers_B;
         triggers_out_ = triggers_out;
+        time_stamps_ = time_stamps;
     }
 }
 

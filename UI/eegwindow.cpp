@@ -357,6 +357,7 @@ void eegWindow::on_startButton_clicked()
 
 void eegWindow::on_stopButton_clicked()
 {
+    std::cout << "Preprocessing stop" << '\n';
     processingWorkerRunning = 0;
 }
 

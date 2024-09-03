@@ -33,6 +33,7 @@ public slots:
                       const Eigen::VectorXi &triggers_A, 
                       const Eigen::VectorXi &triggers_B, 
                       const Eigen::VectorXi &triggers_out, 
+                      const Eigen::VectorXd &time_stamps,
                                         int numPastElements, 
                                         int numFutureElements);
 
@@ -74,6 +75,7 @@ private:
     Eigen::VectorXi triggers_A_;
     Eigen::VectorXi triggers_B_;
     Eigen::VectorXi triggers_out_;
+    Eigen::VectorXd time_stamps_;
     std::vector<bool> channelCheckStates_;
     bool draw_channel_scales = true;
     bool show_triggers_A = true;

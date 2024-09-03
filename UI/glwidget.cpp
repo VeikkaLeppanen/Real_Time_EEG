@@ -5,7 +5,6 @@ Glwidget::Glwidget(QWidget *parent)
 {
     windowLength_seconds = 2;   // Total time in seconds displayed
     time_line_spacing = 500;    // Line spacing in milliseconds
-    totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &Glwidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
@@ -27,7 +26,8 @@ void Glwidget::paintGL()
     if (dataMatrix_.rows() == 0) return;
 
     // Initializing positional parameters
-    int windowHeight = height();
+    int bottomMarging = 20;
+    int windowHeight = height() - bottomMarging;
     int rowHeight = windowHeight / n_channels;
 
     // min max values for y axis
@@ -41,7 +41,7 @@ void Glwidget::paintGL()
     for (int row = 0; row < dataMatrix_.rows(); row++) {
         
         // Set viewport for this row
-        glViewport(0, graph_index * rowHeight, width(), rowHeight);
+        glViewport(0, bottomMarging + graph_index * rowHeight, width(), rowHeight);
 
         // Set up the projection matrix
         glMatrixMode(GL_PROJECTION);
@@ -74,7 +74,7 @@ void Glwidget::paintGL()
     }
 
     // Set viewport to cover the entire widget for drawing triggers
-    glViewport(0, 0, width(), windowHeight);
+    glViewport(0, 0, width(), windowHeight + bottomMarging);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
@@ -107,30 +107,28 @@ void Glwidget::paintGL()
         }
     }
 
+    // Initialize tracker to the next whole second
+    double time_line_spacing_seconds = time_line_spacing * 1e-3;
+    double initialTimeInSeconds = time_stamps_(0) / 1e3;
+    double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
+
     if (drawXaxis) {
         // Enable stipple for dashed lines
         glEnable(GL_LINE_STIPPLE);
         glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
-        glColor3f(0.5, 0.5, 0.5);  // Gray color for the lines
+        glColor3f(1.0, 0.0, 0.0);  // Gray color for the lines
 
         // Draw each vertical line
-        for (int i = 0; i < totalTimeLines; i++) {
-            float x = ((float)i / totalTimeLines) * 2.0f - 1.0f;  // Convert index to OpenGL coordinates
-
-            // Check if the current line is at a whole second
-            if ((i * time_line_spacing) % 1000 == 0) {
-                glDisable(GL_LINE_STIPPLE);  // Disable stipple for whole second lines
-                glColor3f(1.0, 0.0, 0.0);    // Red color for whole second lines
-            } else {
-                glEnable(GL_LINE_STIPPLE);
-                glLineStipple(1, 0x00FF);   // 1x repeat factor, 0x00FF pattern
-                glColor3f(0.5, 0.5, 0.5);   // Gray color for non-whole second lines
+        for (int i = 0; i < totalDataPoints; i++) {
+            double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+            if (timeInSeconds >= tracker) {
+                float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;  // Convert index to OpenGL coordinates
+                glBegin(GL_LINES);
+                glVertex2f(x, -1.0);
+                glVertex2f(x, 1.0);
+                glEnd();
+                tracker += time_line_spacing_seconds;
             }
-
-            glBegin(GL_LINES);
-            glVertex2f(x, -1.0);
-            glVertex2f(x, 1.0);
-            glEnd();
         }
 
         glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
@@ -167,34 +165,23 @@ void Glwidget::paintGL()
         graph_index++;
     }
 
-    // Calculate indexes for the timestamps to display
-    int n_display_points = 10;
-    std::vector<int> display_indexes;
-    int interval = totalDataPoints / n_display_points;
-    for (int i = 0; i < n_display_points; ++i) {
-        display_indexes.push_back(i * interval);
+    tracker = std::ceil(initialTimeInSeconds);  // Round up to next whole second
+    painter.setFont(QFont("Arial", 18)); // Set font here
+
+    // Draw the timestamp labels and vertical lines
+    for (int i = 0; i < totalDataPoints; ++i) {
+        double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+        if (timeInSeconds >= tracker) {
+            QString label = QString::number(tracker, 'f', 0); // Label for whole seconds
+            float x_paint = (float)i / totalDataPoints * width(); // Calculate pixel x-coordinate
+
+            // Draw text label
+            painter.drawText(x_paint, windowHeight + bottomMarging, label); // Draw just above the bottom
+
+            tracker += 1.0;  // Increment tracker by one second
+        }
     }
 
-    // Ensure the last point is included
-    if (display_indexes.back() != totalDataPoints - 1) {
-        display_indexes.back() = totalDataPoints - 1;
-    }
-
-    // Set viewport to cover the entire widget for drawing the time axis
-    glViewport(0, 0, width(), windowHeight);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-
-    // Draw the time stamps
-    for (int index : display_indexes) {
-        float x = (float)index / (totalDataPoints - 1) * 2.0f - 1.0f;  // Mapping index to OpenGL x-coordinate
-        QString timeLabel = QString::number(time_stamps_(index) / 1000000.0, 'f', 2) + "s";  // Assuming timestamps are in seconds
-
-        // Map x OpenGL coordinate to QPainter coordinate
-        int painterX = (x + 1.0f) / 2.0f * width();
-        painter.drawText(painterX, windowHeight - 5, timeLabel);  // Draw near the bottom of the window
-    }
     painter.end();
 }
 

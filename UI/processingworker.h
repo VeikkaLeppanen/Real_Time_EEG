@@ -96,6 +96,7 @@ signals:
                                      const Eigen::VectorXi triggers_A, 
                                      const Eigen::VectorXi triggers_B, 
                                      const Eigen::VectorXi triggers_out, 
+                                     const Eigen::VectorXd time_stamps, 
                                      int numPastElements, 
                                      int numFutureElements);
 

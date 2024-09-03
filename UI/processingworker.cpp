@@ -280,9 +280,9 @@ void ProcessingWorker::process()
                     if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
                     else PhaseEst_channel_names.push_back("Undefined");
                 }
-                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, triggers_out, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - phaseEstParams.edge);
             } else {
-                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, triggers_out, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - phaseEstParams.edge);
             }
             
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_channel_names.size()) {
