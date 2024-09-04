@@ -70,10 +70,10 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
 
             {
                 std::lock_guard<std::mutex> lock(this->dataMutex);
-                // if (TA_tracker >= GACorr_.getTemplateSize()) {
-                //     std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
-                //     return;
-                // }
+                if (TA_tracker >= GACorr_.getTemplateSize()) {
+                    std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
+                    return;
+                }
                 processing_sample_vector = samples - GACorr_.getTemplateCol(TA_tracker);
             }
             

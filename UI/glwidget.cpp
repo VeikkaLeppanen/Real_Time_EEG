@@ -187,6 +187,12 @@ void Glwidget::paintGL()
 
 void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, const Eigen::VectorXd &time_stamps) { 
     if (!pause_view) {
+        // Check if dimensions differ
+        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+        if (triggers_A_.size() != triggers_A.size()) triggers_A_.resize(triggers_A.size());
+        if (triggers_B_.size() != triggers_B.size()) triggers_B_.resize(triggers_B.size());
+        if (time_stamps_.size() != time_stamps.size()) time_stamps_.resize(time_stamps.size());
+
         dataMatrix_ = newMatrix;
         matrixCapasity = newMatrix.cols();
         n_channels = newMatrix.rows();

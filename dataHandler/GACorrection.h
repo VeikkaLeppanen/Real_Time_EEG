@@ -28,6 +28,7 @@ public:
 
     Eigen::VectorXd getTemplateCol(int template_index) { return correction_template_.col(template_index); }
     Eigen::MatrixXd getTemplateCols(int template_index, int num_bundles);
+    int getTemplateSize() { return correction_template_.cols(); }
 
     void printTemplate() { std::cout << correction_template_ << '\n'; }
 
