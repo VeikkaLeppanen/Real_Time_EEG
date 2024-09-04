@@ -23,7 +23,7 @@
 #include "glwidget.h"
 #include "processingworker.h"
 #include "./ui_eegwindow.h"
-#include "../eeg_bridge/eeg_bridge.h"
+#include "../devices/EEG/eeg_bridge/eeg_bridge.h"
 #include "../dataHandler/dataHandler.h"
 
 

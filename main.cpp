@@ -8,17 +8,12 @@
 #include <malloc.h>
 #include <sys/mman.h> // For mlockall
 
-#include "dataProcessor/dataProcessor.h"
-#include "dataProcessor/processingFunctions.h"
 #include "dataHandler/dataHandler.h"
-#include "eeg_bridge/eeg_bridge.h"
+#include "devices/EEG/eeg_bridge/eeg_bridge.h"
 
 #include "UI/mainwindow.h"
 #include <QApplication>
 #include <QWidget>
-
-// #include "matplotlibcpp.h"
-// namespace plt = matplotlibcpp;
 
 // In case of bind failed the previous process can be terminated with the following commands on linux
 // lsof -i :50000       Find PID

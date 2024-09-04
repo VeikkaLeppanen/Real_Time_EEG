@@ -27,15 +27,17 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 set(SOURCES
     main.cpp
-    eeg_bridge/eeg_bridge.cpp
-    eeg_bridge/measurementStartPacket.cpp
-    eeg_bridge/samplePacket.cpp
-    eeg_bridge/networkUtils.cpp
+    devices/EEG/eeg_bridge/eeg_bridge.cpp
+    devices/EEG/eeg_bridge/measurementStartPacket.cpp
+    devices/EEG/eeg_bridge/samplePacket.cpp
+    devices/EEG/eeg_bridge/networkUtils.cpp
     dataHandler/dataHandler.cpp
-    dataHandler/GACorrection.cpp 
-    dataHandler/magPro.cpp 
-    dataProcessor/dataProcessor.cpp
-    dataProcessor/processingFunctions.cpp
+    EEG/preprocessing/GACorrection.cpp 
+    EEG/preprocessing/preprocessingFunctions.cpp 
+    EEG/phaseEstimation/phaseEstimationFunctions.cpp 
+    math/dsp.cpp 
+    utils/utilityFunctions.cpp 
+    devices/TMS/magPro/magPro.cpp 
     UI/mainwindow.cpp
     UI/mainwindow.h
     UI/mainwindow.ui

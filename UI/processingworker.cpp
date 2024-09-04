@@ -85,8 +85,11 @@ void ProcessingWorker::process()
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
             print_debug("Processing start");
-            if (!phaseEstStates.performPreprocessing) continue;
-    
+            if (!phaseEstStates.performPreprocessing) {
+                print_debug("performPreprocessing disabled");
+                continue;
+            }
+
             PhaseEst_channel_names.clear();
             EEG_channel_names = handler.getChannelNames();
 
@@ -98,7 +101,10 @@ void ProcessingWorker::process()
             int sequence_number = handler.getLatestDataAndTriggers(all_channels, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
             
             // Check if current sample is processed
-            if (seq_num_tracker == sequence_number) continue;
+            if (seq_num_tracker == sequence_number) {
+                print_debug("Sample is already processed");
+                continue;
+            }
 
             // Set seq_num_tracker
             if (seq_num_tracker == 0) {
@@ -215,17 +221,23 @@ void ProcessingWorker::process()
                     if (stimulation_tracker < 0) stimulation_tracker++;
                 }
             }
-
+            print_debug("Testing 1");
             Data_to_display.topLeftCorner(5, downsampled_cols) = EEG_corrected;
+            print_debug("Testing 2");
             Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
+            print_debug("Testing 3");
             Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - phaseEstParams.edge) = EEG_filter2.head(filter2_length - phaseEstParams.edge);
 
+            print_debug("Testing 4");
             Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             
             int phase_length = 32;
             int phase_start = phaseEstParams.edge - phase_length / 2;
+            print_debug("Testing 5");
             Data_to_display.row(7).segment(downsampled_cols - phase_length / 2, phase_length) = phaseAngles.segment(phase_start, phase_length);
 
+            // Phase estimation
+            print_debug("Phase estimation");
             if (phaseEstStates.performPhaseDifference) {
                 int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;              // FIGURE OUT A BETTER WAY TO HANDLE DOWNSAMPLING
                 if (last_phase_seqnum == -1) {
@@ -275,6 +287,7 @@ void ProcessingWorker::process()
                 }
             }
 
+            print_debug("Graph updating");
             if (phaseEstStates.phasEst_display_all_EEG_channels) {
                 for (int i = 0; i < n_EEG_channels_to_use; ++i) {
                     if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
@@ -303,7 +316,7 @@ void ProcessingWorker::process()
         
         emit finished();
     } catch (std::exception& e) {
-        emit error(QString("An error occurred in process_test function: %1").arg(e.what()));
+        emit error(QString("An error occurred in processingworker process function: %1").arg(e.what()));
     }
 }
 

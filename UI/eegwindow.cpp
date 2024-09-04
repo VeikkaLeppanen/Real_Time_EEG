@@ -85,7 +85,7 @@ void eegWindow::handleError(const QString &error)
 
 void eegWindow::updateData() 
 {
-    if (processingWorkerRunning) return;
+    if (processingWorkerRunning || true) return;
 
     glWidget = ui->openglWidget;
     if (glWidget && handler.isReady()) {

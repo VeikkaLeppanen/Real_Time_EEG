@@ -7,7 +7,7 @@
 #include <sched.h>
 
 #include "../dataHandler/dataHandler.h"
-#include "../eeg_bridge/eeg_bridge.h"
+#include "../devices/EEG/eeg_bridge/eeg_bridge.h"
 
 class EegBridge;
 class dataHandler;

@@ -11,10 +11,9 @@
 #include <cmath>
 #include <Eigen/Dense>
 
-#include "GACorrection.h"
-#include "magPro.h"
-#include "../dataProcessor/dataProcessor.h"
-#include "../dataProcessor/processingFunctions.h"
+#include "EEG/preprocessing/GACorrection.h"
+#include "devices/TMS/magPro/magPro.h"
+#include "../EEG/preprocessing/preprocessingFunctions.h"
 #include <boost/stacktrace.hpp>
 
 enum HandlerState {
@@ -44,21 +43,12 @@ public:
     void addData(const Eigen::VectorXd &samples, const double &time_stamp, const int &trigger_A, const int &trigger_B, const int &SeqNo);
 
     int getLatestSequenceNumber() { return current_sequence_number_; }
-    int getLatestDataInOrder(Eigen::MatrixXd &output, int number_of_samples);
     int getLatestDataAndTriggers(Eigen::MatrixXd &output, 
                                  Eigen::VectorXi &triggers_A, 
                                  Eigen::VectorXi &triggers_B, 
                                  Eigen::VectorXi &triggers_out, 
                                  Eigen::VectorXd &time_stamps, 
                                              int number_of_samples);
-
-    Eigen::MatrixXd returnLatestDataInOrder(int number_of_samples);
-    Eigen::MatrixXd getMultipleChannelDataInOrder(std::vector<int> channel_indices, int number_of_samples);
-    Eigen::MatrixXd getBlockChannelDataInOrder(int first_channel_index, int number_of_channels, int number_of_samples);
-
-    Eigen::VectorXd getTimeStampsInOrder(int number_of_samples);
-    Eigen::VectorXi getTriggersAInOrder(int number_of_samples);
-    Eigen::VectorXi getTriggersBInOrder(int number_of_samples);
 
     int get_buffer_capacity() { return buffer_capacity_; }
     int get_buffer_length_in_seconds() { return buffer_length_in_seconds_; }

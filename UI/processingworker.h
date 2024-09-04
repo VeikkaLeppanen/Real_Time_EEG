@@ -7,7 +7,8 @@
 #include <cstdlib>
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
-#include "../dataProcessor/processingFunctions.h"
+#include "../EEG/preprocessing/preprocessingFunctions.h"
+#include "../EEG/phaseEstimation/phaseEstimationFunctions.h"
 #include <boost/stacktrace.hpp>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>

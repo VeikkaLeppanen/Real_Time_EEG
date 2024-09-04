@@ -1,11 +1,9 @@
-#ifndef PROCESSINGFUNCTIONS_H
-#define PROCESSINGFUNCTIONS_H
-
+#ifndef PHASEESTIMATIONFUNCTIONS_H
+#define PHASEESTIMATIONFUNCTIONS_H
 
 #include <vector>
 #include <string>
 #include <chrono>
-#include <fstream>
 #include <iostream>
 #include <Eigen/Dense>
 #include <complex>
@@ -17,29 +15,6 @@
 
 #include <fftw3.h>
 
-// Function declarations
-void writeMatrixdToCSV(const std::string& filename, const Eigen::MatrixXd& matrix);
-void writeMatrixiToCSV(const std::string& filename, const Eigen::MatrixXi& matrix);
-Eigen::MatrixXd readCSV(const std::string &file_path);
-
-Eigen::MatrixXd vectorToMatrix(const Eigen::VectorXd& vec);
-Eigen::MatrixXd vectorToColumnMatrixd(const std::vector<double>& vec);
-Eigen::MatrixXi vectorToColumnMatrixi(const std::vector<int>& vec);
-Eigen::MatrixXd complexVectorToMatrix(const std::vector<std::complex<double>>& complexVec);
-Eigen::MatrixXd phaseAngleToMatrix(const std::vector<std::complex<double>>& complexVec);
-
-void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
-
-void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& pinvCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/);
-
-// RT filtering (work in progress)
-std::vector<double> createLowPassFilter(int M, double fc, double fs);
-std::vector<double> createBandPassFilter(int M, double fc_low, double fc_high, double fs);
-
-
-
-void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs);
 void getLSFIRCoeffs_9_13Hz(Eigen::VectorXd& coeffs);
 void designFIR_LS(int numTaps, double f1, double f2, double fs, Eigen::VectorXd& coeffs);
 
@@ -91,22 +66,4 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal, Eig
 double ang_diff(double x, double y);
 Eigen::VectorXd ang_diff(const Eigen::VectorXd& x, const Eigen::VectorXd& y);
 
-// Real-time filter processor class for multiple channels
-class MultiChannelRealTimeFilter {
-private:
-    Eigen::VectorXd filterCoeffs;
-    Eigen::MatrixXd buffers;  // Buffer for each channel
-    Eigen::VectorXd filteredSamples;
-    int M;
-
-public:
-    MultiChannelRealTimeFilter() { }
-
-    void reset_filter(int numChannels);
-
-    // Process a new sample vector where each element is the current sample for a channel
-    Eigen::VectorXd processSample(const Eigen::VectorXd& newSamples);
-};
-
-
-#endif // PROCESSINGFUNCTIONS_H
+#endif // PHASEESTIMATIONFUNCTIONS_H
