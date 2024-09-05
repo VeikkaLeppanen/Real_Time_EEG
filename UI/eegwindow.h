@@ -93,7 +93,6 @@ private slots:
     void on_downsampling_editingFinished();
     void on_numberOfSamples_editingFinished();
     void on_delay_editingFinished();
-    void on_comboBox_view_currentIndexChanged(int index);
     void on_checkBox_GA_stateChanged(int arg1);
     void on_checkBox_triggers_A_stateChanged(int arg1);
     void on_checkBox_triggers_B_stateChanged(int arg1);
@@ -113,7 +112,7 @@ private:
     int bridge_timeout = 10;
 
     // Graph parameters
-    int samples_to_display = 30000;
+    int samples_to_display = 10000;
 
     // Handler parameters
     dataHandler &handler;

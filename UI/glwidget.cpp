@@ -185,7 +185,7 @@ void Glwidget::paintGL()
     painter.end();
 }
 
-void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, const Eigen::VectorXd &time_stamps) { 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi &triggers_A, const Eigen::VectorXi &triggers_B, const Eigen::VectorXd &time_stamps, std::vector<std::string> processing_channel_names) { 
     if (!pause_view) {
         // Check if dimensions differ
         if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
@@ -199,6 +199,7 @@ void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, const Eigen::Vecto
         triggers_A_ = triggers_A;
         triggers_B_ = triggers_B;
         time_stamps_ = time_stamps;
+        updateChannelNamesSTD(processing_channel_names);
     }
 }
 

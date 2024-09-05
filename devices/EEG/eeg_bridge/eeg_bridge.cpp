@@ -119,7 +119,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             int sequenceNumber = packet_info.PacketSeqNo;
 
             if (numDataChannels != data_handler_samples.rows()) {
-                std::cerr << "Error: numDataChannels is not equal to total rows in data_handler_samples." << '\n';
+                std::cerr << "Error: numDataChannels is not equal to total rows in data_handler_samples. " << numDataChannels << ' ' << data_handler_samples.rows() << '\n';
                 break;
             }
 

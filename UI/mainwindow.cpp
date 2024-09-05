@@ -164,12 +164,9 @@ void MainWindow::connect_processing_worker()
 void MainWindow::connect_EEG_worker()
 {
     QObject::connect(worker, &ProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
-    QObject::connect(worker, &ProcessingWorker::updateEEGwindowNames, eegwindow->getGlWidget(), &Glwidget::updateChannelNamesSTD);
-    QObject::connect(eegwindow, &eegWindow::viewStateChanged, worker, &ProcessingWorker::updateViewState);
     QObject::connect(eegwindow, &eegWindow::setRemoveBCG, worker, &ProcessingWorker::setRemoveBCG);
     QObject::connect(eegwindow, &eegWindow::requestEstStates, worker, &ProcessingWorker::sendEstStates);
     QObject::connect(worker, &ProcessingWorker::newEstStates, eegwindow, &eegWindow::newEstStates);
-    emit eegwindow->viewStateChanged(0);
 }
 
 void MainWindow::resetProcessingWindowPointer() {

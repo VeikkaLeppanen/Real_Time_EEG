@@ -63,10 +63,6 @@ eegWindow::eegWindow(dataHandler &handler,
             // Error handling if glWidget is not found
             qWarning("Glwidget not found in UI!");
         }
-        
-        if(handler.isReady()) {
-            checkHandlerTimer->start(100);  // Check every 500 ms
-        }
     }
 
 eegWindow::~eegWindow() {
@@ -85,7 +81,7 @@ void eegWindow::handleError(const QString &error)
 
 void eegWindow::updateData() 
 {
-    if (processingWorkerRunning || true) return;
+    if (processingWorkerRunning) return;
 
     glWidget = ui->openglWidget;
     if (glWidget && handler.isReady()) {
@@ -95,7 +91,7 @@ void eegWindow::updateData()
         Eigen::VectorXi triggers_out;
         Eigen::VectorXd time_stamps;
         handler.getLatestDataAndTriggers(data, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_display);
-        glWidget->updateMatrix(data, triggers_A, triggers_B, time_stamps);
+        glWidget->updateMatrix(data, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
     }
 }
 
@@ -360,12 +356,6 @@ void eegWindow::on_stopButton_clicked()
     std::cout << "Preprocessing stop" << '\n';
     processingWorkerRunning = 0;
 }
-
-void eegWindow::on_comboBox_view_currentIndexChanged(int index)
-{
-    emit viewStateChanged(index);
-}
-
 
 void eegWindow::on_checkBox_GA_stateChanged(int arg1)
 {

@@ -73,6 +73,9 @@ void ProcessingWorker::process()
         Eigen::VectorXi triggers_B = Eigen::VectorXi::Zero(samples_to_process);
         Eigen::VectorXi triggers_out = Eigen::VectorXi::Zero(samples_to_process);
         Eigen::VectorXd time_stamps = Eigen::VectorXd::Zero(samples_to_process);
+        
+        // Display marix
+        EEG_win_data_to_display = Eigen::MatrixXd::Zero(n_channels, samples_to_process);
 
         print_debug("Memory allocated");
 
@@ -114,42 +117,35 @@ void ProcessingWorker::process()
 
             print_debug("Checks passed");
 
-            // Downsampling
-            print_debug("Downsampled");
-            downsample(all_channels, EEG_downsampled, downsampling_factor);
-
             // CWL
             if (phaseEstStates.performRemoveBCG) {
+            
+                // Downsampling
+                print_debug("Downsampled");
+                downsample(all_channels, EEG_downsampled, downsampling_factor);
+
                 print_debug("Delay Embedding");
                 if (delay > 0) { delayEmbed(EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use), expCWL, delay); } 
                 else { expCWL = EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use); }
 
                 print_debug("removeBCG");
                 removeBCG(EEG_downsampled.topRows(n_EEG_channels_to_use), expCWL, pinvCWL, EEG_corrected);
+                // Update the EEG window graph data
+                if (EEG_downsampled.cols() != EEG_win_data_to_display.cols()) EEG_win_data_to_display.resize(EEG_win_data_to_display.rows(), EEG_downsampled.cols());
+
+                EEG_win_data_to_display.topRows(EEG_corrected.rows()) = EEG_corrected;
+                EEG_win_data_to_display.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use) = EEG_downsampled.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use);
+
+                emit updateEEGDisplayedData(EEG_win_data_to_display, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
             } 
             else {
                 EEG_corrected = EEG_downsampled.topRows(n_EEG_channels_to_use);
+                emit updateEEGDisplayedData(all_channels, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
             }
 
-            // Update the EEG window graph data
-            switch (display_state) 
-            {
-                case displayState::RAW:
-                    emit updateEEGDisplayedData(all_channels, triggers_A, triggers_B, time_stamps);
-                    emit updateEEGwindowNames(EEG_channel_names);
-                    break;
-                case displayState::DOWNSAMPLED:
-                    emit updateEEGDisplayedData(EEG_downsampled, triggers_A, triggers_B, time_stamps);
-                    emit updateEEGwindowNames(EEG_channel_names);
-                    break;
-                case displayState::CWL:
-                    emit updateEEGDisplayedData(EEG_corrected, triggers_A, triggers_B, time_stamps);
-                    emit updateEEGwindowNames(EEG_channel_names);
-                    break;
-            }
 
             if (!phaseEstStates.performPhaseEstimation) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
 
@@ -221,19 +217,19 @@ void ProcessingWorker::process()
                     if (stimulation_tracker < 0) stimulation_tracker++;
                 }
             }
-            print_debug("Testing 1");
+
             Data_to_display.topLeftCorner(5, downsampled_cols) = EEG_corrected;
-            print_debug("Testing 2");
+            
             Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
-            print_debug("Testing 3");
+            
             Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - phaseEstParams.edge) = EEG_filter2.head(filter2_length - phaseEstParams.edge);
 
-            print_debug("Testing 4");
+
             Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             
             int phase_length = 32;
             int phase_start = phaseEstParams.edge - phase_length / 2;
-            print_debug("Testing 5");
+            
             Data_to_display.row(7).segment(downsampled_cols - phase_length / 2, phase_length) = phaseAngles.segment(phase_start, phase_length);
 
             // Phase estimation

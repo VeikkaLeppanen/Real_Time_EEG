@@ -53,12 +53,6 @@ struct phaseEstimateStates {
     bool phasEst_display_all_EEG_channels = false;
 };
 
-enum class displayState {
-    RAW = 0,
-    DOWNSAMPLED = 1,
-    CWL = 2
-};
-
 inline std::ostream& operator<<(std::ostream& os, const preprocessingParameters& prepParams) {
     os << "Number of Samples: " << prepParams.numberOfSamples
        << "\nDownsampling Factor: " << prepParams.downsampling_factor
@@ -90,9 +84,12 @@ public:
 signals:
     void finished();
     void error(QString err);
-    void updateEEGwindowNames(std::vector<std::string> processing_channel_names);
-    void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
-    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, const Eigen::VectorXi triggers_A, const Eigen::VectorXi triggers_B, const Eigen::VectorXd time_stamps);
+    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, 
+                                const Eigen::VectorXi triggers_A, 
+                                const Eigen::VectorXi triggers_B, 
+                                const Eigen::VectorXd time_stamps,
+                                std::vector<std::string> processing_channel_names);
+
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, 
                                      const Eigen::VectorXi triggers_A, 
                                      const Eigen::VectorXi triggers_B, 
@@ -100,6 +97,7 @@ signals:
                                      const Eigen::VectorXd time_stamps, 
                                      int numPastElements, 
                                      int numFutureElements);
+    void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
     void sendNumSamples(int numSamples);
@@ -108,9 +106,6 @@ signals:
 public slots:
     void process_start() {
         process_future = QtConcurrent::run([this]() { process(); });
-    };
-    void updateViewState(int index) {
-        display_state = static_cast<displayState>(index);
     };
 
     void setPhaseEstimationState(bool isChecked) { phaseEstStates.performPhaseEstimation = isChecked; }
@@ -206,9 +201,9 @@ private:
     double last_phase = 0.0;
     int last_phase_seqnum = -1;
 
-    displayState display_state = displayState::CWL;
     int phaseErrorType = 0;
     int display_length;
+    Eigen::MatrixXd EEG_win_data_to_display;
     Eigen::MatrixXd Data_to_display;
 
     const bool debug = false;
