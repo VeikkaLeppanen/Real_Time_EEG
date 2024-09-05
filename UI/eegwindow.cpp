@@ -10,58 +10,62 @@ eegWindow::eegWindow(dataHandler &handler,
       signal_received(signal_received),
       processingWorkerRunning(processingWorkerRunning)
     {
-        ui->setupUi(this);
+        try {
+            ui->setupUi(this);
 
-        // Setting validators for lineEdits
-        ui->lineEditPort->setValidator(new QIntValidator(0, 65535, this));
-        ui->lineEditTimeOut->setValidator(new QIntValidator(0, 1000, this));
-        ui->lineEditGALength->setValidator(new QIntValidator(0, 500000, this));
-        ui->lineEditGAaverage->setValidator(new QIntValidator(0, 1000, this));
+            // Setting validators for lineEdits
+            ui->lineEditPort->setValidator(new QIntValidator(0, 65535, this));
+            ui->lineEditTimeOut->setValidator(new QIntValidator(0, 1000, this));
+            ui->lineEditGALength->setValidator(new QIntValidator(0, 500000, this));
+            ui->lineEditGAaverage->setValidator(new QIntValidator(0, 1000, this));
 
-        // Initialize values for lineEdits
-        ui->lineEditPort->setText(QString::number(port));  // Example port number
-        ui->lineEditTimeOut->setText(QString::number(bridge_timeout)); // Example timeout in milliseconds
-        ui->lineEditGALength->setText(QString::number(GALength));
-        ui->lineEditGAaverage->setText(QString::number(GAAverage));
-        ui->lineEdit_XaxisSpacing->setText(QString::number(500));
-        ui->checkBox_GA->setChecked(handler.getGAState());
-        ui->checkBox_2->setChecked(handler.getBaselineState());
-        ui->filter1->setChecked(handler.getFilterState());
-        ui->numberOfSamples->setText(QString::number(prepParams.numberOfSamples));
-        ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
-        ui->delay->setText(QString::number(prepParams.delay));
+            // Initialize values for lineEdits
+            ui->lineEditPort->setText(QString::number(port));  // Example port number
+            ui->lineEditTimeOut->setText(QString::number(bridge_timeout)); // Example timeout in milliseconds
+            ui->lineEditGALength->setText(QString::number(GALength));
+            ui->lineEditGAaverage->setText(QString::number(GAAverage));
+            ui->lineEdit_XaxisSpacing->setText(QString::number(500));
+            ui->checkBox_GA->setChecked(handler.getGAState());
+            ui->checkBox_2->setChecked(handler.getBaselineState());
+            ui->filter1->setChecked(handler.getFilterState());
+            ui->numberOfSamples->setText(QString::number(prepParams.numberOfSamples));
+            ui->downsampling->setText(QString::number(prepParams.downsampling_factor));
+            ui->delay->setText(QString::number(prepParams.delay));
 
-        ui->tabWidget->setTabText(0, "Device");
-        ui->tabWidget->setTabText(1, "Preprocessing");
-        ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
-        ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
-        setWindowTitle("EEG Window");
-        resize(1280, 720);
+            ui->tabWidget->setTabText(0, "Device");
+            ui->tabWidget->setTabText(1, "Preprocessing");
+            ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
+            ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
+            setWindowTitle("EEG Window");
+            resize(1280, 720);
 
-        checkHandlerTimer = new QTimer(this);
-        connect(checkHandlerTimer, &QTimer::timeout, this, &eegWindow::checkHandlerReady);
+            checkHandlerTimer = new QTimer(this);
+            connect(checkHandlerTimer, &QTimer::timeout, this, &eegWindow::checkHandlerReady);
 
-        glWidget = ui->openglWidget;
-        if (glWidget) {
-            connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
-            connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
-            connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
-            connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
-            connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
-            connect(this, &eegWindow::setShowTriggers_A, glWidget, &Glwidget::setShowTriggers_A);
-            connect(this, &eegWindow::setShowTriggers_B, glWidget, &Glwidget::setShowTriggers_B);
-            connect(this, &eegWindow::switchPause, glWidget, &Glwidget::switchPause);
-            connect(this, &eegWindow::setDrawXaxis, glWidget, &Glwidget::setDrawXaxis);
-            connect(this, &eegWindow::updateTLineSpacing, glWidget, &Glwidget::updateTLineSpacing);
+            glWidget = ui->openglWidget;
+            if (glWidget) {
+                connect(glWidget, &Glwidget::fetchData, this, &eegWindow::updateData);
+                connect(this, &eegWindow::updateChannelNamesSTD, glWidget, &Glwidget::updateChannelNamesSTD);
+                connect(this, &eegWindow::updateChannelNamesQt, glWidget, &Glwidget::updateChannelNamesQt);
+                connect(this, &eegWindow::updateChannelDisplayState, glWidget, &Glwidget::updateChannelDisplayState);
+                connect(this, &eegWindow::scaleDrawStateChanged, glWidget, &Glwidget::scaleDrawStateChanged);
+                connect(this, &eegWindow::setShowTriggers_A, glWidget, &Glwidget::setShowTriggers_A);
+                connect(this, &eegWindow::setShowTriggers_B, glWidget, &Glwidget::setShowTriggers_B);
+                connect(this, &eegWindow::switchPause, glWidget, &Glwidget::switchPause);
+                connect(this, &eegWindow::setDrawXaxis, glWidget, &Glwidget::setDrawXaxis);
+                connect(this, &eegWindow::updateTLineSpacing, glWidget, &Glwidget::updateTLineSpacing);
 
-            ui->checkBox_triggers_A->setChecked(glWidget->getShowTriggers_A());
-            ui->checkBox_triggers_B->setChecked(glWidget->getShowTriggers_B());
-            ui->checkBox_Xaxis->setChecked(glWidget->getDrawXaxis());
+                ui->checkBox_triggers_A->setChecked(glWidget->getShowTriggers_A());
+                ui->checkBox_triggers_B->setChecked(glWidget->getShowTriggers_B());
+                ui->checkBox_Xaxis->setChecked(glWidget->getDrawXaxis());
 
-            emit updateChannelNamesSTD(handler.getChannelNames());
-        } else {
-            // Error handling if glWidget is not found
-            qWarning("Glwidget not found in UI!");
+                emit updateChannelNamesSTD(handler.getChannelNames());
+            } else {
+                // Error handling if glWidget is not found
+                qWarning("Glwidget not found in UI!");
+            }
+        } catch (std::exception& e) {
+            emit error(QString("An error occurred during eegWindow initialization: %1").arg(e.what()));
         }
     }
 
@@ -119,7 +123,6 @@ void eegWindow::checkHandlerReady() {
             channelNames_ = QchannelNames;
 
             emit updateChannelNamesQt(QchannelNames);
-            // setupComboBox();
         }
     }
 }
@@ -181,34 +184,6 @@ void eegWindow::setupChannelNames()
     channelNames_ = QchannelNames;
 
     emit updateChannelNamesQt(QchannelNames);
-    // setupComboBox();
-}
-
-void eegWindow::setupComboBox() {
-    int n_channels = channelNames_.size();
-    QStandardItemModel* model = new QStandardItemModel(n_channels, 1, this);
-    
-    channelCheckStates_.resize(n_channels, true);
-
-    for (int i = 0; i < n_channels; ++i) {
-        QStandardItem* item = new QStandardItem(channelNames_.at(i));
-        item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
-        item->setData(Qt::Checked, Qt::CheckStateRole);
-        model->setItem(i, 0, item);
-    }
-
-    // ui->comboBox->setModel(model);
-    connect(model, &QStandardItemModel::itemChanged, this, &eegWindow::handleCheckboxChange);
-    emit updateChannelDisplayState(channelCheckStates_);
-}
-
-
-void eegWindow::handleCheckboxChange(QStandardItem* item) {
-    int row = item->row();
-    bool isChecked = item->checkState() == Qt::Checked;
-    channelCheckStates_[channelNames_.size() - 1 - row] = isChecked;
-
-    emit updateChannelDisplayState(channelCheckStates_);
 }
 
 

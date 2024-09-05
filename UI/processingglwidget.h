@@ -71,6 +71,8 @@ public slots:
     bool getDrawXaxis() { return drawXaxis; }
     
 private:
+    std::mutex dataMutex;
+    
     Eigen::MatrixXd dataMatrix_;
     Eigen::VectorXi triggers_A_;
     Eigen::VectorXi triggers_B_;

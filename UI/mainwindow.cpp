@@ -49,17 +49,17 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         bridge.setTimeout(timeout);
 
         QThread* thread = new QThread;
-        Worker* worker = new Worker(bridge, handler, signal_received);
-        worker->moveToThread(thread);
+        Worker* eeg_worker = new Worker(bridge, handler, signal_received);
+        eeg_worker->moveToThread(thread);
 
-        connect(thread, &QThread::started, worker, &Worker::process);
-        connect(worker, &Worker::finished, thread, &QThread::quit);
-        connect(worker, &Worker::error, this, &MainWindow::handleError);
-        connect(worker, &Worker::finished, worker, &Worker::deleteLater);
+        connect(thread, &QThread::started, eeg_worker, &Worker::process);
+        connect(eeg_worker, &Worker::finished, thread, &QThread::quit);
+        connect(eeg_worker, &Worker::error, this, &MainWindow::handleError);
+        connect(eeg_worker, &Worker::finished, eeg_worker, &Worker::deleteLater);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
         connect(thread, &QThread::finished, this, [=]() {
-            qDebug("Thread and Worker cleaned up properly");
+            qDebug("EEG_bridge Thread and Worker cleaned up properly");
         });
 
         thread->start();
@@ -106,16 +106,10 @@ void MainWindow::on_EEG_clicked()
     connect(eegwindow, &eegWindow::stopGACorrection, this, &MainWindow::stopGACorrection);
     connect(eegwindow, &eegWindow::startPreprocessing, this, &MainWindow::startPreprocessing);
 
-    if (worker) {
+    if (processingworker) {
+        std::cout << "Worker found" << '\n';
         connect_EEG_worker();
         emit eegwindow->requestEstStates();
-    }
-    
-    MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget) {
-        // connect(eegwindow, &ProcessingWorker::updateChannelNamesQt, mainglWidget, &MainGlWidget::updateChannelNamesQt);
-    } else {
-        qWarning("Glwidget not found in UI!");
     }
 }
 
@@ -135,7 +129,7 @@ void MainWindow::on_processing_clicked()
         processingWindow->raise();
         processingWindow->activateWindow();
     
-        if (worker) connect_processing_worker();
+        if (processingworker) connect_processing_worker();
         emit processingWindow->requestEstStates();
     } else {
         QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab and start the processing thread from the preprocessing tab.");
@@ -144,29 +138,29 @@ void MainWindow::on_processing_clicked()
 
 void MainWindow::connect_processing_worker()
 {
-    QObject::connect(worker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
-    QObject::connect(worker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
-    QObject::connect(worker, &ProcessingWorker::updateSpatialChannelNames, processingWindow, &ProcessingWindow::updateSpatialChannelNames);
-    QObject::connect(processingWindow, &ProcessingWindow::setFilterState, worker, &ProcessingWorker::setFilterState);
-    QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, worker, &ProcessingWorker::setEEGViewState);
-    QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, worker, &ProcessingWorker::setPhaseEstimationState);
-    QObject::connect(processingWindow, &ProcessingWindow::setPhaseTargetingState, worker, &ProcessingWorker::setPhaseTargetingState);
-    QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, worker, &ProcessingWorker::setPhaseEstimateParameters);
-    QObject::connect(processingWindow, &ProcessingWindow::setPhaseError, worker, &ProcessingWorker::setPhaseDifference);
-    QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, worker, &ProcessingWorker::setSpatilaTargetChannel);
-    QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, worker, &ProcessingWorker::outerElectrodesStateChanged);
-    QObject::connect(processingWindow, &ProcessingWindow::setPhaseErrorType, worker, &ProcessingWorker::setPhaseErrorType);
-    QObject::connect(worker, &ProcessingWorker::sendNumSamples, processingWindow, &ProcessingWindow::setNumSamples);
-    QObject::connect(processingWindow, &ProcessingWindow::requestEstStates, worker, &ProcessingWorker::sendEstStates);
-    QObject::connect(worker, &ProcessingWorker::newEstStates, processingWindow, &ProcessingWindow::newEstStates);
+    QObject::connect(processingworker, &ProcessingWorker::updatePhaseEstDisplayedData, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
+    QObject::connect(processingworker, &ProcessingWorker::updatePhaseEstwindowNames, processingWindow->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
+    QObject::connect(processingworker, &ProcessingWorker::updateSpatialChannelNames, processingWindow, &ProcessingWindow::updateSpatialChannelNames);
+    QObject::connect(processingWindow, &ProcessingWindow::setFilterState, processingworker, &ProcessingWorker::setFilterState);
+    QObject::connect(processingWindow, &ProcessingWindow::setEEGViewState, processingworker, &ProcessingWorker::setEEGViewState);
+    QObject::connect(processingWindow, &ProcessingWindow::setphaseEstimateState, processingworker, &ProcessingWorker::setPhaseEstimationState);
+    QObject::connect(processingWindow, &ProcessingWindow::setPhaseTargetingState, processingworker, &ProcessingWorker::setPhaseTargetingState);
+    QObject::connect(processingWindow, &ProcessingWindow::setPhaseEstParams, processingworker, &ProcessingWorker::setPhaseEstimateParameters);
+    QObject::connect(processingWindow, &ProcessingWindow::setPhaseError, processingworker, &ProcessingWorker::setPhaseDifference);
+    QObject::connect(processingWindow, &ProcessingWindow::setSpatilaTargetChannel, processingworker, &ProcessingWorker::setSpatilaTargetChannel);
+    QObject::connect(processingWindow, &ProcessingWindow::outerElectrodesStateChanged, processingworker, &ProcessingWorker::outerElectrodesStateChanged);
+    QObject::connect(processingWindow, &ProcessingWindow::setPhaseErrorType, processingworker, &ProcessingWorker::setPhaseErrorType);
+    QObject::connect(processingworker, &ProcessingWorker::sendNumSamples, processingWindow, &ProcessingWindow::setNumSamples);
+    QObject::connect(processingWindow, &ProcessingWindow::requestEstStates, processingworker, &ProcessingWorker::sendEstStates);
+    QObject::connect(processingworker, &ProcessingWorker::newEstStates, processingWindow, &ProcessingWindow::newEstStates);
 }
 
 void MainWindow::connect_EEG_worker()
 {
-    QObject::connect(worker, &ProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
-    QObject::connect(eegwindow, &eegWindow::setRemoveBCG, worker, &ProcessingWorker::setRemoveBCG);
-    QObject::connect(eegwindow, &eegWindow::requestEstStates, worker, &ProcessingWorker::sendEstStates);
-    QObject::connect(worker, &ProcessingWorker::newEstStates, eegwindow, &eegWindow::newEstStates);
+    QObject::connect(processingworker, &ProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+    QObject::connect(eegwindow, &eegWindow::setRemoveBCG, processingworker, &ProcessingWorker::setRemoveBCG);
+    QObject::connect(eegwindow, &eegWindow::requestEstStates, processingworker, &ProcessingWorker::sendEstStates);
+    QObject::connect(processingworker, &ProcessingWorker::newEstStates, eegwindow, &eegWindow::newEstStates);
 }
 
 void MainWindow::resetProcessingWindowPointer() {
@@ -179,18 +173,19 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams, phaseEs
         processingWorkerRunning = 1;
 
         QThread* thread = new QThread;
-        worker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, prepParams, phaseEstParams);
-        worker->moveToThread(thread);
+        processingworker = new ProcessingWorker(handler, processed_data, processingWorkerRunning, prepParams, phaseEstParams);
+        processingworker->moveToThread(thread);
 
-        QObject::connect(thread, &QThread::started, worker, &ProcessingWorker::process_start);       // Switch between differentprocessing functions here
-        QObject::connect(worker, &ProcessingWorker::finished, thread, &QThread::quit);
-        QObject::connect(worker, &ProcessingWorker::error, this, &MainWindow::handleError);
-        QObject::connect(worker, &ProcessingWorker::finished, worker, &ProcessingWorker::deleteLater);
+        QObject::connect(thread, &QThread::started, processingworker, &ProcessingWorker::process_start);       // Switch between differentprocessing functions here
+        QObject::connect(processingworker, &ProcessingWorker::finished, thread, &QThread::quit);
+        QObject::connect(processingworker, &ProcessingWorker::error, this, &MainWindow::handleError);
+        QObject::connect(processingworker, &ProcessingWorker::finished, processingworker, &ProcessingWorker::deleteLater);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
         QObject::connect(thread, &QThread::finished, this, [=]() {
+            processingworker = nullptr;
             processingWorkerRunning = 0;
-            qDebug("Thread and Worker cleaned up properly");
+            qDebug("Processing Thread and Worker cleaned up properly");
         });
 
         thread->start();

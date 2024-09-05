@@ -229,11 +229,14 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
                                                         int numFutureElements) 
 {
     if (!pause_view) {
+        std::lock_guard<std::mutex> lock(this->dataMutex);
+
         // Check if dimensions differ
-        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
-            // Resize dataMatrix_ to match the dimensions of newMatrix
-            dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
-        }
+        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
+        if (triggers_A_.size() != triggers_A.size()) triggers_A_.resize(triggers_A.size());
+        if (triggers_B_.size() != triggers_B.size()) triggers_B_.resize(triggers_B.size());
+        if (triggers_out_.size() != triggers_out.size()) triggers_out_.resize(triggers_out.size());
+        if (time_stamps_.size() != time_stamps.size()) time_stamps_.resize(time_stamps.size());
 
         // Assign the new matrix
         dataMatrix_ = newMatrix;

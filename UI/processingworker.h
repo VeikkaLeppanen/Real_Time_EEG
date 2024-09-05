@@ -76,8 +76,8 @@ public:
     explicit ProcessingWorker(dataHandler &handler, 
                           Eigen::MatrixXd &processed_data, 
                volatile std::sig_atomic_t &processingWorkerRunning, 
-                  preprocessingParameters &prepParams, 
-                  phaseEstimateParameters &phaseEstParams, 
+                  preprocessingParameters &prepParams_in, 
+                  phaseEstimateParameters &phaseEstParams_in, 
                                   QObject* parent = nullptr);
     ~ProcessingWorker();
 
@@ -121,29 +121,8 @@ public slots:
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
-    void setPhaseEstimateParameters(phaseEstimateParameters newParams) {
-        phaseEstParams.edge = newParams.edge;
-        phaseEstParams.modelOrder = newParams.modelOrder;
-        phaseEstParams.hilbertWinLength = newParams.hilbertWinLength; 
-        phaseEstParams.stimulation_target = newParams.stimulation_target;
-        phaseEstParams.phase_shift = newParams.phase_shift;
-
-        edge_cut_cols = filter2_length - 2 * newParams.edge;
-        estimationLength = newParams.edge + std::ceil(newParams.hilbertWinLength / 2);
-        display_length = downsampled_cols + estimationLength - newParams.edge;
-
-        EEG_filter2 = Eigen::VectorXd::Zero(filter2_length);
-        EEG_predicted.resize(estimationLength, 0.0);
-        EEG_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
-        phaseAngles = Eigen::VectorXd::Zero(estimationLength);
-
-        phase_diff_hilbert.resize(estimationLength, std::complex<double>(0.0, 0.0));
-        phaseDifference = Eigen::VectorXd::Zero(downsampled_cols - newParams.edge);
-
-        outerElectrodeCheckStates_.resize(numOuterElectrodes, true);
-
-        Data_to_display = Eigen::MatrixXd::Zero(9, display_length);
-    }
+    void setPreprocessingParameters(preprocessingParameters newParams);
+    void setPhaseEstimateParameters(phaseEstimateParameters newParams);
 
     Eigen::VectorXd getPhaseDifference_vector() {
         if (phaseDifference_current_index == 0) return phaseDifference;
@@ -169,7 +148,6 @@ public slots:
 private:
     void process();
 
-
     dataHandler &handler;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
@@ -188,6 +166,27 @@ private:
     int filter2_length = 250;
     int edge_cut_cols;
     size_t estimationLength;
+
+    int n_EEG_channels_to_use = 5;      
+    int n_CWL_channels_to_use = 7;
+    int n_channels;
+    int samples_to_process;
+    int downsampling_factor;
+    int delay;
+
+    // Memory preallocation for preprocessing matrices
+    Eigen::MatrixXd all_channels;
+    Eigen::MatrixXd EEG_downsampled;
+    Eigen::MatrixXd expCWL;
+    Eigen::MatrixXd pinvCWL;
+    Eigen::MatrixXd EEG_corrected;
+    Eigen::VectorXd EEG_spatial;
+
+    // Input triggers
+    Eigen::VectorXi triggers_A;
+    Eigen::VectorXi triggers_B;
+    Eigen::VectorXi triggers_out;
+    Eigen::VectorXd time_stamps;
 
     Eigen::VectorXd EEG_filter2;
     std::vector<double> EEG_predicted;

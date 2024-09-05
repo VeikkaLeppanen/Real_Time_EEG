@@ -73,6 +73,8 @@ signals:
 
     void requestEstStates();
 
+    void error(QString err);
+
 private slots:
     void handleError(const QString& error);
 
@@ -80,8 +82,6 @@ private slots:
     void checkHandlerReady();  // Slot to periodically check the handler's readiness
     void on_disconnectButton_clicked();
     void on_sourceChannelLoad_clicked();
-    void setupComboBox();
-    void handleCheckboxChange(QStandardItem* item);
     void on_lineEditPort_editingFinished();
     void on_lineEditTimeOut_editingFinished();
     void on_lineEditGraphSamples_editingFinished();
