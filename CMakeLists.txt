@@ -25,44 +25,21 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-set(SOURCES
-    main.cpp
-    devices/EEG/eeg_bridge/eeg_bridge.cpp
-    devices/EEG/eeg_bridge/measurementStartPacket.cpp
-    devices/EEG/eeg_bridge/samplePacket.cpp
-    devices/EEG/eeg_bridge/networkUtils.cpp
-    dataHandler/dataHandler.cpp
-    EEG/preprocessing/GACorrection.cpp 
-    EEG/preprocessing/preprocessingFunctions.cpp 
-    EEG/phaseEstimation/phaseEstimationFunctions.cpp 
-    math/dsp.cpp 
-    utils/utilityFunctions.cpp 
-    devices/TMS/magPro/magPro.cpp 
-    UI/mainwindow.cpp
-    UI/mainwindow.h
-    UI/mainwindow.ui
-    UI/eegwindow.cpp
-    UI/eegwindow.h
-    UI/eegwindow.ui
-    UI/processingwindow.h 
-    UI/processingwindow.cpp 
-    UI/triggeringwindow.h 
-    UI/triggeringwindow.cpp 
-    UI/processingwindow.ui
-    UI/processingglwidget.cpp 
-    UI/processingglwidget.h
-    UI/processingworker.cpp
-    UI/processingworker.h
-    UI/worker.cpp
-    UI/worker.h
-    UI/glwidget.cpp
-    UI/glwidget.h
-    UI/mainglwidget.cpp
-    UI/mainglwidget.h
-)
 
-add_executable(real_time_eeg ${SOURCES}
-    UI/triggeringwindow.h UI/triggeringwindow.cpp UI/triggeringwindow.ui)
+file(GLOB MAIN_SOURCES "*.cpp" "*.h")
+file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
+file(GLOB_RECURSE EEG_BRIDGE_SOURCES "devices/EEG/eeg_bridge/*.cpp" "devices/EEG/eeg_bridge/*.h")
+file(GLOB_RECURSE DATAHANDLER_SOURCES "dataHandler/*.cpp" "dataHandler/*.h")
+file(GLOB_RECURSE TMS_SOURCES "devices/TMS/*.cpp" "devices/TMS/*.h")
+file(GLOB_RECURSE MATH_SOURCES "math/*.cpp" "math/*.h")
+file(GLOB_RECURSE UTILS_SOURCES "utils/*.cpp" "utils/*.h")
+file(GLOB_RECURSE UI_SOURCES "UI/*.cpp" "UI/*.h" "UI/*.ui")
+
+# Combine all source lists
+set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES})
+
+# Add the executable based on the sources
+add_executable(real_time_eeg ${SOURCES})
 
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets

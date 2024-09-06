@@ -295,56 +295,6 @@
            <property name="bottomMargin">
             <number>3</number>
            </property>
-           <item>
-            <widget class="QFrame" name="frame_10">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_6">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="stopButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Stop</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="startButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Start</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item alignment="Qt::AlignTop">
             <widget class="QFrame" name="frame_3">
              <property name="frameShape">
@@ -366,7 +316,21 @@
               <property name="bottomMargin">
                <number>3</number>
               </property>
-              <item row="10" column="1">
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="checkBox_2">
+                <property name="text">
+                 <string>Baseline</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="0">
+               <widget class="QLabel" name="label_13">
+                <property name="text">
+                 <string>down sampling</string>
+                </property>
+               </widget>
+              </item>
+              <item row="15" column="1">
                <widget class="QLineEdit" name="numberOfSamples">
                 <property name="maximumSize">
                  <size>
@@ -382,17 +346,13 @@
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
-               <widget class="QCheckBox" name="checkBox_removeBCG">
-                <property name="text">
-                 <string>remove BCG</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
-               <widget class="QLabel" name="label_13">
-                <property name="text">
-                 <string>down sampling</string>
+              <item row="16" column="1">
+               <widget class="QLineEdit" name="downsampling">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
                 </property>
                </widget>
               </item>
@@ -403,27 +363,10 @@
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
-               <widget class="QCheckBox" name="filter1">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_2">
                 <property name="text">
-                 <string>Filter 0-80Hz</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0">
-               <widget class="QCheckBox" name="checkBox_2">
-                <property name="text">
-                 <string>Baseline</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="1">
-               <widget class="QLineEdit" name="downsampling">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
+                 <string>TA length</string>
                 </property>
                </widget>
               </item>
@@ -434,10 +377,77 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
-               <widget class="QLineEdit" name="lineEditGALength">
+              <item row="10" column="0" colspan="2">
+               <widget class="QFrame" name="frame_10">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <property name="lineWidth">
+                 <number>1</number>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_6">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item row="1" column="0">
+                  <widget class="QPushButton" name="startButton">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Start</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QPushButton" name="stopButton">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Stop</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Processing thread control</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item row="14" column="0">
+               <widget class="QCheckBox" name="checkBox_removeBCG">
                 <property name="text">
-                 <string>5000</string>
+                 <string>remove BCG</string>
+                </property>
+               </widget>
+              </item>
+              <item row="15" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Window length</string>
                 </property>
                </widget>
               </item>
@@ -448,34 +458,44 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>TA length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="10" column="0">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>Window length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="12" column="0">
+              <item row="17" column="0">
                <widget class="QLabel" name="label_11">
                 <property name="text">
                  <string>delay</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="1">
+              <item row="8" column="0">
+               <widget class="QCheckBox" name="filter1">
+                <property name="text">
+                 <string>Filter 0-80Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item row="17" column="1">
                <widget class="QLineEdit" name="delay">
                 <property name="maximumSize">
                  <size>
                   <width>100</width>
                   <height>16777215</height>
                  </size>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0" colspan="2">
+               <widget class="QFrame" name="frame_9">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="lineEditGALength">
+                <property name="text">
+                 <string>5000</string>
                 </property>
                </widget>
               </item>

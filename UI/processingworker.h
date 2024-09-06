@@ -9,6 +9,7 @@
 #include "../dataHandler/dataHandler.h"
 #include "../EEG/preprocessing/preprocessingFunctions.h"
 #include "../EEG/phaseEstimation/phaseEstimationFunctions.h"
+#include "../math/dsp.h"
 #include <boost/stacktrace.hpp>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>

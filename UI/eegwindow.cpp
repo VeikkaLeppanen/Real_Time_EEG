@@ -279,6 +279,7 @@ void eegWindow::on_numberOfSamples_editingFinished()
     if (ok) {
         prepParams.numberOfSamples = value;
         updateChannelLength(value);
+        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -290,6 +291,7 @@ void eegWindow::on_downsampling_editingFinished()
     int value = ui->downsampling->text().toInt(&ok);
     if (ok && (value > 0)) {
         prepParams.downsampling_factor = value;
+        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -302,6 +304,7 @@ void eegWindow::on_delay_editingFinished()
     int value = ui->delay->text().toInt(&ok);
     if (ok) {
         prepParams.delay = value;
+        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -336,10 +339,8 @@ void eegWindow::on_checkBox_GA_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     if (isChecked) {
-        // if (handler.get_TA_length() != GALength || handler.get_GA_average_length() != GAAverage) {
         emit stopGACorrection();
         emit applyGACorrection(GALength, GAAverage);
-        // }
         emit startGACorrection();
     } else {
         emit stopGACorrection();

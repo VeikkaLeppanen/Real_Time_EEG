@@ -112,7 +112,7 @@ private:
     int bridge_timeout = 10;
 
     // Graph parameters
-    int samples_to_display = 10000;
+    int samples_to_display = 30000;
 
     // Handler parameters
     dataHandler &handler;
