@@ -107,7 +107,6 @@ void MainWindow::on_EEG_clicked()
     connect(eegwindow, &eegWindow::startPreprocessing, this, &MainWindow::startPreprocessing);
 
     if (processingworker) {
-        std::cout << "Worker found" << '\n';
         connect_EEG_worker();
         emit eegwindow->requestEstStates();
     }

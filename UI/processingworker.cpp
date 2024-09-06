@@ -17,10 +17,11 @@ ProcessingWorker::ProcessingWorker(dataHandler &handler,
     : QObject(parent), 
       handler(handler), 
       processed_data(processed_data), 
-      processingWorkerRunning(processingWorkerRunning), 
-      prepParams(prepParams_in),
-      phaseEstParams(phaseEstParams_in)
-{ }
+      processingWorkerRunning(processingWorkerRunning)
+{ 
+    setPreprocessingParameters(prepParams_in);
+    setPhaseEstimateParameters(phaseEstParams_in);
+}
 
 ProcessingWorker::~ProcessingWorker()
 { }
@@ -58,11 +59,12 @@ void ProcessingWorker::setPreprocessingParameters(preprocessingParameters newPar
 
 void ProcessingWorker::setPhaseEstimateParameters(phaseEstimateParameters newParams) {
     std::cout << "New phaseEstimateParameters Parameters: " << newParams << std::endl;
-    phaseEstParams.edge = newParams.edge;
-    phaseEstParams.modelOrder = newParams.modelOrder;
-    phaseEstParams.hilbertWinLength = newParams.hilbertWinLength; 
-    phaseEstParams.stimulation_target = newParams.stimulation_target;
-    phaseEstParams.phase_shift = newParams.phase_shift;
+    edge = newParams.edge;
+    modelOrder = newParams.modelOrder;
+    hilbertWinLength = newParams.hilbertWinLength; 
+    stimulation_target = newParams.stimulation_target;
+    phase_shift = newParams.phase_shift;
+    filter2_length = 250;
 
     edge_cut_cols = filter2_length - 2 * newParams.edge;
     estimationLength = newParams.edge + std::ceil(newParams.hilbertWinLength / 2);
@@ -94,12 +96,6 @@ void ProcessingWorker::process()
         // FIR filters
         Eigen::VectorXd LSFIR_coeffs_2;
         getLSFIRCoeffs_9_13Hz(LSFIR_coeffs_2);
-
-        // preprocessing
-        setPreprocessingParameters(prepParams);
-
-        // phase estimate
-        setPhaseEstimateParameters(phaseEstParams);
 
         // Set names for each channel in Data_to_display
         std::vector<std::string> EEG_channel_names;
@@ -221,7 +217,7 @@ void ProcessingWorker::process()
             // Phase estimation
             print_debug("AR predicted");
             if (phaseEstStates.performEstimation) {
-                EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(phaseEstParams.edge, edge_cut_cols), phaseEstParams.modelOrder, estimationLength);
+                EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             }
             
             // Hilbert transform
@@ -233,7 +229,7 @@ void ProcessingWorker::process()
             // Trigger phase targeting
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
-                int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, phaseEstParams.edge, phaseEstParams.phase_shift, phaseEstParams.stimulation_target);
+                int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum) { 
                     handler.insertTrigger(trigger_seqNum); 
                     if (stimulation_tracker < 0) stimulation_tracker++;
@@ -244,13 +240,13 @@ void ProcessingWorker::process()
             
             Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
             
-            Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - phaseEstParams.edge) = EEG_filter2.head(filter2_length - phaseEstParams.edge);
+            Data_to_display.row(6).segment(downsampled_cols - filter2_length, filter2_length - edge) = EEG_filter2.head(filter2_length - edge);
 
 
             Data_to_display.row(6).tail(estimationLength) = Eigen::Map<Eigen::VectorXd>(EEG_predicted.data(), EEG_predicted.size());
             
             int phase_length = 32;
-            int phase_start = phaseEstParams.edge - phase_length / 2;
+            int phase_start = edge - phase_length / 2;
             
             Data_to_display.row(7).segment(downsampled_cols - phase_length / 2, phase_length) = phaseAngles.segment(phase_start, phase_length);
 
@@ -259,7 +255,7 @@ void ProcessingWorker::process()
             if (phaseEstStates.performPhaseDifference) {
                 int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;              // FIGURE OUT A BETTER WAY TO HANDLE DOWNSAMPLING
                 if (last_phase_seqnum == -1) {
-                    last_phase = phaseAngles(phaseEstParams.edge);
+                    last_phase = phaseAngles(edge);
                     last_phase_seqnum = sequence_number;
                 } else if (numSkippedSamples > 35) {
                     double difference;
@@ -301,7 +297,7 @@ void ProcessingWorker::process()
                             break;
                     }
                     last_phase_seqnum = -1;
-                    Data_to_display.row(8).head(downsampled_cols - phaseEstParams.edge) = getPhaseDifference_vector();
+                    Data_to_display.row(8).head(downsampled_cols - edge) = getPhaseDifference_vector();
                 }
             }
 
@@ -311,9 +307,9 @@ void ProcessingWorker::process()
                     if(i < EEG_channel_names.size()) PhaseEst_channel_names.push_back(EEG_channel_names[i]);
                     else PhaseEst_channel_names.push_back("Undefined");
                 }
-                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display, triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - edge);
             } else {
-                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - phaseEstParams.edge);
+                emit updatePhaseEstDisplayedData(Data_to_display.bottomRows(Data_to_display.rows() - n_EEG_channels_to_use), triggers_A, triggers_B, triggers_out, time_stamps, downsampled_cols, estimationLength - edge);
             }
             
             if (spatial_channel_index >= 0 && spatial_channel_index < EEG_channel_names.size()) {

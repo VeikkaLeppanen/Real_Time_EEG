@@ -129,7 +129,7 @@ public slots:
         
         std::lock_guard<std::mutex> lock(this->dataMutex); // Protect shared data access
 
-        int N = downsampled_cols - phaseEstParams.edge;
+        int N = downsampled_cols - edge;
         Eigen::VectorXd output(N); // Corrected initialization
 
         // Calculate the number of samples in each segment
@@ -148,12 +148,15 @@ public slots:
 private:
     void process();
 
+    const bool debug = false;
+    void print_debug(std::string msg) {
+        if (debug) std::cout << msg << std::endl;
+    };
+
     dataHandler &handler;
     Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
-    preprocessingParameters &prepParams;
-    phaseEstimateParameters &phaseEstParams;
     QFuture<void> process_future;
 
     int downsampled_cols;
@@ -163,9 +166,6 @@ private:
     int spatial_channel_index = 0;
     int numOuterElectrodes = 4;
     std::vector<bool> outerElectrodeCheckStates_;
-    int filter2_length = 250;
-    int edge_cut_cols;
-    size_t estimationLength;
 
     int n_EEG_channels_to_use = 5;      
     int n_CWL_channels_to_use = 7;
@@ -173,6 +173,15 @@ private:
     int samples_to_process;
     int downsampling_factor;
     int delay;
+    
+    size_t edge;
+    int filter2_length;
+    int edge_cut_cols;
+    int estimationLength;
+    size_t modelOrder;
+    size_t hilbertWinLength; 
+    double stimulation_target;
+    int phase_shift;
 
     // Memory preallocation for preprocessing matrices
     Eigen::MatrixXd all_channels;
@@ -205,10 +214,6 @@ private:
     Eigen::MatrixXd EEG_win_data_to_display;
     Eigen::MatrixXd Data_to_display;
 
-    const bool debug = false;
-    void print_debug(std::string msg) {
-        if (debug) std::cout << msg << std::endl;
-    };
 };
 
 #endif // PROCESSINGWORKER_H
