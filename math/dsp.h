@@ -6,6 +6,14 @@
 
 #include <fftw3.h>
 
+Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag, const std::string& norm = "biased");
+
+std::vector<std::complex<double>> performFFT(const std::vector<double>& data);
+std::vector<std::complex<double>> performFFT(const Eigen::VectorXd& data);
+std::vector<std::complex<double>> performIFFT(const std::vector<std::complex<double>>& data);
+std::vector<std::complex<double>> hilbertTransform(const std::vector<double>& signal);
+std::vector<std::complex<double>> hilbertTransform(const Eigen::VectorXd& signal);
+
 Eigen::VectorXd hamming(unsigned int N);
 Eigen::VectorXcd spectrum(const Eigen::VectorXd& x, const Eigen::VectorXd& W);
 Eigen::MatrixXcd specgram_cx(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int Noverl);

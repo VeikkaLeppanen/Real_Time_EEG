@@ -217,7 +217,7 @@ void ProcessingWorker::process()
             // Phase estimation
             print_debug("AR predicted");
             if (phaseEstStates.performEstimation) {
-                EEG_predicted = fitAndPredictAR_YuleWalker_V2(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
+                EEG_predicted = fitAndPredictAR_YuleWalker(EEG_filter2.segment(edge, edge_cut_cols), modelOrder, estimationLength);
             }
             
             // Hilbert transform
