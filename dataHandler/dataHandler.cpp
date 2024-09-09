@@ -96,8 +96,8 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
                 }
 
                 // Update baseline_average
-                baseline_average += (samples - baseline_matrix.col(baseline_index)) / baseline_length;
-                baseline_matrix.col(baseline_index) = samples;
+                baseline_average += (processing_sample_vector - baseline_matrix.col(baseline_index)) / baseline_length;
+                baseline_matrix.col(baseline_index) = processing_sample_vector;
 
                 // Avoid dividing by zero in baseline_average
                 for (int i = 0; i < baseline_average.size(); ++i) {
