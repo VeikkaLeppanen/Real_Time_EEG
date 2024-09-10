@@ -8,6 +8,7 @@
 #include <cmath>    // For M_PI
 #include "../dataHandler/dataHandler.h"
 #include "../EEG/preprocessing/preprocessingFunctions.h"
+#include "../EEG/preprocessing/removeBCG.h"
 #include "../EEG/phaseEstimation/phaseEstimationFunctions.h"
 #include "../math/dsp.h"
 #include <boost/stacktrace.hpp>

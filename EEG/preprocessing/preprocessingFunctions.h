@@ -26,7 +26,4 @@ void getLSFIRCoeffs_0_80Hz(Eigen::VectorXd& coeffs);
 
 void downsample(const Eigen::MatrixXd& input, Eigen::MatrixXd& output, int factor);
 
-void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step);
-void removeBCG(const Eigen::MatrixXd& EEG, const Eigen::MatrixXd& expCWL, Eigen::MatrixXd& pinvCWL, Eigen::MatrixXd& EEG_corrected/*, Eigen::VectorXd& betas*/);
-
 #endif // PREPROCESSINGFUNCTIONS_H
