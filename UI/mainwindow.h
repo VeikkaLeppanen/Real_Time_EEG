@@ -8,13 +8,13 @@
 #include <QIntValidator>
 #include <iostream>
 #include "processingworker.h"
-#include "worker.h"
+#include "EEGSpinWorker.h"
 #include "glwidget.h"
 #include "mainglwidget.h"
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow.h"
-#include "processingwindow.h"
-#include "triggeringwindow.h"
+#include "phaseEstwindow.h"
+#include "TMSwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -54,7 +54,7 @@ private slots:
     void resetProcessingWindowPointer();
 
     void on_triggering_clicked();
-    void resetTriggeringWindowPointer();
+    void resetTMSwinPointer();
 
 private:
     Ui::MainWindow *ui;
@@ -77,8 +77,8 @@ private:
 
     // windows
     eegWindow *eegwindow = nullptr;
-    ProcessingWindow *processingWindow = nullptr;
-    TriggeringWindow *triggeringWindow = nullptr;
+    phaseEstwindow *phaseEstwin = nullptr;
+    TMSwindow *TMSwin = nullptr;
     ProcessingWorker *processingworker = nullptr;
 
     volatile std::sig_atomic_t &signal_received;

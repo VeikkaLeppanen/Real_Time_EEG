@@ -167,7 +167,7 @@ void Glwidget::paintGL()
 
     tracker = std::ceil(initialTimeInSeconds);  // Round up to next whole second
     painter.setFont(QFont("Arial", 18)); // Set font here
-
+    
     // Draw the timestamp labels and vertical lines
     for (int i = 0; i < totalDataPoints; ++i) {
         double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds

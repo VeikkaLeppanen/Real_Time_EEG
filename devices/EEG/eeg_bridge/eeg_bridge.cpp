@@ -2,9 +2,6 @@
 
 // AMPLIFIER *100
 // NANO TO MICRO /1000
-const uint8_t DC_MODE_SCALE = 100;
-const uint16_t NANO_TO_MICRO_CONVERSION = 1000;
-const double DOUBLESCALINGFACTOR = 10000.0;
 
 void EegBridge::bind_socket() {
 
@@ -45,7 +42,7 @@ void EegBridge::bind_socket() {
     len = sizeof(cliaddr);
 }
 
-void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_received) {
+void EegBridge::spin(volatile std::sig_atomic_t &signal_received) {
     try {
     
     running = true;
@@ -92,14 +89,11 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             sampling_rate = packet_info.SamplingRateHz;
             lastSequenceNumber = -1;
 
-            handler.setSourceChannels(data_channel_sources);
-            handler.setTriggerSource(trigger_channel_source);
 
             data_handler_samples = Eigen::MatrixXd::Zero(numDataChannels, 100);
 
             std::cout << "MeasurementStart package processed!\n";
 
-            handler.reset_handler(numDataChannels, sampling_rate);
             std::cout << "DataHandler reset!\n";
             eeg_bridge_status = MEASUREMENT_IN_PROGRESS;
             std::cout << "Waiting for packets..." << '\n';
@@ -107,7 +101,7 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
             break;
 
         } case 0x02: { // SamplesPacket
-            if (eeg_bridge_status == WAITING_MEASUREMENT_START || !handler.isReady()) break;
+            if (eeg_bridge_status == WAITING_MEASUREMENT_START) break;
 
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
@@ -136,7 +130,6 @@ void EegBridge::spin(dataHandler &handler, volatile std::sig_atomic_t &signal_re
                     std::cerr << "Error: Column index " << i << " is out of range for data_samples with columns " << data_samples.cols() << '\n';
                     break;
                 }
-                handler.addData(data_samples.col(i), static_cast<double>(packet_info.FirstSampleTime), triggers_A(i), triggers_B(i), sequenceNumber);
             }
 
             // Check for dropped packets

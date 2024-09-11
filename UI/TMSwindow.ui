@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TriggeringWindow</class>
- <widget class="QMainWindow" name="TriggeringWindow">
+ <class>TMSwindow</class>
+ <widget class="QMainWindow" name="TMSwindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -125,7 +125,7 @@
        <item row="5" column="0">
         <widget class="QLabel" name="label_4">
          <property name="text">
-          <string>ba ratio:</string>
+          <string>B/A ratio:</string>
          </property>
         </widget>
        </item>
@@ -156,54 +156,6 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_17">
-         <property name="text">
-          <string>Direction</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_18">
-         <property name="text">
-          <string>Waveform</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_19">
-         <property name="text">
-          <string>Burst pulses</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_20">
-         <property name="text">
-          <string>IPI (ms)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QLineEdit" name="lineEditIPI"/>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_21">
-         <property name="text">
-          <string>B/A ratio</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLineEdit" name="lineEditBAratio"/>
-       </item>
-       <item row="6" column="1">
-        <widget class="QCheckBox" name="checkBoxDelay">
-         <property name="text">
-          <string>Delay</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QComboBox" name="comboBoxMode">
          <item>
@@ -228,6 +180,13 @@
          </item>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>Direction</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="1">
         <widget class="QComboBox" name="comboBoxDirection">
          <item>
@@ -240,6 +199,13 @@
            <string>Reverse</string>
           </property>
          </item>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_18">
+         <property name="text">
+          <string>Waveform</string>
+         </property>
         </widget>
        </item>
        <item row="2" column="1">
@@ -266,6 +232,13 @@
          </item>
         </widget>
        </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_19">
+         <property name="text">
+          <string>Burst pulses</string>
+         </property>
+        </widget>
+       </item>
        <item row="3" column="1">
         <widget class="QComboBox" name="comboBoxBurstPulses">
          <item>
@@ -289,6 +262,26 @@
           </property>
          </item>
         </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_20">
+         <property name="text">
+          <string>IPI (ms)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="lineEditIPI"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_21">
+         <property name="text">
+          <string>B/A ratio</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEditBAratio"/>
        </item>
       </layout>
      </widget>

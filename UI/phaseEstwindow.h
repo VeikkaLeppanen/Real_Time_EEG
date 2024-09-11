@@ -1,5 +1,5 @@
-#ifndef PROCESSINGWINDOW_H
-#define PROCESSINGWINDOW_H
+#ifndef PHASEESTWINDOW_H
+#define PHASEESTWINDOW_H
 
 #include <QMainWindow>
 #include <QMessageBox>
@@ -11,19 +11,19 @@
 #include "../dataHandler/dataHandler.h"
 
 namespace Ui {
-class ProcessingWindow;
+class phaseEstwindow;
 }
 
-class ProcessingWindow : public QMainWindow
+class phaseEstwindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit ProcessingWindow(dataHandler &handler, 
+    explicit phaseEstwindow(dataHandler &handler, 
                volatile std::sig_atomic_t &processingWorkerRunning, 
                           Eigen::MatrixXd &processed_data, 
                                   QWidget *parent = nullptr);
-    ~ProcessingWindow();
+    ~phaseEstwindow();
 
     ProcessingGlWidget* getProcessingGlWidget() { return processingglWidget; }
 
@@ -91,7 +91,7 @@ private slots:
     void on_comboBox_phaseError_currentIndexChanged(int index);
 
 private:
-    Ui::ProcessingWindow *ui;
+    Ui::phaseEstwindow *ui;
     ProcessingGlWidget *processingglWidget;
 
     dataHandler &handler;
@@ -111,4 +111,4 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
 };
 
-#endif // PROCESSINGWINDOW_H
+#endif // PHASEESTWINDOW_H

@@ -1,13 +1,13 @@
-#include "processingwindow.h"
-#include "ui_processingwindow.h"
+#include "phaseEstwindow.h"
+#include "ui_phaseEstwindow.h"
 #include <QThread>
 
-ProcessingWindow::ProcessingWindow(dataHandler &handler, 
+phaseEstwindow::phaseEstwindow(dataHandler &handler, 
                     volatile std::sig_atomic_t &processingWorkerRunning, 
                                Eigen::MatrixXd &processed_data, 
                                        QWidget *parent)
     : QMainWindow(parent), 
-      ui(new Ui::ProcessingWindow),
+      ui(new Ui::phaseEstwindow),
       handler(handler),
       processingWorkerRunning(processingWorkerRunning),
       processed_data(processed_data)
@@ -31,21 +31,21 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
 
     processingglWidget = ui->processingGlWidget;
     if (processingglWidget) {
-        connect(this, &ProcessingWindow::setCustomScaleStatus, processingglWidget, &ProcessingGlWidget::setCustomScaleStatus);
-        connect(this, &ProcessingWindow::setCustomScaleMin, processingglWidget, &ProcessingGlWidget::setCustomScaleMin);
-        connect(this, &ProcessingWindow::setCustomScaleMax, processingglWidget, &ProcessingGlWidget::setCustomScaleMax);
+        connect(this, &phaseEstwindow::setCustomScaleStatus, processingglWidget, &ProcessingGlWidget::setCustomScaleStatus);
+        connect(this, &phaseEstwindow::setCustomScaleMin, processingglWidget, &ProcessingGlWidget::setCustomScaleMin);
+        connect(this, &phaseEstwindow::setCustomScaleMax, processingglWidget, &ProcessingGlWidget::setCustomScaleMax);
 
-        connect(this, &ProcessingWindow::getCustomScaleStatus, processingglWidget, &ProcessingGlWidget::getCustomScaleStatus);
-        connect(this, &ProcessingWindow::getCustomScaleMin, processingglWidget, &ProcessingGlWidget::getCustomScaleMin);
-        connect(this, &ProcessingWindow::getCustomScaleMax, processingglWidget, &ProcessingGlWidget::getCustomScaleMax);
-        connect(this, &ProcessingWindow::setShowTriggers_A, processingglWidget, &ProcessingGlWidget::setShowTriggers_A);
-        connect(this, &ProcessingWindow::setShowTriggers_B, processingglWidget, &ProcessingGlWidget::setShowTriggers_B);
-        connect(this, &ProcessingWindow::setShowTriggers_out, processingglWidget, &ProcessingGlWidget::setShowTriggers_out);
-        connect(this, &ProcessingWindow::switchPause, processingglWidget, &ProcessingGlWidget::switchPause);
+        connect(this, &phaseEstwindow::getCustomScaleStatus, processingglWidget, &ProcessingGlWidget::getCustomScaleStatus);
+        connect(this, &phaseEstwindow::getCustomScaleMin, processingglWidget, &ProcessingGlWidget::getCustomScaleMin);
+        connect(this, &phaseEstwindow::getCustomScaleMax, processingglWidget, &ProcessingGlWidget::getCustomScaleMax);
+        connect(this, &phaseEstwindow::setShowTriggers_A, processingglWidget, &ProcessingGlWidget::setShowTriggers_A);
+        connect(this, &phaseEstwindow::setShowTriggers_B, processingglWidget, &ProcessingGlWidget::setShowTriggers_B);
+        connect(this, &phaseEstwindow::setShowTriggers_out, processingglWidget, &ProcessingGlWidget::setShowTriggers_out);
+        connect(this, &phaseEstwindow::switchPause, processingglWidget, &ProcessingGlWidget::switchPause);
 
-        connect(this, &ProcessingWindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
-        connect(this, &ProcessingWindow::setDrawXaxis, processingglWidget, &ProcessingGlWidget::setDrawXaxis);
-        connect(this, &ProcessingWindow::updateTLineSpacing, processingglWidget, &ProcessingGlWidget::updateTLineSpacing);
+        connect(this, &phaseEstwindow::updateWidgetChannelNames, processingglWidget, &ProcessingGlWidget::updateChannelNamesSTD);
+        connect(this, &phaseEstwindow::setDrawXaxis, processingglWidget, &ProcessingGlWidget::setDrawXaxis);
+        connect(this, &phaseEstwindow::updateTLineSpacing, processingglWidget, &ProcessingGlWidget::updateTLineSpacing);
 
         ui->checkBox->setChecked(emit getCustomScaleStatus());
         ui->scaleMin->setText(QString::number(emit getCustomScaleMin()));
@@ -60,7 +60,7 @@ ProcessingWindow::ProcessingWindow(dataHandler &handler,
     }
 }
 
-void ProcessingWindow::newEstStates(phaseEstimateStates states) {
+void phaseEstwindow::newEstStates(phaseEstimateStates states) {
     ui->checkBox_phaseEstimate->setChecked(states.performPhaseEstimation);
     ui->Filter_checkbox->setChecked(states.performFiltering);
     ui->checkBox_PhaseTargeting->setChecked(states.performPhaseTargeting);
@@ -68,18 +68,18 @@ void ProcessingWindow::newEstStates(phaseEstimateStates states) {
     ui->checkBox_Channels->setChecked(states.phasEst_display_all_EEG_channels);
 }
 
-void ProcessingWindow::updateSpatialChannelNames(std::vector<std::string> names) 
+void phaseEstwindow::updateSpatialChannelNames(std::vector<std::string> names) 
 {
     spatial_channel_names = names;
 }
 
-ProcessingWindow::~ProcessingWindow()
+phaseEstwindow::~phaseEstwindow()
 {
     emit setphaseEstimateState(false);
     delete ui;
 }
 
-void ProcessingWindow::on_edge_editingFinished()
+void phaseEstwindow::on_edge_editingFinished()
 {
     bool ok;
     int value = ui->edge->text().toInt(&ok);
@@ -91,7 +91,7 @@ void ProcessingWindow::on_edge_editingFinished()
 }
 
 
-void ProcessingWindow::on_modelOrder_editingFinished()
+void phaseEstwindow::on_modelOrder_editingFinished()
 {
     bool ok;
     int value = ui->modelOrder->text().toInt(&ok);
@@ -103,7 +103,7 @@ void ProcessingWindow::on_modelOrder_editingFinished()
 }
 
 
-void ProcessingWindow::on_hilbertLength_editingFinished()
+void phaseEstwindow::on_hilbertLength_editingFinished()
 {
     bool ok;
     int value = ui->hilbertLength->text().toInt(&ok);
@@ -115,7 +115,7 @@ void ProcessingWindow::on_hilbertLength_editingFinished()
 }
 
 
-void ProcessingWindow::on_stimulationTarget_editingFinished()
+void phaseEstwindow::on_stimulationTarget_editingFinished()
 {
     bool ok;
     double value = ui->stimulationTarget->text().toDouble(&ok);
@@ -127,7 +127,7 @@ void ProcessingWindow::on_stimulationTarget_editingFinished()
 }
 
 
-void ProcessingWindow::on_phaseShift_editingFinished()
+void phaseEstwindow::on_phaseShift_editingFinished()
 {
     bool ok;
     int value = ui->phaseShift->text().toInt(&ok);
@@ -141,7 +141,7 @@ void ProcessingWindow::on_phaseShift_editingFinished()
 
 
 
-void ProcessingWindow::on_scaleMax_editingFinished()
+void phaseEstwindow::on_scaleMax_editingFinished()
 {
     bool ok;
     double value = ui->scaleMax->text().toDouble(&ok);
@@ -153,7 +153,7 @@ void ProcessingWindow::on_scaleMax_editingFinished()
 }
 
 
-void ProcessingWindow::on_scaleMin_editingFinished()
+void phaseEstwindow::on_scaleMin_editingFinished()
 {
     bool ok;
     double value = ui->scaleMin->text().toDouble(&ok);
@@ -165,40 +165,40 @@ void ProcessingWindow::on_scaleMin_editingFinished()
 }
 
 
-void ProcessingWindow::on_checkBox_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setCustomScaleStatus(isChecked);
 }
 
 
-void ProcessingWindow::on_Filter_checkbox_stateChanged(int arg1)
+void phaseEstwindow::on_Filter_checkbox_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setFilterState(isChecked);
 }
 
 
-void ProcessingWindow::on_checkBox_Channels_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_Channels_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setEEGViewState(isChecked);
 }
 
 
-void ProcessingWindow::on_checkBox_PhaseTargeting_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_PhaseTargeting_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setPhaseTargetingState(isChecked);
 }
 
-void ProcessingWindow::on_checkBox_Stimulation_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_Stimulation_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     handler.setTriggerEnableStatus(isChecked);
 }
 
-void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
 {
     if (handler.channelNamesSet()) {
         sampling_rate_ = handler.getSamplingRate();
@@ -221,18 +221,18 @@ void ProcessingWindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
 }
 
 
-void ProcessingWindow::on_setParamsButton_clicked()
+void phaseEstwindow::on_setParamsButton_clicked()
 {
     emit setPhaseEstParams(phaseEstParams);
 }
 
-void ProcessingWindow::on_comboBox_spatialTarget_currentIndexChanged(int index)
+void phaseEstwindow::on_comboBox_spatialTarget_currentIndexChanged(int index)
 {
     emit setSpatilaTargetChannel(index);
     setupComboBox_OuterElectrode(index);
 }
 
-void ProcessingWindow::setupComboBox_OuterElectrode(int spatial_target_index) {
+void phaseEstwindow::setupComboBox_OuterElectrode(int spatial_target_index) {
 
     // Setup outer channel names
     outer_channel_names.clear();
@@ -257,10 +257,10 @@ void ProcessingWindow::setupComboBox_OuterElectrode(int spatial_target_index) {
     }
 
     ui->comboBox_outElectrodes->setModel(model);
-    connect(model, &QStandardItemModel::itemChanged, this, &ProcessingWindow::handleCheckboxChange);
+    connect(model, &QStandardItemModel::itemChanged, this, &phaseEstwindow::handleCheckboxChange);
 }
 
-void ProcessingWindow::handleCheckboxChange(QStandardItem* item) {
+void phaseEstwindow::handleCheckboxChange(QStandardItem* item) {
     int row = item->row();
     bool isChecked = item->checkState() == Qt::Checked;
     outerElectrodeCheckStates_[row] = isChecked;
@@ -268,36 +268,36 @@ void ProcessingWindow::handleCheckboxChange(QStandardItem* item) {
     emit outerElectrodesStateChanged(outerElectrodeCheckStates_);
 }
 
-void ProcessingWindow::on_pushButton_pause_view_clicked()
+void phaseEstwindow::on_pushButton_pause_view_clicked()
 {
     emit switchPause();
 }
 
-void ProcessingWindow::on_checkBox_triggers_A_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_triggers_A_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setShowTriggers_A(isChecked);
 }
 
-void ProcessingWindow::on_checkBox_triggers_B_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_triggers_B_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setShowTriggers_B(isChecked);
 }
 
-void ProcessingWindow::on_checkBox_phaseError_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_phaseError_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setPhaseError(isChecked);
 }
 
-void ProcessingWindow::on_checkBox_Xaxis_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_Xaxis_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setDrawXaxis(isChecked);
 }
 
-void ProcessingWindow::on_lineEdit_XaxisSpacing_editingFinished()
+void phaseEstwindow::on_lineEdit_XaxisSpacing_editingFinished()
 {
     bool ok;
     int value = ui->lineEdit_XaxisSpacing->text().toInt(&ok);
@@ -309,14 +309,14 @@ void ProcessingWindow::on_lineEdit_XaxisSpacing_editingFinished()
 }
 
 
-void ProcessingWindow::on_checkBox_triggers_out_stateChanged(int arg1)
+void phaseEstwindow::on_checkBox_triggers_out_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setShowTriggers_out(isChecked);
 }
 
 
-void ProcessingWindow::on_comboBox_phaseError_currentIndexChanged(int index)
+void phaseEstwindow::on_comboBox_phaseError_currentIndexChanged(int index)
 {
     emit setPhaseErrorType(index);
 }

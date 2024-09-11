@@ -14,6 +14,7 @@
 #include "EEG/preprocessing/GACorrection.h"
 #include "devices/TMS/magPro/magPro.h"
 #include "../EEG/preprocessing/preprocessingFunctions.h"
+#include "devices/EEG/eeg_bridge/eeg_bridge.h"
 #include <boost/stacktrace.hpp>
 
 enum HandlerState {

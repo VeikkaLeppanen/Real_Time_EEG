@@ -1,9 +1,9 @@
-#include "triggeringwindow.h"
-#include "ui_triggeringwindow.h"
+#include "TMSwindow.h"
+#include "ui_TMSwindow.h"
 
-TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
+TMSwindow::TMSwindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
     : QMainWindow(parent),
-      ui(new Ui::TriggeringWindow),
+      ui(new Ui::TMSwindow),
       handler(handler),
       signal_received(signal_received)
 {
@@ -18,7 +18,6 @@ TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomi
     ui->TimeLimitLineEdit->setText(QString::number(handler.getTriggerTimeLimit()));
     ui->lineEditIPI->setText(QString::number(1));
     ui->lineEditBAratio->setText(QString::number(1));
-    ui->checkBoxDelay->setChecked(true);
 
     ui->ModeLabel->setText("");
     ui->DirectionLabel->setText("");
@@ -31,26 +30,64 @@ TriggeringWindow::TriggeringWindow(dataHandler &handler, volatile std::sig_atomi
     ui->SetModeError->setStyleSheet("QLabel { color : gray; }");
     ui->RequestInfoError->setStyleSheet("QLabel { color : gray; }");
 
+    if (handler.getTriggerConnectStatus()) set_enable_UI(true);
+    else set_enable_UI(false);
+
     setWindowTitle("TMS Window");
 }
 
-TriggeringWindow::~TriggeringWindow()
+TMSwindow::~TMSwindow()
 {
     delete ui;
 }
 
-void TriggeringWindow::on_connectTrigger_clicked()
+void TMSwindow::on_connectTrigger_clicked()
 {
     if(handler.connectTriggerPort()) {
         handler.setTriggerConnectStatus(false);
         std::cerr << "Trigger port connection failed" << '\n';
     } else {
         handler.setTriggerConnectStatus(true);
+        set_enable_UI(true);
+        on_RequestInfo_clicked();
+        handler.set_amplitude(0);
         std::cout << "Trigger port connected" << '\n';
     }
 }
 
-void TriggeringWindow::on_testTrigger_clicked()
+void TMSwindow::set_enable_UI(bool enable) {
+    
+    ui->comboBoxBurstPulses->setEnabled(enable);
+    ui->comboBoxDirection->setEnabled(enable);
+    ui->comboBoxMode->setEnabled(enable);
+    ui->comboBoxWaveform->setEnabled(enable);
+
+    ui->enable->setEnabled(enable);
+    ui->disable->setEnabled(enable);
+    ui->setAmplitude->setEnabled(enable);
+    ui->testTrigger->setEnabled(enable);
+    ui->SetMode->setEnabled(enable);
+    ui->RequestInfo->setEnabled(enable);
+    
+    ui->amplitudeLineEdit->setEnabled(enable);
+    ui->lineEditIPI->setEnabled(enable);
+    ui->lineEditBAratio->setEnabled(enable);
+    ui->TimeLimitLineEdit->setEnabled(enable);
+
+    ui->ModeLabel->setEnabled(enable);
+    ui->DirectionLabel->setEnabled(enable);
+    ui->WaveformLabel->setEnabled(enable);
+    ui->BurstPulsesLabel->setEnabled(enable);
+    ui->IPILabel->setEnabled(enable);
+    ui->BAratioLabel->setEnabled(enable);
+    ui->EnabledLabel->setEnabled(enable);
+    
+    ui->SetModeError->setEnabled(enable);
+    ui->RequestInfoError->setEnabled(enable);
+
+}
+
+void TMSwindow::on_testTrigger_clicked()
 {
     if(handler.getTriggerEnableStatus()) {
         handler.send_trigger();
@@ -59,7 +96,7 @@ void TriggeringWindow::on_testTrigger_clicked()
         QMessageBox::warning(this, "Trigger Port Error", "Trigger port not enabled.");
     }
 }
-void TriggeringWindow::on_enable_clicked()
+void TMSwindow::on_enable_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         handler.set_enable(true);
@@ -70,7 +107,7 @@ void TriggeringWindow::on_enable_clicked()
 }
 
 
-void TriggeringWindow::on_disable_clicked()
+void TMSwindow::on_disable_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         handler.set_enable(false);
@@ -81,7 +118,7 @@ void TriggeringWindow::on_disable_clicked()
 }
 
 
-void TriggeringWindow::on_TimeLimitLineEdit_editingFinished()
+void TMSwindow::on_TimeLimitLineEdit_editingFinished()
 {
     bool ok;
     int value = ui->TimeLimitLineEdit->text().toInt(&ok);
@@ -93,7 +130,7 @@ void TriggeringWindow::on_TimeLimitLineEdit_editingFinished()
 }
 
 
-void TriggeringWindow::on_setAmplitude_clicked()
+void TMSwindow::on_setAmplitude_clicked()
 {
     bool ok;
     int value = ui->amplitudeLineEdit->text().toInt(&ok);
@@ -111,7 +148,7 @@ void TriggeringWindow::on_setAmplitude_clicked()
 
 
 
-void TriggeringWindow::on_SetMode_clicked()
+void TMSwindow::on_SetMode_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         ui->SetModeError->setText("Set mode requested");
@@ -127,7 +164,7 @@ void TriggeringWindow::on_SetMode_clicked()
         double ba_ratio = ui->lineEditBAratio->text().toDouble();
 
         // Get the state of the checkbox
-        bool delay = ui->checkBoxDelay->isChecked();
+        bool delay = true;
 
         ui->SetModeError->setText("Sending set mode request");
         handler.magPro_set_mode(mode, direction, waveform, burst_pulses, ipi, ba_ratio, delay);
@@ -139,7 +176,7 @@ void TriggeringWindow::on_SetMode_clicked()
 }
 
 
-void TriggeringWindow::on_RequestInfo_clicked()
+void TMSwindow::on_RequestInfo_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         ui->RequestInfoError->setText("Mode info requested");
@@ -157,6 +194,7 @@ void TriggeringWindow::on_RequestInfo_clicked()
         handler.get_mode_info(mode, direction, waveform, burst_pulses, ipi, ba_ratio, enabled);
         ui->RequestInfoError->setText("Mode info retrieved");
 
+        // Set the values in the labels
         ui->ModeLabel->setText(mode_names.at(mode));
         ui->DirectionLabel->setText(direction ? "Reverse" : "Normal");
         ui->WaveformLabel->setText(waveform_names.at(waveform));
@@ -164,6 +202,16 @@ void TriggeringWindow::on_RequestInfo_clicked()
         ui->IPILabel->setText(QString::number(ipi));
         ui->BAratioLabel->setText(QString::number(ba_ratio));
         ui->EnabledLabel->setText(enabled ? "Enabled" : "Disabled");
+
+        // Set the values in the comboboxes
+        ui->comboBoxMode->setCurrentIndex(mode);
+        ui->comboBoxDirection->setCurrentIndex(direction);
+        ui->comboBoxWaveform->setCurrentIndex(waveform);
+        ui->comboBoxBurstPulses->setCurrentIndex(burst_pulses);
+
+        // Set the values in the line edits
+        ui->lineEditIPI->setText(QString::number(ipi, 'f', 2));
+        ui->lineEditBAratio->setText(QString::number(ba_ratio, 'f', 2));
 
     } else {
         QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");

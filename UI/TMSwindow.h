@@ -8,19 +8,21 @@
 #include "../dataHandler/dataHandler.h"
 
 namespace Ui {
-class TriggeringWindow;
+class TMSwindow;
 }
 
-class TriggeringWindow : public QMainWindow
+class TMSwindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit TriggeringWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
-    ~TriggeringWindow();
+    explicit TMSwindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
+    ~TMSwindow();
 
 private slots:
     void on_connectTrigger_clicked();
+
+    void set_enable_UI(bool enable);
 
     void on_testTrigger_clicked();
 
@@ -37,7 +39,7 @@ private slots:
     void on_RequestInfo_clicked();
 
 private:
-    Ui::TriggeringWindow *ui;
+    Ui::TMSwindow *ui;
 
     dataHandler &handler;
 

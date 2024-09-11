@@ -12,12 +12,12 @@
 class EegBridge;
 class dataHandler;
 
-class Worker : public QObject {
+class EEGSpinWorker : public QObject {
     Q_OBJECT
 
 public:
-    explicit Worker(EegBridge &bridge, dataHandler &handler, volatile std::sig_atomic_t &signal_received, QObject* parent = nullptr);
-    ~Worker();
+    explicit EEGSpinWorker(EegBridge &bridge, dataHandler &handler, volatile std::sig_atomic_t &signal_received, QObject* parent = nullptr);
+    ~EEGSpinWorker();
 
 signals:
     void finished();
@@ -30,6 +30,8 @@ private:
     EegBridge &bridge;
     dataHandler &handler;
     volatile std::sig_atomic_t &signal_received;
+
+    void bridge_handler_spin(EegBridge &bridge, dataHandler &handler, volatile std::sig_atomic_t &signal_received);
 
     void set_thread_affinity();
 };
