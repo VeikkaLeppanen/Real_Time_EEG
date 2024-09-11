@@ -6,12 +6,14 @@
 #include <QTimer>
 #include <QLabel>
 #include <algorithm>
-#include "../dataHandler/dataHandler.h"
 #include <QPainter>
 #include <QFont>
 #include <QString>
-
 #include <algorithm>
+#include <QMouseEvent>  // Add this line at the top of your processingglwidget.cpp
+
+#include "../dataHandler/dataHandler.h"
+#include "customTooltip.h"
 
 class ProcessingGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -69,6 +71,9 @@ public slots:
     }
     void setDrawXaxis(bool isChecked) { drawXaxis = isChecked; }
     bool getDrawXaxis() { return drawXaxis; }
+    void mouseMoveEvent(QMouseEvent *event);
+    QString getDataValue(const QPoint &pos);
+    void leaveEvent(QEvent *event);
     
 private:
     std::mutex dataMutex;
@@ -101,6 +106,11 @@ private:
     int time_line_spacing;
     int totalTimeLines;
     bool drawXaxis = true;
+
+    CustomTooltip *tooltipWidget = nullptr;
+    QPoint currentMousePosition;
+    int visibleSampleCount;
+    float currentTimePosition;
 };
 
 #endif // PROCESSINGGLWIDGET_H

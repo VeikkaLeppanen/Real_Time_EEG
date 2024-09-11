@@ -6,6 +6,7 @@ ProcessingGlWidget::ProcessingGlWidget(QWidget *parent)
     windowLength_seconds = 2;   // Total time in seconds displayed
     time_line_spacing = 500;    // Line spacing in milliseconds
     totalTimeLines = (windowLength_seconds * 1000) / time_line_spacing;  // Calculate number of lines to draw
+    setMouseTracking(true);
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &ProcessingGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
@@ -25,6 +26,7 @@ void ProcessingGlWidget::resizeGL(int w, int h)
 void ProcessingGlWidget::paintGL()
 {
     if (dataMatrix_.rows() == 0) return;
+    std::lock_guard<std::mutex> lock(this->dataMutex);
     
     // Initializing positional parameters
     int bottomMarging = 20;
@@ -43,7 +45,7 @@ void ProcessingGlWidget::paintGL()
 
     // Draw graphs for enabled channels
     int graph_index = 0;
-    for (int row = 0; row < dataMatrix_.rows(); row++) {
+    for (int row = 0; row < n_channels_; row++) {
         // Set viewport for this row
         glViewport(0, bottomMarging + graph_index * rowHeight, width(), rowHeight);
 
@@ -134,19 +136,25 @@ void ProcessingGlWidget::paintGL()
         }
     }
     
-    // Draw the vertical line for the current time
+    // Draw the vertical line for the current time and mouse cursor
     glEnable(GL_LINE_STIPPLE);
     glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
     glColor3f(1.0, 0.0, 0.0); // Red for the current time line
     glBegin(GL_LINES);
     glVertex2f(glX, -1.0);
     glVertex2f(glX, 1.0);
+
+    float xNorm = (static_cast<float>(currentMousePosition.x()) / width()) * 2.0f - 1.0f;  // Normalize X to [-1, 1]
+    glColor3f(1.0, 1.0, 0.0); // Red for the current time line
+    glBegin(GL_LINES);
+    glVertex2f(xNorm, -1.0);
+    glVertex2f(xNorm, 1.0);
     glEnd();
 
     // Initialize tracker to the next whole second
     double time_line_spacing_seconds = time_line_spacing * 1e-3;
     double initialTimeInSeconds = time_stamps_(0) / 1e3;
-    double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
+    double tracker = std::ceil(initialTimeInSeconds);
 
     if (drawXaxis) {
         // Enable stipple for dashed lines
@@ -176,7 +184,7 @@ void ProcessingGlWidget::paintGL()
     painter.setFont(QFont("Arial", 10)); // Set font here
 
     graph_index = 0;
-    for (int row = 0; row < dataMatrix_.rows(); row++) {
+    for (int row = 0; row < n_channels_; row++) {
         // Draw channel name for each channel
         int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
         QString name = "Undefined";  // Default name if no channel name is available
@@ -205,9 +213,11 @@ void ProcessingGlWidget::paintGL()
 
     // Draw the timestamp labels and vertical lines
     for (int i = 0; i < totalDataPoints; ++i) {
-        double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+        double timeInSeconds = time_stamps_(i) / 1e3; // Convert milliseconds to seconds
         if (timeInSeconds >= tracker) {
-            QString label = QString::number(tracker, 'f', 0); // Label for whole seconds
+            int minutes = static_cast<int>(tracker / 60); // Total minutes
+            int seconds = static_cast<int>(tracker) % 60; // Remaining seconds after minutes
+            QString label = QString("%1 m %2 s").arg(minutes).arg(seconds); // Label for whole seconds
             float x = (float)i / totalDataPoints * (width() * currentTimePosition); // Calculate pixel x-coordinate
 
             // Draw text label
@@ -238,14 +248,14 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
         if (triggers_out_.size() != triggers_out.size()) triggers_out_.resize(triggers_out.size());
         if (time_stamps_.size() != time_stamps.size()) time_stamps_.resize(time_stamps.size());
 
-        // Assign the new matrix
+        // DOWNSAMPLED
         dataMatrix_ = newMatrix;
-
-        // Update other attributes based on the new matrix
         matrixCapasity_ = newMatrix.cols(); 
         n_channels_ = newMatrix.rows();
         numPastElements_ = numPastElements;
         numFutureElements_ = numFutureElements;
+
+        // NO DOWNSAMPLING
         triggers_A_ = triggers_A;
         triggers_B_ = triggers_B;
         triggers_out_ = triggers_out;
@@ -266,4 +276,55 @@ void ProcessingGlWidget::updateChannelNamesSTD(std::vector<std::string> channelN
         newNames.append(QString::fromStdString(channelNames[i])); 
     }
     channelNames_ = newNames;
+}
+
+void ProcessingGlWidget::mouseMoveEvent(QMouseEvent* event) {
+    currentMousePosition = event->pos(); // Update the current mouse position
+    if (!tooltipWidget) {
+        tooltipWidget = new CustomTooltip(nullptr); // Changed to have no parent
+        tooltipWidget->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    }
+
+    QString tooltipContent = QString("Data value at cursor: %1").arg(getDataValue(event->pos()));
+    tooltipWidget->setText(tooltipContent);
+
+    QPoint tooltipPosition = event->globalPos() + QPoint(20, 20);
+    tooltipWidget->move(tooltipPosition);
+    tooltipWidget->show();
+    tooltipWidget->update(); // Force an update
+}
+
+
+
+QString ProcessingGlWidget::getDataValue(const QPoint &pos) {
+    if (dataMatrix_.size() > 0) {
+        std::lock_guard<std::mutex> lock(this->dataMutex);
+        int channelIndex = pos.y() / (height() / dataMatrix_.rows());
+        int sampleIndex = static_cast<int>((static_cast<double>(pos.x()) / width()) * dataMatrix_.cols());
+        int timeIndex = static_cast<int>((static_cast<double>(pos.x()) / width()) * time_stamps_.size() * ((numPastElements_ + numFutureElements_) / static_cast<double>(numPastElements_)));
+        timeIndex = std::min(timeIndex, static_cast<int>(time_stamps_.size()) - 1);
+        
+        // Validate indices
+        if (channelIndex >= 0 && channelIndex < dataMatrix_.rows() &&
+            sampleIndex >= 0 && sampleIndex < dataMatrix_.cols()) {
+            double value = dataMatrix_(channelIndex, sampleIndex);
+            
+            double timestamp = time_stamps_(timeIndex) / 1e3;
+
+            return QString("Channel index: %1\n Sample index: %2\n Sample value: %3 mV\n Time stamp: %4 s")
+                .arg(channelIndex)
+                .arg(sampleIndex)
+                .arg(value)
+                .arg(timestamp);
+        }
+    }
+    return "No data available";
+}
+
+
+void ProcessingGlWidget::leaveEvent(QEvent *event) {
+    if (tooltipWidget) {
+        tooltipWidget->hide();
+    }
+    QOpenGLWidget::leaveEvent(event);
 }

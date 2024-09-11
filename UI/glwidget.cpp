@@ -24,6 +24,7 @@ void Glwidget::resizeGL(int w, int h)
 void Glwidget::paintGL()
 {
     if (dataMatrix_.rows() == 0) return;
+    std::lock_guard<std::mutex> lock(this->dataMutex);
 
     // Initializing positional parameters
     int bottomMarging = 20;
@@ -172,7 +173,9 @@ void Glwidget::paintGL()
     for (int i = 0; i < totalDataPoints; ++i) {
         double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
         if (timeInSeconds >= tracker) {
-            QString label = QString::number(tracker, 'f', 0); // Label for whole seconds
+            int minutes = static_cast<int>(tracker / 60); // Total minutes
+            int seconds = static_cast<int>(tracker) % 60; // Remaining seconds after minutes
+            QString label = QString("%1 m %2 s").arg(minutes).arg(seconds); // Label for whole seconds
             float x_paint = (float)i / totalDataPoints * width(); // Calculate pixel x-coordinate
 
             // Draw text label
