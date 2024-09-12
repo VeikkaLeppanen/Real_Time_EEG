@@ -1,5 +1,5 @@
-#ifndef PROCESSINGWORKER_H
-#define PROCESSINGWORKER_H
+#ifndef PHASEESTIMATIONWORKER_H
+#define PHASEESTIMATIONWORKER_H
 
 #include <QObject>
 #include <csignal>
@@ -11,23 +11,18 @@
 #include "../EEG/preprocessing/removeBCG.h"
 #include "../EEG/phaseEstimation/phaseEstimationFunctions.h"
 #include "../math/dsp.h"
+#include "preProcessingWorker.h"
 #include <boost/stacktrace.hpp>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 
-struct preprocessingParameters {
+struct phaseEstimateParameters {
 
     // Number of samples to use for the processing
     int numberOfSamples = 10000;
 
     //  downsampling
     int downsampling_factor = 10;
-
-    // removeBCG
-    int delay = 11;
-};
-
-struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
@@ -55,15 +50,10 @@ struct phaseEstimateStates {
     bool phasEst_display_all_EEG_channels = false;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const preprocessingParameters& prepParams) {
-    os << "Number of Samples: " << prepParams.numberOfSamples
-       << "\nDownsampling Factor: " << prepParams.downsampling_factor
-       << "\nDelay: " << prepParams.delay;
-    return os;
-}
-
 inline std::ostream& operator<<(std::ostream& os, const phaseEstimateParameters& phaseEstParams) {
-    os << "\nEdge: " << phaseEstParams.edge
+    os << "Number of Samples: " << phaseEstParams.numberOfSamples
+       << "\nDownsampling Factor: " << phaseEstParams.downsampling_factor
+       << "\nEdge: " << phaseEstParams.edge
        << "\nModel Order: " << phaseEstParams.modelOrder
        << "\nHilbert Window Length: " << phaseEstParams.hilbertWinLength
        << "\nStimulation Target: " << phaseEstParams.stimulation_target
@@ -71,17 +61,15 @@ inline std::ostream& operator<<(std::ostream& os, const phaseEstimateParameters&
     return os;
 }
 
-class ProcessingWorker : public QObject {
+class phaseEstimationWorker : public QObject {
     Q_OBJECT
 
 public:
-    explicit ProcessingWorker(dataHandler &handler, 
-                          Eigen::MatrixXd &processed_data, 
+    explicit phaseEstimationWorker(dataHandler &handler, 
                volatile std::sig_atomic_t &processingWorkerRunning, 
-                  preprocessingParameters &prepParams_in, 
                   phaseEstimateParameters &phaseEstParams_in, 
                                   QObject* parent = nullptr);
-    ~ProcessingWorker();
+    ~phaseEstimationWorker();
 
 signals:
     void finished();
@@ -112,7 +100,6 @@ public slots:
 
     void setPhaseEstimationState(bool isChecked) { phaseEstStates.performPhaseEstimation = isChecked; }
 
-    void setRemoveBCG(bool isChecked) { phaseEstStates.performRemoveBCG = isChecked; }
     void setFilterState(bool isChecked) { phaseEstStates.performFiltering = isChecked; }
     void setEstimationState(bool isChecked) { phaseEstStates.performEstimation = isChecked; }
     void setHilbertTransformState(bool isChecked) { phaseEstStates.performHilbertTransform = isChecked; }
@@ -123,7 +110,6 @@ public slots:
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
-    void setPreprocessingParameters(preprocessingParameters newParams);
     void setPhaseEstimateParameters(phaseEstimateParameters newParams);
 
     Eigen::VectorXd getPhaseDifference_vector() {
@@ -156,7 +142,6 @@ private:
     };
 
     dataHandler &handler;
-    Eigen::MatrixXd &processed_data;
     std::mutex dataMutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
     QFuture<void> process_future;
@@ -186,10 +171,6 @@ private:
     int phase_shift;
 
     // Memory preallocation for preprocessing matrices
-    Eigen::MatrixXd all_channels;
-    Eigen::MatrixXd EEG_downsampled;
-    Eigen::MatrixXd expCWL;
-    Eigen::MatrixXd pinvCWL;
     Eigen::MatrixXd EEG_corrected;
     Eigen::VectorXd EEG_spatial;
 
@@ -218,4 +199,4 @@ private:
 
 };
 
-#endif // PROCESSINGWORKER_H
+#endif // PHASEESTIMATIONWORKER_H

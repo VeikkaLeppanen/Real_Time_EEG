@@ -7,14 +7,14 @@
 #include <QLineEdit>
 #include <QIntValidator>
 #include <iostream>
-#include "processingworker.h"
-#include "EEGSpinWorker.h"
-#include "glwidget.h"
+#include "workers/preProcessingWorker.h"
+#include "workers/phaseEstimationWorker.h"
+#include "workers/EEGSpinWorker.h"
 #include "mainglwidget.h"
 #include "../dataHandler/dataHandler.h"
-#include "eegwindow.h"
-#include "phaseEstwindow.h"
-#include "TMSwindow.h"
+#include "eegwindow/eegwindow.h"
+#include "phaseEstimationwindow/phaseEstwindow.h"
+#include "TMSwindow/TMSwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -40,7 +40,8 @@ public slots:
     void startGACorrection();
     void stopGACorrection();
 
-    void startPreprocessing(preprocessingParameters& parameters, phaseEstimateParameters &phaseEstParams);
+    void startPreprocessing(preprocessingParameters &parameters);
+    void startPhaseEstimationprocessing(phaseEstimateParameters phaseEstParams);
 
 private slots:
     void handleError(const QString& error);
@@ -50,7 +51,7 @@ private slots:
 
     void on_processing_clicked();
     void connect_processing_worker();
-    void connect_EEG_worker();
+    void connect_EEG_Prepworker();
     void resetProcessingWindowPointer();
 
     void on_triggering_clicked();
@@ -67,20 +68,21 @@ private:
     Eigen::MatrixXd processed_data;
     std::vector<std::string> processing_channel_names;
 
-    // Filtering parameters
-    std::vector<double> filterCoeffs_;
-    std::vector<double> b; 
-    std::vector<double> a;
-
     // Handler parameters
     dataHandler &handler;
+
+    bool preprocessingWorkerRunning = false;
+    bool phaseEstWorkerRunning = false;
 
     // windows
     eegWindow *eegwindow = nullptr;
     phaseEstwindow *phaseEstwin = nullptr;
     TMSwindow *TMSwin = nullptr;
-    ProcessingWorker *processingworker = nullptr;
+    preProcessingWorker *preProcessingworker = nullptr;
+    phaseEstimationWorker *phaseEstworker = nullptr;
 
+    phaseEstimateParameters phaseEstParams;
+    
     volatile std::sig_atomic_t &signal_received;
     volatile std::sig_atomic_t processingWorkerRunning = 0;
 

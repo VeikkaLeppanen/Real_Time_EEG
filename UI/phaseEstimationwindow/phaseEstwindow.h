@@ -7,7 +7,7 @@
 #include <QStandardItem>
 
 #include "processingglwidget.h"
-#include "processingworker.h"
+#include "workers/phaseEstimationWorker.h"
 #include "../dataHandler/dataHandler.h"
 
 namespace Ui {

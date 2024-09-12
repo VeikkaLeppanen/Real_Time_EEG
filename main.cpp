@@ -11,7 +11,7 @@
 #include "dataHandler/dataHandler.h"
 #include "devices/EEG/eeg_bridge/eeg_bridge.h"
 
-#include "UI/mainwindow.h"
+#include "UI/mainwindow/mainwindow.h"
 #include <QApplication>
 #include <QWidget>
 

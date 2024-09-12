@@ -190,7 +190,7 @@
   <customwidget>
    <class>MainGlWidget</class>
    <extends>QWidget</extends>
-   <header>mainglwidget.h</header>
+   <header>mainwindow/mainglwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

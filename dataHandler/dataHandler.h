@@ -57,6 +57,41 @@ public:
     int get_current_data_index() { return current_data_index_; }
     int getSamplingRate() { return sampling_rate_; }
 
+    void setPreprocessingOutput(Eigen::MatrixXd &output, 
+                                 Eigen::VectorXi &triggers_A, 
+                                 Eigen::VectorXi &triggers_B, 
+                                 Eigen::VectorXi &triggers_out, 
+                                 Eigen::VectorXd &time_stamps, 
+                                             int number_of_samples,
+                                             int seq_num) 
+    { 
+        std::lock_guard<std::mutex> lock(this->dataMutex);
+        preprocessing_output = output;
+        preprocessing_triggers_A = triggers_A;
+        preprocessing_triggers_B = triggers_B;
+        preprocessing_triggers_out = triggers_out;
+        preprocessing_time_stamps = time_stamps;
+        preprocessing_number_of_samples = number_of_samples;
+        processing_sequence_number = seq_num;
+    }
+
+    int getPreprocessingOutput(Eigen::MatrixXd &output, 
+                                 Eigen::VectorXi &triggers_A, 
+                                 Eigen::VectorXi &triggers_B, 
+                                 Eigen::VectorXi &triggers_out, 
+                                 Eigen::VectorXd &time_stamps, 
+                                             int number_of_samples) 
+    { 
+        std::lock_guard<std::mutex> lock(this->dataMutex);
+        output = preprocessing_output;
+        triggers_A = preprocessing_triggers_A;
+        triggers_B =preprocessing_triggers_B;
+        triggers_out = preprocessing_triggers_out;
+        time_stamps = preprocessing_time_stamps;
+        number_of_samples = preprocessing_number_of_samples;
+        return processing_sequence_number;
+    }
+
     void setTriggerSource(uint16_t source) { triggerSource = source; }
     void setSourceChannels(std::vector<uint16_t> SourceChannels) {
         source_channels_.resize(SourceChannels.size());
@@ -165,9 +200,15 @@ private:
     int sampling_rate_;
     int simulation_delivery_rate_;
 
-    // dataProcessor &processor_;
-
     Eigen::VectorXd processing_sample_vector;
+
+    Eigen::MatrixXd preprocessing_output;
+    Eigen::VectorXi preprocessing_triggers_A;
+    Eigen::VectorXi preprocessing_triggers_B;
+    Eigen::VectorXi preprocessing_triggers_out;
+    Eigen::VectorXd preprocessing_time_stamps;
+    int preprocessing_number_of_samples;
+    int processing_sequence_number;
 
     // Gradient artifact correction
     bool Apply_GACorr = false;

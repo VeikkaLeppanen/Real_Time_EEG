@@ -19,10 +19,10 @@
 
 #include <array>
 
-#include "EEGSpinWorker.h"
+#include "workers/EEGSpinWorker.h"
 #include "glwidget.h"
-#include "processingworker.h"
-#include "./ui_eegwindow.h"
+#include "workers/phaseEstimationWorker.h"
+#include "../ui_eegwindow.h"
 #include "../devices/EEG/eeg_bridge/eeg_bridge.h"
 #include "../dataHandler/dataHandler.h"
 

@@ -1,5 +1,5 @@
 #include "phaseEstwindow.h"
-#include "ui_phaseEstwindow.h"
+#include "../ui_phaseEstwindow.h"
 #include <QThread>
 
 phaseEstwindow::phaseEstwindow(dataHandler &handler, 
@@ -203,6 +203,9 @@ void phaseEstwindow::on_checkBox_phaseEstimate_stateChanged(int arg1)
     if (handler.channelNamesSet()) {
         sampling_rate_ = handler.getSamplingRate();
         bool isChecked = (arg1 == Qt::Checked);
+
+        //Begin Phase Estimation processing thread
+        // emit startPhaseEstimationprocessing(phaseEstParams);
         emit setphaseEstimateState(isChecked);
         
         ui->comboBox_spatialTarget->clear(); // Clear the combo box before updating it

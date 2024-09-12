@@ -387,7 +387,7 @@
   <customwidget>
    <class>ProcessingGlWidget</class>
    <extends>QWidget</extends>
-   <header>processingglwidget.h</header>
+   <header>phaseEstimationwindow/processingglwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

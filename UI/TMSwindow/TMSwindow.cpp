@@ -1,5 +1,5 @@
 #include "TMSwindow.h"
-#include "ui_TMSwindow.h"
+#include "../ui_TMSwindow.h"
 
 TMSwindow::TMSwindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent)
     : QMainWindow(parent),
