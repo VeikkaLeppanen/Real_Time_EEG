@@ -279,7 +279,7 @@ void eegWindow::on_numberOfSamples_editingFinished()
     if (ok) {
         prepParams.numberOfSamples = value;
         updateChannelLength(value);
-        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
+        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -291,7 +291,7 @@ void eegWindow::on_downsampling_editingFinished()
     int value = ui->downsampling->text().toInt(&ok);
     if (ok && (value > 0)) {
         prepParams.downsampling_factor = value;
-        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
+        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -304,7 +304,7 @@ void eegWindow::on_delay_editingFinished()
     int value = ui->delay->text().toInt(&ok);
     if (ok) {
         prepParams.delay = value;
-        QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect.");
+        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -317,7 +317,8 @@ void eegWindow::on_startButton_clicked()
     } else {
         std::cout << "Preprocessing start" << '\n';
         emit startPreprocessing(prepParams, phaseEstParams);
-        
+        preprocessingWorkerRunning = true;
+
         bool ok;
         int value = ui->numberOfSamples->text().toInt(&ok);
         if (ok) {
@@ -332,6 +333,7 @@ void eegWindow::on_startButton_clicked()
 void eegWindow::on_stopButton_clicked()
 {
     std::cout << "Preprocessing stop" << '\n';
+    preprocessingWorkerRunning = false;
     processingWorkerRunning = 0;
 }
 

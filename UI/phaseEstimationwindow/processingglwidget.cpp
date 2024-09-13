@@ -217,7 +217,11 @@ void ProcessingGlWidget::paintGL()
         if (timeInSeconds >= tracker) {
             int minutes = static_cast<int>(tracker / 60); // Total minutes
             int seconds = static_cast<int>(tracker) % 60; // Remaining seconds after minutes
-            QString label = QString("%1 m %2 s").arg(minutes).arg(seconds); // Label for whole seconds
+            
+            QString label;
+            if (minutes != 0)   { label = QString("%1 m %2 s").arg(minutes).arg(seconds); } 
+            else                { label = QString("%1 s").arg(seconds); }
+
             float x = (float)i / totalDataPoints * (width() * currentTimePosition); // Calculate pixel x-coordinate
 
             // Draw text label
@@ -265,8 +269,6 @@ void ProcessingGlWidget::updateMatrix(const Eigen::MatrixXd &newMatrix,
 
 void ProcessingGlWidget::updateGraph()
 {
-    // This method should ideally handle fetching new data and triggering a redraw
-    // emit fetchData();
     update();  // Request a re-draw
 }
 
@@ -288,7 +290,7 @@ void ProcessingGlWidget::mouseMoveEvent(QMouseEvent* event) {
     QString tooltipContent = QString("Data value at cursor: %1").arg(getDataValue(event->pos()));
     tooltipWidget->setText(tooltipContent);
 
-    QPoint tooltipPosition = event->globalPos() + QPoint(20, 20);
+    QPoint tooltipPosition = event->globalPos() + QPoint(10, 10);
     tooltipWidget->move(tooltipPosition);
     tooltipWidget->show();
     tooltipWidget->update(); // Force an update

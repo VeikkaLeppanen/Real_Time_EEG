@@ -65,7 +65,6 @@ void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters n
 void phaseEstimationWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPhaseEst);
-    omp_set_num_threads(10);
 
     Eigen::setNbThreads(std::thread::hardware_concurrency());
 

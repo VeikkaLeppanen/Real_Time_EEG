@@ -108,31 +108,47 @@ void Glwidget::paintGL()
         }
     }
 
-    // Initialize tracker to the next whole second
+    if (dataMatrix_.rows() == 0) {
+        qDebug() << "Error: dataMatrix_ is empty";
+        return;
+    }
+
+    if (time_stamps_.size() == 0) {
+        qDebug() << "Error: time_stamps_ vector is empty";
+        return;
+    }
+
     double time_line_spacing_seconds = time_line_spacing * 1e-3;
     double initialTimeInSeconds = time_stamps_(0) / 1e3;
     double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
 
     if (drawXaxis) {
-        // Enable stipple for dashed lines
         glEnable(GL_LINE_STIPPLE);
-        glLineStipple(1, 0x00FF);  // 1x repeat factor, 0x00FF pattern
-        glColor3f(1.0, 0.0, 0.0);  // Gray color for the lines
+        glLineStipple(1, 0x00FF);
+        glColor3f(1.0, 0.0, 0.0);
 
-        // Draw each vertical line
         for (int i = 0; i < totalDataPoints; i++) {
-            double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+            double timeInSeconds = time_stamps_(i) / 1e3;
+            if (timeInSeconds < 0) {
+                qDebug() << "Error: Negative timeInSeconds at index" << i << ":" << timeInSeconds;
+            }
+
             if (timeInSeconds >= tracker) {
-                float x = (float)i / (totalDataPoints - 1) * 2.0f - 1.0f;  // Convert index to OpenGL coordinates
+                float x = static_cast<float>(i) / (totalDataPoints - 1) * 2.0f - 1.0f;
+                if (x < -1.0f || x > 1.0f) {
+                    qDebug() << "Error: Normalized position x out of bounds at index" << i << ":" << x;
+                }
+
                 glBegin(GL_LINES);
                 glVertex2f(x, -1.0);
                 glVertex2f(x, 1.0);
                 glEnd();
+
                 tracker += time_line_spacing_seconds;
             }
         }
 
-        glDisable(GL_LINE_STIPPLE); // Disable stipple after drawing lines
+        glDisable(GL_LINE_STIPPLE);
     }
 
     // QPainter for text overlays
@@ -175,7 +191,11 @@ void Glwidget::paintGL()
         if (timeInSeconds >= tracker) {
             int minutes = static_cast<int>(tracker / 60); // Total minutes
             int seconds = static_cast<int>(tracker) % 60; // Remaining seconds after minutes
-            QString label = QString("%1 m %2 s").arg(minutes).arg(seconds); // Label for whole seconds
+            
+            QString label;
+            if (minutes != 0)   { label = QString("%1 m %2 s").arg(minutes).arg(seconds); } 
+            else                { label = QString("%1 s").arg(seconds); }
+            
             float x_paint = (float)i / totalDataPoints * width(); // Calculate pixel x-coordinate
 
             // Draw text label

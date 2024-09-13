@@ -55,7 +55,6 @@ void preProcessingWorker::setPreprocessingParameters(preprocessingParameters new
 void preProcessingWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPrep);
-    omp_set_num_threads(10);
 
     Eigen::setNbThreads(std::thread::hardware_concurrency());
 

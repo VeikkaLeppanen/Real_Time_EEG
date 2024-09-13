@@ -106,6 +106,8 @@ private:
     Ui::EegWindow *ui;
     QTimer *checkHandlerTimer;
     Glwidget *glWidget;
+    
+    bool preprocessingWorkerRunning = false;
 
     // eeg_bridge parameters
     int port = 50000;
