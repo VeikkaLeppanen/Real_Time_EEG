@@ -2,6 +2,7 @@
 #define PREPROCESSINGWORKER_H
 
 #include <QObject>
+#include <QMutex>
 #include <csignal>
 #include <iostream>
 #include <cstdlib>
@@ -71,7 +72,7 @@ private:
     };
 
     dataHandler &handler;
-    std::mutex dataMutex;
+    QMutex *mutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
     QFuture<void> process_future;
 

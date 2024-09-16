@@ -14,7 +14,8 @@ preProcessingWorker::preProcessingWorker(dataHandler &handler,
                                        QObject *parent)
     : QObject(parent), 
       handler(handler), 
-      processingWorkerRunning(processingWorkerRunning)
+      processingWorkerRunning(processingWorkerRunning), 
+      mutex(new QMutex())
 { 
     setPreprocessingParameters(prepParams_in);
 }
@@ -63,6 +64,10 @@ void preProcessingWorker::process()
 
         print_debug("Channel names set");
 
+        // int index = 0;
+        // std::vector<int> seqNum_list;
+        // Eigen::MatrixXd EEG_save = Eigen::MatrixXd::Zero(200, downsampled_cols);
+
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
@@ -89,7 +94,7 @@ void preProcessingWorker::process()
             downsample(all_channels, EEG_downsampled, downsampling_factor);
 
             // CWL
-            if (performRemoveBCG) {
+            if (performRemoveBCG && sequence_number % 10000 == 0) {
             
                 print_debug("Delay Embedding");
                 if (delay > 0) { delayEmbed(EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use), expCWL, delay); } 
@@ -102,6 +107,12 @@ void preProcessingWorker::process()
 
                 EEG_win_data_to_display.topRows(EEG_corrected.rows()) = EEG_corrected;
                 EEG_win_data_to_display.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use) = EEG_downsampled.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use);
+
+                // EEG_save.row(index) = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
+                // seqNum_list.push_back(sequence_number);
+                // std::cout << "index saved: " << index << " SeqNum: " << sequence_number << '\n';
+                // index++;
+
             } else {
                 EEG_corrected = EEG_downsampled.topRows(n_EEG_channels_to_use);
                 EEG_win_data_to_display = EEG_downsampled;
@@ -111,6 +122,10 @@ void preProcessingWorker::process()
 
             emit updateEEGDisplayedData(EEG_win_data_to_display, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
         }
+
+        // writeMatrixdToCSV("data_interleaved_removeBCG.csv", EEG_save);
+        // writeMatrixiToCSV("seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+
         emit finished();
     } catch (std::exception& e) {
         emit error(QString("An error occurred in processingworker process function: %1").arg(e.what()));

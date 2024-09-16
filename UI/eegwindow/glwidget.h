@@ -29,10 +29,10 @@ protected:
     void paintGL() override;
 
 public slots:
-    void updateMatrix(const Eigen::MatrixXd &newMatrix, 
-                      const Eigen::VectorXi &triggers_A, 
-                      const Eigen::VectorXi &triggers_B, 
-                      const Eigen::VectorXd &time_stamps,
+    void updateMatrix(const Eigen::MatrixXd newMatrix, 
+                      const Eigen::VectorXi triggers_A, 
+                      const Eigen::VectorXi triggers_B, 
+                      const Eigen::VectorXd time_stamps,
                    std::vector<std::string> processing_channel_names);
     
     void updateChannelDisplayState(std::vector<bool> channelCheckStates);

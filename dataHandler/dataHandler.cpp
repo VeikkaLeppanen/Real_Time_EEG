@@ -146,6 +146,15 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         trigger_buffer_B(current_data_index_) = trigger_B;
         current_sequence_number_ = SeqNo;
         current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+        
+        // if (SAVE_INDEX_TRACKER >= 1000000 && !data_saved) {
+        //     data_saved = true;
+        //     writeMatrixdToCSV("data_GAcorr_filter1_interleaved.csv", save_matrix);
+        // }
+        // if (SAVE_INDEX_TRACKER <= 1000000) {
+        //     save_matrix.col(SAVE_INDEX_TRACKER) = processing_sample_vector;
+        //     SAVE_INDEX_TRACKER++;
+        // }
 
     } catch (const std::exception& e) {
         std::cerr << "Datahandler exception: " << e.what() << '\n';

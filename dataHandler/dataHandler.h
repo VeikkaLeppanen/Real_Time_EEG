@@ -14,6 +14,7 @@
 #include "EEG/preprocessing/GACorrection.h"
 #include "devices/TMS/magPro/magPro.h"
 #include "../EEG/preprocessing/preprocessingFunctions.h"
+#include "../utils/utilityFunctions.h"
 #include "devices/EEG/eeg_bridge/eeg_bridge.h"
 #include <boost/stacktrace.hpp>
 
@@ -57,11 +58,11 @@ public:
     int get_current_data_index() { return current_data_index_; }
     int getSamplingRate() { return sampling_rate_; }
 
-    void setPreprocessingOutput(Eigen::MatrixXd &output, 
-                                 Eigen::VectorXi &triggers_A, 
-                                 Eigen::VectorXi &triggers_B, 
-                                 Eigen::VectorXi &triggers_out, 
-                                 Eigen::VectorXd &time_stamps, 
+    void setPreprocessingOutput(Eigen::MatrixXd output, 
+                                 Eigen::VectorXi triggers_A, 
+                                 Eigen::VectorXi triggers_B, 
+                                 Eigen::VectorXi triggers_out, 
+                                 Eigen::VectorXd time_stamps, 
                                              int number_of_samples,
                                              int seq_num) 
     { 
@@ -242,6 +243,10 @@ private:
 
     std::mutex triggerMutex;
     std::unordered_set<int> triggerSet;
+
+    // int SAVE_INDEX_TRACKER = 0;
+    // bool data_saved = false;
+    // Eigen::MatrixXd save_matrix = Eigen::MatrixXd::Zero(12, 1000000);
 };
 
 #endif // DATAHANDLER_H

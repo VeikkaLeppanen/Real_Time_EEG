@@ -94,7 +94,7 @@ void EEGSpinWorker::bridge_handler_spin(EegBridge &bridge, dataHandler &handler,
             handler.setSourceChannels(data_channel_sources);
             handler.setTriggerSource(trigger_channel_source);
 
-            bridge.data_handler_samples = Eigen::MatrixXd::Zero(bridge.numDataChannels, 100);
+            bridge.data_handler_samples = Eigen::MatrixXd::Zero(bridge.numDataChannels, 10);
 
             std::cout << "MeasurementStart package processed!\n";
 
