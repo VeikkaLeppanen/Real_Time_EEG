@@ -48,11 +48,18 @@ signals:
     void finished();
     void error(QString err);
     void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, 
-                                const Eigen::VectorXi triggers_A, 
-                                const Eigen::VectorXi triggers_B, 
-                                const Eigen::VectorXd time_stamps,
+                                const Eigen::VectorXi &triggers_A, 
+                                const Eigen::VectorXi &triggers_B, 
+                                const Eigen::VectorXd &time_stamps,
                                 std::vector<std::string> processing_channel_names);
 
+    void preprocessingOutputReady(const Eigen::MatrixXd &output,
+                                  const Eigen::VectorXi &triggers_A,
+                                  const Eigen::VectorXi &triggers_B,
+                                  const Eigen::VectorXi &triggers_out,
+                                  const Eigen::VectorXd &time_stamps,
+                                  int number_of_samples,
+                                  int seq_num);
 
 public slots:
     void process_start() {

@@ -62,6 +62,23 @@ void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters n
     Data_to_display = Eigen::MatrixXd::Zero(9, display_length);
 }
 
+void phaseEstimationWorker::handlePreprocessingOutput(const Eigen::MatrixXd &output,
+                                           const Eigen::VectorXi &triggers_A_in,
+                                           const Eigen::VectorXi &triggers_B_in,
+                                           const Eigen::VectorXi &triggers_out_in,
+                                           const Eigen::VectorXd &time_stamps_in,
+                                           int number_of_samples,
+                                           int seq_num) 
+{
+    EEG_corrected = output;
+    triggers_A = triggers_A_in;
+    triggers_B = triggers_B_in;
+    triggers_out = triggers_out_in;
+    time_stamps = time_stamps_in;
+    samples_to_process = number_of_samples;
+    sequence_number = seq_num;
+}
+
 void phaseEstimationWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPhaseEst);
@@ -80,6 +97,9 @@ void phaseEstimationWorker::process()
         std::vector<std::string> PhaseEst_channel_names;
         print_debug("Channel names set");
 
+        // int index = 0;
+        // std::vector<int> seqNum_list;
+
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
@@ -93,7 +113,7 @@ void phaseEstimationWorker::process()
                 emit updateSpatialChannelNames(EEG_spatial_channel_names);
             }
 
-            int sequence_number = handler.getPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
+            // int sequence_number = handler.getPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
 
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) {
@@ -178,6 +198,7 @@ void phaseEstimationWorker::process()
             if (phaseEstStates.performPhaseTargeting) {
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum) { 
+                    // seqNum_list.push_back(trigger_seqNum);
                     handler.insertTrigger(trigger_seqNum); 
                     if (stimulation_tracker < 0) stimulation_tracker++;
                 }
@@ -274,6 +295,8 @@ void phaseEstimationWorker::process()
 
             print_debug("Processing end");
         }
+
+        // writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
         
         emit finished();
     } catch (std::exception& e) {

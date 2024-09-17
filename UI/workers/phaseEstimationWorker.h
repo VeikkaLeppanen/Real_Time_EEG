@@ -74,19 +74,15 @@ public:
 signals:
     void finished();
     void error(QString err);
-    void updateEEGDisplayedData(const Eigen::MatrixXd &newMatrix, 
-                                const Eigen::VectorXi triggers_A, 
-                                const Eigen::VectorXi triggers_B, 
-                                const Eigen::VectorXd time_stamps,
-                                std::vector<std::string> processing_channel_names);
 
     void updatePhaseEstDisplayedData(const Eigen::MatrixXd &newMatrix, 
-                                     const Eigen::VectorXi triggers_A, 
-                                     const Eigen::VectorXi triggers_B, 
-                                     const Eigen::VectorXi triggers_out, 
-                                     const Eigen::VectorXd time_stamps, 
+                                     const Eigen::VectorXi &triggers_A, 
+                                     const Eigen::VectorXi &triggers_B, 
+                                     const Eigen::VectorXi &triggers_out, 
+                                     const Eigen::VectorXd &time_stamps, 
                                      int numPastElements, 
                                      int numFutureElements);
+
     void updatePhaseEstwindowNames(std::vector<std::string> processing_channel_names);
 
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
@@ -97,6 +93,14 @@ public slots:
     void process_start() {
         process_future = QtConcurrent::run([this]() { process(); });
     };
+
+    void handlePreprocessingOutput(const Eigen::MatrixXd &output,
+                                   const Eigen::VectorXi &triggers_A_in,
+                                   const Eigen::VectorXi &triggers_B_in,
+                                   const Eigen::VectorXi &triggers_out_in,
+                                   const Eigen::VectorXd &time_stamps_in,
+                                   int number_of_samples,
+                                   int seq_num);
 
     void setPhaseEstimationState(bool isChecked) { phaseEstStates.performPhaseEstimation = isChecked; }
 
@@ -154,6 +158,7 @@ private:
     int numOuterElectrodes = 4;
     std::vector<bool> outerElectrodeCheckStates_;
 
+    int sequence_number = 0;
     int n_EEG_channels_to_use = 5;      
     int n_CWL_channels_to_use = 7;
     int n_channels;

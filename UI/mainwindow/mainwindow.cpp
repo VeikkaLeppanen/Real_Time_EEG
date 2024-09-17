@@ -229,6 +229,8 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
         thread->setPriority(QThread::HighPriority);
         std::cout << "Phase estimation thread start" << '\n';
 
+        QObject::connect(preProcessingworker, &preProcessingWorker::preprocessingOutputReady, phaseEstworker, &phaseEstimationWorker::handlePreprocessingOutput);
+
         if (phaseEstwin) connect_processing_worker();
 
     } else {

@@ -66,7 +66,8 @@ void preProcessingWorker::process()
 
         // int index = 0;
         // std::vector<int> seqNum_list;
-        // Eigen::MatrixXd EEG_save = Eigen::MatrixXd::Zero(200, downsampled_cols);
+        // Eigen::MatrixXd EEG_save_1 = Eigen::MatrixXd::Zero(200, downsampled_cols);
+        // Eigen::MatrixXd EEG_save_2 = Eigen::MatrixXd::Zero(200, downsampled_cols);
 
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
@@ -108,7 +109,8 @@ void preProcessingWorker::process()
                 EEG_win_data_to_display.topRows(EEG_corrected.rows()) = EEG_corrected;
                 EEG_win_data_to_display.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use) = EEG_downsampled.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use);
 
-                // EEG_save.row(index) = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
+                // EEG_save_1.row(index) = EEG_corrected.row(0);
+                // EEG_save_2.row(index) = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
                 // seqNum_list.push_back(sequence_number);
                 // std::cout << "index saved: " << index << " SeqNum: " << sequence_number << '\n';
                 // index++;
@@ -118,12 +120,14 @@ void preProcessingWorker::process()
                 EEG_win_data_to_display = EEG_downsampled;
             }
 
-            handler.setPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process, sequence_number);
+            // handler.setPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process, sequence_number);
+            emit preprocessingOutputReady(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process, sequence_number);
 
             emit updateEEGDisplayedData(EEG_win_data_to_display, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
         }
 
-        // writeMatrixdToCSV("data_interleaved_removeBCG.csv", EEG_save);
+        // writeMatrixdToCSV("data_reference_removeBCG.csv", EEG_save_1);
+        // writeMatrixdToCSV("data_reference_removeBCG_spatial.csv", EEG_save_2);
         // writeMatrixiToCSV("seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
 
         emit finished();

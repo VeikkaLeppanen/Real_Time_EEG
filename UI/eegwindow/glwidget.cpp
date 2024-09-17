@@ -208,10 +208,10 @@ void Glwidget::paintGL()
     painter.end();
 }
 
-void Glwidget::updateMatrix(const Eigen::MatrixXd newMatrix, 
-                            const Eigen::VectorXi triggers_A, 
-                            const Eigen::VectorXi triggers_B, 
-                            const Eigen::VectorXd time_stamps, 
+void Glwidget::updateMatrix(const Eigen::MatrixXd &newMatrix, 
+                            const Eigen::VectorXi &triggers_A, 
+                            const Eigen::VectorXi &triggers_B, 
+                            const Eigen::VectorXd &time_stamps, 
                             std::vector<std::string> processing_channel_names) { 
     if (!pause_view) {
         std::lock_guard<std::mutex> lock(this->dataMutex);

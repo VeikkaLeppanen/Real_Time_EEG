@@ -14,6 +14,8 @@
 #include "UI/mainwindow/mainwindow.h"
 #include <QApplication>
 #include <QWidget>
+#include <Eigen/Dense>
+#include <QMetaType>
 
 // In case of bind failed the previous process can be terminated with the following commands on linux
 // lsof -i :50000       Find PID
@@ -24,6 +26,10 @@ volatile std::sig_atomic_t signal_received = 0;
 void signal_handler(int signal) {
     signal_received = 1;
 }
+
+Q_DECLARE_METATYPE(Eigen::MatrixXd)
+Q_DECLARE_METATYPE(Eigen::VectorXi)
+Q_DECLARE_METATYPE(Eigen::VectorXd)
 
 int main(int argc, char *argv[])
 {
@@ -46,8 +52,9 @@ int main(int argc, char *argv[])
     dataHandler handler;
 
     QApplication a(argc, argv);
-    // qRegisterMetaType<Eigen::MatrixXd>("Eigen::MatrixXd");
-    // qRegisterMetaType<Eigen::MatrixXd&>("Eigen::MatrixXd&");
+    qRegisterMetaType<Eigen::MatrixXd>("Eigen::MatrixXd");
+    qRegisterMetaType<Eigen::VectorXi>("Eigen::VectorXi");
+    qRegisterMetaType<Eigen::VectorXd>("Eigen::VectorXd");
     MainWindow w(handler, signal_received);
     w.show();
     return a.exec();

@@ -58,11 +58,11 @@ public:
     int get_current_data_index() { return current_data_index_; }
     int getSamplingRate() { return sampling_rate_; }
 
-    void setPreprocessingOutput(Eigen::MatrixXd output, 
-                                 Eigen::VectorXi triggers_A, 
-                                 Eigen::VectorXi triggers_B, 
-                                 Eigen::VectorXi triggers_out, 
-                                 Eigen::VectorXd time_stamps, 
+    void setPreprocessingOutput(const Eigen::MatrixXd &output, 
+                                const Eigen::VectorXi &triggers_A, 
+                                const Eigen::VectorXi &triggers_B, 
+                                const Eigen::VectorXi &triggers_out, 
+                                const Eigen::VectorXd &time_stamps, 
                                              int number_of_samples,
                                              int seq_num) 
     { 
@@ -81,7 +81,7 @@ public:
                                  Eigen::VectorXi &triggers_B, 
                                  Eigen::VectorXi &triggers_out, 
                                  Eigen::VectorXd &time_stamps, 
-                                             int number_of_samples) 
+                                             int &number_of_samples) 
     { 
         std::lock_guard<std::mutex> lock(this->dataMutex);
         output = preprocessing_output;
@@ -236,7 +236,7 @@ private:
     bool triggerEnableState = false;
 
     // Time limit in milliseconds
-    int time_limit = 100;
+    int time_limit = 2000;
     const int min_time_limit = 100;
     const int max_time_limit = 100000;
     std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
