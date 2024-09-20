@@ -43,38 +43,39 @@ add_executable(real_time_eeg ${SOURCES}
     UI/TMSwindow.ui
     UI/phaseEstwindow.ui)
 
+add_definitions(-DEIGEN_USE_MKL_ALL)
+add_definitions(-DEIGEN_USE_LAPACKE=0)
+
+add_executable(real_time_eeg ${SOURCES})
+
+# Link libraries
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::OpenGL
-    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
-    OpenGL::GL  # Linking OpenGL
+    Qt${QT_VERSION_MAJOR}::Charts
+    OpenGL::GL
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
+    -m64 -L${MKLROOT}/lib -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(real_time_eeg)
 endif()
 
-# Use the flag to suppress deprecated declarations warnings
-target_compile_options(real_time_eeg PRIVATE -Wno-deprecated-declarations) # -DEIGEN_USE_MKL_ALL
+# Compiler flags for MKL and Eigen
+target_compile_definitions(real_time_eeg PRIVATE)
 
-# Compiler optimization and OpenMP
 include(CheckCXXCompilerFlag)
-# Check and enable FMA instruction set if available
 CHECK_CXX_COMPILER_FLAG("-mfma" COMPILER_SUPPORTS_MFMA)
 if(COMPILER_SUPPORTS_MFMA)
     target_compile_options(real_time_eeg PRIVATE -mfma)
 endif()
 
-# Add compiler and linker options for OpenMP
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_compile_options(real_time_eeg PRIVATE ${OpenMP_CXX_FLAGS})
-    # Linking OpenMP libraries
     target_link_libraries(real_time_eeg PRIVATE ${OpenMP_CXX_LIBRARIES})
 endif()
 
-# Set other compiler optimizations
-target_compile_options(real_time_eeg PRIVATE -O3)
+target_compile_options(real_time_eeg PRIVATE -O3 -DMKL_ILP64 -m64 -I"${MKLROOT}/include")
