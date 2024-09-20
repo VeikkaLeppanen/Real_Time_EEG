@@ -95,7 +95,7 @@ void preProcessingWorker::process()
             downsample(all_channels, EEG_downsampled, downsampling_factor);
 
             // CWL
-            if (performRemoveBCG && sequence_number % 10000 == 0) {
+            if (performRemoveBCG) {
             
                 print_debug("Delay Embedding");
                 if (delay > 0) { delayEmbed(EEG_downsampled.middleRows(n_EEG_channels_to_use, n_CWL_channels_to_use), expCWL, delay); } 
@@ -109,16 +109,23 @@ void preProcessingWorker::process()
                 EEG_win_data_to_display.topRows(EEG_corrected.rows()) = EEG_corrected;
                 EEG_win_data_to_display.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use) = EEG_downsampled.bottomRows(EEG_downsampled.rows() - n_EEG_channels_to_use);
 
-                // EEG_save_1.row(index) = EEG_corrected.row(0);
-                // EEG_save_2.row(index) = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
-                // seqNum_list.push_back(sequence_number);
-                // std::cout << "index saved: " << index << " SeqNum: " << sequence_number << '\n';
-                // index++;
 
             } else {
                 EEG_corrected = EEG_downsampled.topRows(n_EEG_channels_to_use);
                 EEG_win_data_to_display = EEG_downsampled;
+                
+                // if (sequence_number % 10000 == 0) {
+                //     EEG_save_1.row(index) = EEG_corrected.row(0);
+                //     EEG_save_2.row(index) = EEG_corrected.row(0) - EEG_corrected.bottomRows(4).colwise().mean();
+                //     seqNum_list.push_back(sequence_number);
+                //     std::cout << "index saved: " << index << " SeqNum: " << sequence_number << '\n';
+                //     index++;
+                // }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(3));
             }
+
+            seq_num_tracker = sequence_number;
 
             // handler.setPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process, sequence_number);
             emit preprocessingOutputReady(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process, sequence_number);
@@ -126,8 +133,8 @@ void preProcessingWorker::process()
             emit updateEEGDisplayedData(EEG_win_data_to_display, triggers_A, triggers_B, time_stamps, handler.getChannelNames());
         }
 
-        // writeMatrixdToCSV("data_reference_removeBCG.csv", EEG_save_1);
-        // writeMatrixdToCSV("data_reference_removeBCG_spatial.csv", EEG_save_2);
+        // writeMatrixdToCSV("data_reference.csv", EEG_save_1);
+        // writeMatrixdToCSV("data_reference_spatial.csv", EEG_save_2);
         // writeMatrixiToCSV("seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
 
         emit finished();

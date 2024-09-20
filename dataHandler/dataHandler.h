@@ -247,6 +247,9 @@ private:
     // int SAVE_INDEX_TRACKER = 0;
     // bool data_saved = false;
     // Eigen::MatrixXd save_matrix = Eigen::MatrixXd::Zero(12, 1000000);
+
+    bool data_saved = false;
+    std::vector<int> seqNum_list;
 };
 
 #endif // DATAHANDLER_H

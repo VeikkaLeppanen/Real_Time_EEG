@@ -175,6 +175,8 @@ void phaseEstimationWorker::process()
 
             // Filter2
             print_debug("Second filtering");
+            // Demean
+            EEG_spatial.array() -= EEG_spatial.mean();
             if (phaseEstStates.performFiltering) {
                 EEG_filter2 = zeroPhaseLSFIR(EEG_spatial.tail(filter2_length), LSFIR_coeffs_2);
             } else {
@@ -218,8 +220,8 @@ void phaseEstimationWorker::process()
             
             Data_to_display.row(7).segment(downsampled_cols - phase_length / 2, phase_length) = phaseAngles.segment(phase_start, phase_length);
 
-            // Phase estimation
-            print_debug("Phase estimation");
+            // Phase difference
+            print_debug("Phase difference");
             if (phaseEstStates.performPhaseDifference) {
                 int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;              // FIGURE OUT A BETTER WAY TO HANDLE DOWNSAMPLING
                 if (last_phase_seqnum == -1) {
