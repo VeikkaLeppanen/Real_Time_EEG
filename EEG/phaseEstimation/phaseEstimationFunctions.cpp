@@ -455,9 +455,9 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
     int target_seqNum = 0;
     for (std::size_t i = 0; i < hilbert_signal.size(); ++i) {
         phaseAngles(i) = std::arg(hilbert_signal[i]);
-        if (!target_found && i > 0 && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
+        if (!target_found && i > edge && phaseAngles(i) >= stimulation_target && phaseAngles(i - 1) < stimulation_target) {
             int best_index = std::abs(phaseAngles(i) - stimulation_target) < std::abs(phaseAngles(i - 1) - stimulation_target) ? i : i - 1;
-            target_seqNum = sequence_number + best_index * downsampling_factor + phase_shift;
+            target_seqNum = sequence_number + (best_index - edge) * downsampling_factor + phase_shift;
             target_found = true;
         }
     }
