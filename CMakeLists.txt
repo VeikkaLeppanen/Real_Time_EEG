@@ -23,7 +23,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
-include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${EIGEN3_INCLUDE_DIR} /usr/include/mkl)
 
 
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
@@ -38,11 +38,6 @@ file(GLOB_RECURSE UI_SOURCES "UI/*.cpp" "UI/*.h" "UI/*.ui")
 # Combine all source lists
 set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES})
 
-# Add the executable based on the sources
-add_executable(real_time_eeg ${SOURCES}
-    UI/TMSwindow.ui
-    UI/phaseEstwindow.ui)
-
 add_definitions(-DEIGEN_USE_MKL_ALL)
 add_definitions(-DEIGEN_USE_LAPACKE=0)
 
@@ -51,7 +46,8 @@ add_executable(real_time_eeg ${SOURCES})
 # Link libraries
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
-    Qt${QT_VERSION_MAJOR}::Charts
+    Qt${QT_VERSION_MAJOR}::OpenGL
+    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
     OpenGL::GL
     Threads::Threads
     ${Boost_LIBRARIES}
