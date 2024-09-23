@@ -63,7 +63,7 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         });
         
         thread->start();
-        thread->setPriority(QThread::TimeCriticalPriority);
+        // thread->setPriority(QThread::TimeCriticalPriority);
     }
 }
 
@@ -141,7 +141,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
         });
 
         thread->start();
-        thread->setPriority(QThread::HighPriority);
+        // thread->setPriority(QThread::HighPriority);
         std::cout << "Preprocessing thread start" << '\n';
 
         connect_EEG_Prepworker();
@@ -226,7 +226,7 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
         });
 
         thread->start();
-        thread->setPriority(QThread::HighPriority);
+        // thread->setPriority(QThread::HighPriority);
         std::cout << "Phase estimation thread start" << '\n';
 
         QObject::connect(preProcessingworker, &preProcessingWorker::preprocessingOutputReady, phaseEstworker, &phaseEstimationWorker::handlePreprocessingOutput);

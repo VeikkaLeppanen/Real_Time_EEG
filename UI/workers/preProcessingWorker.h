@@ -78,8 +78,10 @@ private:
         if (debug) std::cout << msg << std::endl;
     };
 
+    std::mutex dataMutex;
+    std::condition_variable data_condition;
+    
     dataHandler &handler;
-    QMutex *mutex;
     volatile std::sig_atomic_t &processingWorkerRunning;
     QFuture<void> process_future;
 
