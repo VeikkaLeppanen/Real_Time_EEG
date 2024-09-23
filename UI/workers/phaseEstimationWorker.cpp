@@ -83,7 +83,7 @@ void phaseEstimationWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPhaseEst);
 
-    Eigen::setNbThreads(std::thread::hardware_concurrency());
+    // Eigen::setNbThreads(std::thread::hardware_concurrency());
 
     try {
         std::cout << "phaseEstimationWorker start" << '\n';

@@ -68,14 +68,11 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         // Gradient artifact correction
         if (Apply_GACorr && TA_tracker < TA_length) {
 
-            {
-                std::lock_guard<std::mutex> lock(this->dataMutex);
-                if (TA_tracker >= GACorr_.getTemplateSize()) {
-                    std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
-                    return;
-                }
-                processing_sample_vector = samples - GACorr_.getTemplateCol(TA_tracker);
+            if (TA_tracker >= GACorr_.getTemplateSize()) {
+                std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
+                return;
             }
+            processing_sample_vector = samples - GACorr_.getTemplateCol(TA_tracker);
             
             GACorr_.update_template(TA_tracker, samples);
             TA_tracker++;
@@ -126,7 +123,6 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             std::cerr << "Error: current_data_index exceeds buffer capacity." << std::endl;
             return;
         }
-        sample_buffer_.col(current_data_index_) = processing_sample_vector;
 
         // Triggering
         if (getTriggerEnableStatus() && shouldTrigger(SeqNo) && checkTimeLimit()) {    
@@ -134,7 +130,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             
             if (getTriggerConnectStatus()) send_trigger();
             
-            // if (SeqNo <= 5000000) {
+            // if (SeqNo <= 1400000) {
             //     seqNum_list.push_back(SeqNo);
             // } else if (!data_saved) {
             //     writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
@@ -148,13 +144,23 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             trigger_buffer_out(current_data_index_) = 0;
         }
 
-        // Timestamp, triggers, and buffer index update
-        time_stamp_buffer_(current_data_index_) = time_stamp;
-        trigger_buffer_A(current_data_index_) = trigger_A;
-        trigger_buffer_B(current_data_index_) = trigger_B;
-        current_sequence_number_ = SeqNo;
-        current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+        {
+            std::lock_guard<std::mutex> lock(this->dataMutex);
         
+            // Samples, timestamp, triggers, and buffer index update
+            sample_buffer_.col(current_data_index_) = processing_sample_vector;
+            time_stamp_buffer_(current_data_index_) = time_stamp;
+            trigger_buffer_A(current_data_index_) = trigger_A;
+            trigger_buffer_B(current_data_index_) = trigger_B;
+            current_sequence_number_ = SeqNo;
+            current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+
+            new_data_available = true;
+        }
+
+        // Notify the processing thread
+        data_condition.notify_one();
+
         // if (SAVE_INDEX_TRACKER >= 1000000 && !data_saved) {
         //     data_saved = true;
         //     writeMatrixdToCSV("data_GAcorr_filter1_interleaved.csv", save_matrix);

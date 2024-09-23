@@ -2,6 +2,9 @@
 #define DATAHANDLER_H
 
 #include <mutex>
+#include <condition_variable>
+#include <queue>
+
 #include <cstddef> // For size_t
 #include <iostream>
 #include <chrono>
@@ -183,7 +186,12 @@ public:
 private:
     HandlerState handler_state = WAITING_FOR_START;
 
+    // Synchronization primitives
     std::mutex dataMutex;
+    std::condition_variable data_condition;
+    bool new_data_available = false;
+    bool processingWorkerRunning = true;
+
     int triggerSource;
     Eigen::VectorXi source_channels_;
     bool channel_names_set = false;

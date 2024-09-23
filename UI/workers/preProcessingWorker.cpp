@@ -14,8 +14,7 @@ preProcessingWorker::preProcessingWorker(dataHandler &handler,
                                        QObject *parent)
     : QObject(parent), 
       handler(handler), 
-      processingWorkerRunning(processingWorkerRunning), 
-      mutex(new QMutex())
+      processingWorkerRunning(processingWorkerRunning)
 { 
     setPreprocessingParameters(prepParams_in);
 }
@@ -57,7 +56,12 @@ void preProcessingWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPrep);
 
-    Eigen::setNbThreads(std::thread::hardware_concurrency());
+    int number_of_threads = std::thread::hardware_concurrency() - 3;
+    Eigen::setNbThreads(number_of_threads);
+    omp_set_num_threads(number_of_threads);
+    
+    int eigen_threads = Eigen::nbThreads();
+    std::cout << "Eigen is using " << eigen_threads << " threads." << std::endl;
 
     try {
         std::cout << "preProcessingWorker start" << '\n';
