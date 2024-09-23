@@ -193,11 +193,11 @@ std::vector<uint8_t> generateExampleSamplePacket_random() {
 }
 
 // Example usage
-std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample_vector, uint32_t SeqNo) {
+std::vector<uint8_t> generateExampleSamplePacket_csv(std::vector<int32_t> sample_vector, uint32_t SeqNo, uint64_t SampleTime) {
     uint8_t FrameType = 2, MainUnitNum = 2, Reserved[2] = {3, 4};
     uint32_t PacketSeqNo = SeqNo;
     uint16_t NumChannels = CHANNEL_COUNT, NumSampleBundles = 1;
-    uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = 98765432109876;
+    uint64_t FirstSampleIndex = 123456789012345, FirstSampleTime = SampleTime;
 
     std::vector<std::vector<int32_t>> Samples(NumSampleBundles, std::vector<int32_t>(NumChannels));
 
@@ -236,8 +236,8 @@ void sendUDP(const std::vector<uint8_t> &data, const std::string &address, int p
 
 int main() {
     std::vector<uint8_t> MSdata = generateExampleMeasurementStartPacket();
-    std::string IP_address = "127.0.0.1"; // Localhost
-    // std::string IP_address = "192.168.0.100";
+    // std::string IP_address = "127.0.0.1"; // Localhost
+    std::string IP_address = "192.168.0.100";
     // std::string IP_address = "192.168.0.107";
 
     sendUDP(MSdata, IP_address, PORT);
@@ -245,12 +245,16 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/testdata_interleaved_sept.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/5_eeg_7_cwl_reference.csv");
+    std::ifstream csvFile("/home/user/EEG/data/testdata_sine.csv");
     // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
     auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
 
+    auto startTimePoint = std::chrono::system_clock::now();
     auto lastTimePoint = std::chrono::steady_clock::now();
 
     int number_of_sample_packets_to_send = 40000000;//14999;
@@ -261,11 +265,12 @@ int main() {
 
         while (std::getline(lineStream, cell, ',')) {
             sampleVector.push_back(std::stod(cell));
-            // std::cout << std::stod(cell) << ' ';
         }
-        // std::cout << '\n';
         
-        std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber);
+        auto timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - startTimePoint);
+        uint64_t SampleTime = static_cast<uint64_t>(timeStamp.count());
+        std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber, SampleTime);
 
         sendUDP(samplePacket, IP_address, PORT);
 
