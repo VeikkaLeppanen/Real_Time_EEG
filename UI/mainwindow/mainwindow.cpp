@@ -63,6 +63,7 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         });
         
         thread->start();
+        // thread->setPriority(QThread::HighPriority);
         // thread->setPriority(QThread::TimeCriticalPriority);
     }
 }
