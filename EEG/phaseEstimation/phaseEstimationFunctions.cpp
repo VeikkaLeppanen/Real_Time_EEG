@@ -463,15 +463,16 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
 
     // Initialize phase unwrapping variables
     double prevPhase = std::arg(hilbert_signal[0]);
-    phaseAngles(0) = prevPhase;
+    phaseAngles(0) = prevPhase; // Store the wrapped phase
     double unwrappedPhase = prevPhase;
 
     // Loop through the signal once
     for (std::size_t i = 1; i < signal_size; ++i) {
-        // Compute current phase
+        // Compute current phase (wrapped)
         double currPhase = std::arg(hilbert_signal[i]);
+        phaseAngles(i) = currPhase; // Store the wrapped phase
 
-        // Unwrap phase
+        // Unwrap phase internally for crossing detection
         double deltaPhase = currPhase - prevPhase;
 
         // Adjust for phase wrapping
@@ -482,14 +483,14 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
         }
 
         unwrappedPhase += deltaPhase;
-        phaseAngles(i) = unwrappedPhase;
 
         // Update previous phase
         prevPhase = currPhase;
 
         // Check for target crossing after the edge
         if (!target_found && i >= static_cast<std::size_t>(edge + 1)) {
-            double prevUnwrappedPhase = phaseAngles(i - 1);
+            // Reconstruct the unwrapped phases for comparison
+            double prevUnwrappedPhase = unwrappedPhase - deltaPhase;
 
             if (prevUnwrappedPhase < stimulation_target && unwrappedPhase >= stimulation_target) {
                 // Determine the closest index
@@ -504,6 +505,10 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
             }
         }
     }
+
+    // Optionally, adjust phaseAngles to start from zero
+    // Subtract phaseAngles(0) from each element
+    // phaseAngles.array() -= phaseAngles(0);
 
     return target_seqNum;
 }

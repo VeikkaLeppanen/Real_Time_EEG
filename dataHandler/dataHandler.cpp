@@ -60,24 +60,31 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             std::cerr << "Error: Empty samples vector." << std::endl;
             return;
         }
+        std::lock_guard<std::mutex> lock(this->dataMutex);
 
         if (trigger_A == 1) { 
-            TA_tracker = 0;
+            TA_tracker = SeqNo;
         }
 
         // Gradient artifact correction
-        if (Apply_GACorr && TA_tracker < TA_length) {
+        if (Apply_GACorr && TA_tracker > 0 && SeqNo >= TA_tracker && SeqNo < TA_tracker + TA_length) {
 
-            if (TA_tracker >= GACorr_.getTemplateSize()) {
-                std::cerr << "Error: TA_tracker exceeds GACorr template size." << std::endl;
+            int temp_index = SeqNo - TA_tracker;
+
+            if (temp_index < 0) {
+                std::cerr << "Error: temp_index is negative." << std::endl;
                 return;
             }
-            processing_sample_vector = samples - GACorr_.getTemplateCol(TA_tracker);
+
+            if (temp_index >= GACorr_.getTemplateSize()) {
+                std::cerr << "Error: temp_index exceeds GACorr template size." << std::endl;
+                return;
+            }
+
+            processing_sample_vector = samples - GACorr_.getTemplateCol(temp_index);
             
-            GACorr_.update_template(TA_tracker, samples);
-            TA_tracker++;
+            GACorr_.update_template(temp_index, samples);
         } else {
-            std::lock_guard<std::mutex> lock(this->dataMutex);
             processing_sample_vector = samples;
         }
 
@@ -130,12 +137,6 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             
             if (getTriggerConnectStatus()) send_trigger();
             
-            // if (SeqNo <= 1400000) {
-            //     seqNum_list.push_back(SeqNo);
-            // } else if (!data_saved) {
-            //     writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
-            //     data_saved = true;
-            // }
 
 
             removeTrigger(SeqNo);
@@ -144,19 +145,22 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             trigger_buffer_out(current_data_index_) = 0;
         }
 
-        {
-            std::lock_guard<std::mutex> lock(this->dataMutex);
-        
-            // Samples, timestamp, triggers, and buffer index update
-            sample_buffer_.col(current_data_index_) = processing_sample_vector;
-            time_stamp_buffer_(current_data_index_) = time_stamp;
-            trigger_buffer_A(current_data_index_) = trigger_A;
-            trigger_buffer_B(current_data_index_) = trigger_B;
-            current_sequence_number_ = SeqNo;
-            current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+        // if (SeqNo > 4000000 && !data_saved) {
+        //     writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+        //     data_saved = true;
+        // }
 
-            new_data_available = true;
-        }
+        
+        // Samples, timestamp, triggers, and buffer index update
+        sample_buffer_.col(current_data_index_) = processing_sample_vector;
+        time_stamp_buffer_(current_data_index_) = time_stamp;
+        trigger_buffer_A(current_data_index_) = trigger_A;
+        trigger_buffer_B(current_data_index_) = trigger_B;
+        current_sequence_number_ = SeqNo;
+        current_data_index_ = (current_data_index_ + 1) % buffer_capacity_;
+
+        new_data_available = true;
+        
 
         // Notify the processing thread
         data_condition.notify_one();
@@ -182,6 +186,10 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
                                           Eigen::VectorXi &triggers_out, 
                                           Eigen::VectorXd &time_stamps, 
                                                       int number_of_samples) {
+
+    if (last_retrieved_sequence_number_ == current_sequence_number_) {
+        return current_sequence_number_;
+    }
 
     // Ensure matrices are resized correctly
     if (output.rows() != channel_count_ || output.cols() != number_of_samples) output.resize(channel_count_, number_of_samples);
@@ -214,6 +222,7 @@ int dataHandler::getLatestDataAndTriggers(Eigen::MatrixXd &output,
         time_stamps.head(overflow) = time_stamp_buffer_.segment(buffer_capacity_ - overflow, overflow);
     }
 
+    last_retrieved_sequence_number_ = current_sequence_number_;
     return current_sequence_number_;
 }
 

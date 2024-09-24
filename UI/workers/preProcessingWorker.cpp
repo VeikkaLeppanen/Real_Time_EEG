@@ -56,7 +56,7 @@ void preProcessingWorker::process()
 {
     std::signal(SIGSEGV, signalHandlerPrep);
 
-    int number_of_threads = std::thread::hardware_concurrency() - 3;
+    int number_of_threads = std::thread::hardware_concurrency() - 4;
     Eigen::setNbThreads(number_of_threads);
     omp_set_num_threads(number_of_threads);
     
@@ -126,7 +126,7 @@ void preProcessingWorker::process()
                 //     index++;
                 // }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(3));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(3));
             }
 
             seq_num_tracker = sequence_number;

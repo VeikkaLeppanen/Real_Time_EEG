@@ -157,6 +157,7 @@ public:
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
         triggerSet.insert(seqNum);
+        // seqNum_list.push_back(seqNum);
     }
 
     bool shouldTrigger(int seqNum) {
@@ -203,6 +204,7 @@ private:
     Eigen::VectorXi trigger_buffer_out;
     size_t current_data_index_ = 0;
     int current_sequence_number_ = 0;
+    int last_retrieved_sequence_number_ = -1;
     int buffer_length_in_seconds_ = 20;
     int buffer_capacity_;
     int channel_count_;
@@ -224,7 +226,7 @@ private:
     GACorrection GACorr_;
     int TA_length = 10000;
     int GA_average_length = 25;
-    int TA_tracker = 10000000;
+    int TA_tracker = 0;
 
     // Baseline correction
     bool Apply_baseline = false;
@@ -244,7 +246,7 @@ private:
     bool triggerEnableState = false;
 
     // Time limit in milliseconds
-    int time_limit = 2000;
+    int time_limit = 100;
     const int min_time_limit = 100;
     const int max_time_limit = 100000;
     std::chrono::time_point<std::chrono::system_clock> latest_trigger_time;
