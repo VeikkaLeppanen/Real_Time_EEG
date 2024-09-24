@@ -247,8 +247,8 @@ int main() {
 
     // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
     // std::ifstream csvFile("/home/user/EEG/data/testdata_interleaved_sept.csv");
-    // std::ifstream csvFile("/home/user/EEG/data/5_eeg_7_cwl_reference.csv");
-    std::ifstream csvFile("/home/user/EEG/data/testdata_sine.csv");
+    std::ifstream csvFile("/home/user/EEG/data/5_eeg_7_cwl_reference.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/testdata_sine.csv");
     // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     std::string line;
     uint32_t sequenceNumber = 0;

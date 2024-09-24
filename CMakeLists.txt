@@ -16,6 +16,7 @@ find_package(OpenGL REQUIRED)  # Added OpenGL package
 find_package(Threads REQUIRED)
 find_package(Boost 1.65 REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
+find_package(OpenBLAS REQUIRED)
 
 include_directories(/home/veikka/Work/Real_Time_EEG)
 # include_directories(/usr/include/eigen3)
@@ -25,6 +26,11 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR} /usr/include/mkl)
 
+if(OpenBLAS_FOUND)
+    include_directories(${OpenBLAS_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "OpenBLAS not found")
+endif()
 
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
 file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
@@ -48,6 +54,7 @@ target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::OpenGL
     Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+    ${OpenBLAS_LIBRARIES}
     OpenGL::GL
     Threads::Threads
     ${Boost_LIBRARIES}
