@@ -246,7 +246,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
-    std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
+    // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     // std::ifstream csvFile("/home/user/EEG/data/testdata_interleaved_sept.csv");
     std::ifstream csvFile("/home/user/EEG/data/5_eeg_7_cwl_reference.csv");
     // std::ifstream csvFile("/home/user/EEG/data/testdata_sine.csv");
