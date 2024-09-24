@@ -126,7 +126,7 @@ void preProcessingWorker::process()
                 //     index++;
                 // }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(3));
+                // std::this_thread::sleep_for(std::chrono::milliseconds(3));
             }
 
             seq_num_tracker = sequence_number;
