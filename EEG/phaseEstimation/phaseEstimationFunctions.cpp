@@ -459,17 +459,19 @@ int findTargetPhase(const std::vector<std::complex<double>>& hilbert_signal,
         adjusted_stimulation_target = stimulation_target + 2 * M_PI;
     }
     
+    Eigen::VectorXd phaseAngles_temp = phaseAngles;
+    
     // Unwrap phase angles to avoid discontinuities
     for (size_t i = 1; i < phaseAngles.size(); ++i) {
-        double delta = phaseAngles(i) - phaseAngles(i - 1);
+        double delta = phaseAngles_temp(i) - phaseAngles_temp(i - 1);
         if (delta > M_PI)
-            phaseAngles(i) -= 2 * M_PI;
+            phaseAngles_temp(i) -= 2 * M_PI;
         else if (delta < -M_PI)
-            phaseAngles(i) += 2 * M_PI;
+            phaseAngles_temp(i) += 2 * M_PI;
     }
     
     // Adjust phase angles relative to the stimulation target
-    Eigen::VectorXd delta_phase = phaseAngles.array() - adjusted_stimulation_target;
+    Eigen::VectorXd delta_phase = phaseAngles_temp.array() - adjusted_stimulation_target;
     
     // Find the first crossing point
     for (size_t i = 1; i < delta_phase.size(); ++i) {
