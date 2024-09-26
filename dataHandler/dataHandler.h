@@ -157,7 +157,13 @@ public:
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
         triggerSet.insert(seqNum);
-        // seqNum_list.push_back(seqNum);
+
+        // if (seqNum > 300000 && seqNum > 200 + last_save_index) {
+        //     seqNum_list.push_back(seqNum);
+        //     // std::cout << "Trigger inserted: " << seqNum << std::endl;
+        // }
+        
+        // last_save_index = seqNum;
     }
 
     bool shouldTrigger(int seqNum) {
@@ -257,7 +263,8 @@ private:
     // int SAVE_INDEX_TRACKER = 0;
     // bool data_saved = false;
     // Eigen::MatrixXd save_matrix = Eigen::MatrixXd::Zero(12, 1000000);
-
+    
+    int last_save_index = -1;
     bool data_saved = false;
     std::vector<int> seqNum_list;
 };

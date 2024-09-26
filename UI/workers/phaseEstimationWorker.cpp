@@ -105,15 +105,6 @@ void phaseEstimationWorker::process()
         while(processingWorkerRunning) {
             print_debug("Processing start");
 
-            PhaseEst_channel_names.clear();
-            EEG_channel_names = handler.getChannelNames();
-
-            if (EEG_channel_names.size() >= n_EEG_channels_to_use) { 
-                std::vector<std::string> EEG_spatial_channel_names(EEG_channel_names.begin(), EEG_channel_names.begin() + n_EEG_channels_to_use);
-                emit updateSpatialChannelNames(EEG_spatial_channel_names);
-            }
-
-            // int sequence_number = handler.getPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
 
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) {
@@ -128,6 +119,14 @@ void phaseEstimationWorker::process()
             }
 
             print_debug("Checks passed");
+            
+            PhaseEst_channel_names.clear();
+            EEG_channel_names = handler.getChannelNames();
+
+            if (EEG_channel_names.size() >= n_EEG_channels_to_use) { 
+                std::vector<std::string> EEG_spatial_channel_names(EEG_channel_names.begin(), EEG_channel_names.begin() + n_EEG_channels_to_use);
+                emit updateSpatialChannelNames(EEG_spatial_channel_names);
+            }
 
             if (!phaseEstStates.performPhaseEstimation) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -142,11 +141,15 @@ void phaseEstimationWorker::process()
                 Eigen::VectorXd sum_of_rows = Eigen::VectorXd::Zero(downsampled_cols);
                 int outer_channel_index = 0;
                 for (int i = 0; i < EEG_corrected.rows(); i++) {
-                    if (i == spatial_channel_index) continue;
-                        
-                    if (outerElectrodeCheckStates_[outer_channel_index]) {
-                            sum_of_rows += EEG_corrected.row(i);
+                    if (i == spatial_channel_index) {
+                        outer_channel_index++;
+                        continue;
                     }
+
+                    if (outerElectrodeCheckStates_[outer_channel_index]) {
+                        sum_of_rows += EEG_corrected.row(i);
+                    }
+
                     outer_channel_index++;
                 }
                 
