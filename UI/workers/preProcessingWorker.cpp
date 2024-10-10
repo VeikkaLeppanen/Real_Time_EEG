@@ -24,7 +24,8 @@ preProcessingWorker::~preProcessingWorker()
 
 void preProcessingWorker::setPreprocessingParameters(preprocessingParameters newParams) {
     std::cout << "New preprocessingParameters Parameters: " << newParams << std::endl;
-    
+    currentPrepParams = newParams;
+
     n_channels = handler.get_channel_count();
 
     samples_to_process = newParams.numberOfSamples;
@@ -76,6 +77,11 @@ void preProcessingWorker::process()
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
+            if (processing_pause) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                continue;
+            }
+            
             print_debug("Processing start");
 
             int sequence_number = handler.getLatestDataAndTriggers(all_channels, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
@@ -96,7 +102,8 @@ void preProcessingWorker::process()
 
             // Downsampling
             print_debug("Downsampled");
-            downsample(all_channels, EEG_downsampled, downsampling_factor);
+            if (downsampling_factor > 1) downsample(all_channels, EEG_downsampled, downsampling_factor);
+            else EEG_downsampled = all_channels;
 
             // CWL
             if (performRemoveBCG) {

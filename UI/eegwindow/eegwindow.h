@@ -48,8 +48,8 @@ public:
 
 public slots:
     void updateData();
-    void on_startButton_clicked();
-    void on_stopButton_clicked();
+    void preProcessing_start();
+    void preProcessing_stop();
     void newEstStates(phaseEstimateStates states);
 
 signals:
@@ -72,6 +72,8 @@ signals:
     void updateTLineSpacing(int value);
 
     void requestEstStates();
+    void sendPrepStates(preprocessingParameters prepParams);
+    void set_processing_pause(bool pause);
 
     void error(QString err);
 

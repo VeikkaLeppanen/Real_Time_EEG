@@ -15,6 +15,7 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
     ui->setupUi(this);
 
     // Initialize values for lineEdits
+    ui->SNRtreshold->setText(QString::number(phaseEstParams.SNR_threshold));
     ui->edge->setText(QString::number(phaseEstParams.edge));
     ui->modelOrder->setText(QString::number(phaseEstParams.modelOrder));
     ui->hilbertLength->setText(QString::number(phaseEstParams.hilbertWinLength));
@@ -63,6 +64,7 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
 void phaseEstwindow::newEstStates(phaseEstimateStates states) {
     ui->checkBox_phaseEstimate->setChecked(states.performPhaseEstimation);
     ui->Filter_checkbox->setChecked(states.performFiltering);
+    ui->checkBox_SNRcheck->setChecked(states.performSNRcheck);
     ui->checkBox_PhaseTargeting->setChecked(states.performPhaseTargeting);
     ui->checkBox_phaseError->setChecked(states.performPhaseDifference);
     ui->checkBox_Channels->setChecked(states.phasEst_display_all_EEG_channels);
@@ -322,5 +324,24 @@ void phaseEstwindow::on_checkBox_triggers_out_stateChanged(int arg1)
 void phaseEstwindow::on_comboBox_phaseError_currentIndexChanged(int index)
 {
     emit setPhaseErrorType(index);
+}
+
+
+void phaseEstwindow::on_checkBox_SNRcheck_stateChanged(int arg1)
+{
+    bool isChecked = (arg1 == Qt::Checked);
+    emit setSNRcheck(isChecked);
+}
+
+
+void phaseEstwindow::on_SNRtreshold_editingFinished()
+{
+    bool ok;
+    double value = ui->SNRtreshold->text().toDouble(&ok);
+    if (ok) {
+        emit setSNRthreshold(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
 }
 

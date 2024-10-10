@@ -123,7 +123,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
     if (!preprocessingWorkerRunning && handler.isReady()) {
         preprocessingWorkerRunning = true;
         processingWorkerRunning = 1;
-
+        
         QThread* thread = new QThread;
         preProcessingworker = new preProcessingWorker(handler, processingWorkerRunning, prepParams);
         preProcessingworker->moveToThread(thread);
@@ -168,6 +168,9 @@ void MainWindow::on_processing_clicked()
         emit phaseEstwin->requestEstStates();
         
         //Start phase estimation thread
+        preprocessingParameters tempParams = preProcessingworker->getPreprocessingParameters();
+        phaseEstParams.numberOfSamples = tempParams.numberOfSamples;
+        phaseEstParams.downsampling_factor = tempParams.downsampling_factor;
         startPhaseEstimationprocessing(phaseEstParams);
     } else {
         QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab and start the processing thread from the preprocessing tab.");
@@ -188,15 +191,21 @@ void MainWindow::connect_processing_worker()
     QObject::connect(phaseEstwin, &phaseEstwindow::setSpatilaTargetChannel, phaseEstworker, &phaseEstimationWorker::setSpatilaTargetChannel);
     QObject::connect(phaseEstwin, &phaseEstwindow::outerElectrodesStateChanged, phaseEstworker, &phaseEstimationWorker::outerElectrodesStateChanged);
     QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseErrorType, phaseEstworker, &phaseEstimationWorker::setPhaseErrorType);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
     QObject::connect(phaseEstwin, &phaseEstwindow::requestEstStates, phaseEstworker, &phaseEstimationWorker::sendEstStates);
+    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRcheck, phaseEstworker, &phaseEstimationWorker::setSNRcheck);
+    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRthreshold, phaseEstworker, &phaseEstimationWorker::setSNRthreshold);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
+    QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
+    QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
 }
 
 void MainWindow::connect_EEG_Prepworker()
 {
     QObject::connect(preProcessingworker, &preProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
+    QObject::connect(eegwindow, &eegWindow::sendPrepStates, preProcessingworker, &preProcessingWorker::setPreprocessingParameters);
     QObject::connect(eegwindow, &eegWindow::setRemoveBCG, preProcessingworker, &preProcessingWorker::setRemoveBCG);
+    QObject::connect(eegwindow, &eegWindow::set_processing_pause, preProcessingworker, &preProcessingWorker::set_processing_pause);
 }
 
 void MainWindow::resetProcessingWindowPointer() {

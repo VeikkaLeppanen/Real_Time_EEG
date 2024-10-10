@@ -24,6 +24,7 @@ phaseEstimationWorker::~phaseEstimationWorker()
 
 void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters newParams) {
     std::cout << "New phaseEstimateParameters Parameters: " << newParams << std::endl;
+    currentPhaseEstParams = newParams;
 
     n_channels = handler.get_channel_count();
     samples_to_process = newParams.numberOfSamples;
@@ -38,6 +39,7 @@ void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters n
     triggers_out = Eigen::VectorXi::Zero(samples_to_process);
     time_stamps = Eigen::VectorXd::Zero(samples_to_process);
 
+    SNR_threshold = newParams.SNR_threshold;
     edge = newParams.edge;
     modelOrder = newParams.modelOrder;
     hilbertWinLength = newParams.hilbertWinLength; 
@@ -97,12 +99,19 @@ void phaseEstimationWorker::process()
         std::vector<std::string> PhaseEst_channel_names;
         print_debug("Channel names set");
 
-        // int index = 0;
-        // std::vector<int> seqNum_list;
+        int index = 0;
+        int last_save_index = -1;
+        std::vector<int> seqNum_list;
+        std::vector<double> max_power_list;
 
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
+            if (processing_pause) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                continue;
+            }
+            
             print_debug("Processing start");
 
 
@@ -164,13 +173,17 @@ void phaseEstimationWorker::process()
                 // Handle the case where the index is out of bounds
                 std::cerr << "Error: Row index is out of bounds." << std::endl;
             }
-            
+
+            double SNR = 0.0;
             // SNR check
             if (phaseEstStates.performSNRcheck) {
                 print_debug("SNR check");
-                double SNR = calculateSNR(EEG_spatial, 64, 500, 500.0, 10.0, 2.0);
-                if (SNR < 1.0) {
-                    std::cout << "SNR too small: " << SNR << '\n';
+
+                SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 3.0);
+                // std::cout << "SNR: " << SNR << '\n';
+
+                if (SNR < SNR_threshold) {
+                    std::cout << "signal_ceiling too small: " << SNR << '\n';
                     seq_num_tracker = sequence_number;
                     continue;
                 }
@@ -203,7 +216,15 @@ void phaseEstimationWorker::process()
             if (phaseEstStates.performPhaseTargeting) {
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum) { 
-                    // seqNum_list.push_back(trigger_seqNum);
+
+                    if (/*trigger_seqNum > 300000 && */trigger_seqNum > 200 + last_save_index) {
+                        seqNum_list.push_back(sequence_number);
+                        max_power_list.push_back(SNR);
+                        // std::cout << "Trigger inserted: " << seqNum << std::endl;
+                    }
+
+                    last_save_index = trigger_seqNum;
+
                     handler.insertTrigger(trigger_seqNum); 
                     if (stimulation_tracker < 0) stimulation_tracker++;
                 }
@@ -301,7 +322,9 @@ void phaseEstimationWorker::process()
             print_debug("Processing end");
         }
 
-        // writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+        std::cout << "Saving data..." << seqNum_list.size() << std::endl;
+        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+        writeMatrixdToCSV("trigger_max_power.csv", vectorToColumnMatrixd(max_power_list));
         
         emit finished();
     } catch (std::exception& e) {

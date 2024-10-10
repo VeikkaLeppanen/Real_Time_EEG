@@ -277,27 +277,6 @@ std::vector<double> fitAndPredictAR_Burg(const Eigen::VectorXd& data, size_t mod
     return predictions;
 }
 
-// Function to estimate AR coefficients using Yule-Walker method
-std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
-    Eigen::VectorXd autocorrelations = computeAutocorrelation(data, order, norm);
-
-    Eigen::MatrixXd R(order, order);
-    Eigen::VectorXd r(order);
-    for (int i = 0; i < order; ++i) {
-        r(i) = autocorrelations(i + 1);
-        for (int j = 0; j < order; ++j) {
-            R(i, j) = autocorrelations(std::abs(i - j));
-        }
-    }
-
-    // Solve the Yule-Walker equations using matrix operations
-    Eigen::VectorXd arParams = R.ldlt().solve(r);
-    double sigma2 = autocorrelations(0) - arParams.dot(r);
-    Eigen::VectorXd k = Eigen::VectorXd::Zero(order);  // Placeholder, no reflection coefficients computed here
-
-    return std::make_tuple(arParams, sigma2, k);
-}
-
 // Function to fit an AR model using the Yule-Walker method and predict future values
 std::vector<double> fitAndPredictAR_YuleWalker(const Eigen::VectorXd& data, size_t modelOrder, size_t numPredictions) {
     // Estimate AR coefficients using the Yule-Walker method
