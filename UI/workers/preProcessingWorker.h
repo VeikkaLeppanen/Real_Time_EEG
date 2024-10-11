@@ -63,6 +63,8 @@ signals:
                                   int number_of_samples,
                                   int seq_num);
 
+    void newBCGState(bool state);
+
 public slots:
     void process_start() {
         process_future = QtConcurrent::run([this]() { process(); });
@@ -72,6 +74,8 @@ public slots:
 
     void setPreprocessingParameters(preprocessingParameters newParams);
     void set_processing_pause(bool pause) { processing_pause = pause; }
+
+    void sendBCGState() { emit newBCGState(performRemoveBCG); }
 
 private:
     void process();
@@ -88,7 +92,7 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
     QFuture<void> process_future;
 
-    bool performRemoveBCG = false;
+    bool performRemoveBCG = true;
 
     bool processing_pause = false;
     preprocessingParameters currentPrepParams;

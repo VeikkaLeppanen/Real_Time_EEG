@@ -73,8 +73,8 @@ eegWindow::~eegWindow() {
     delete ui;
 }
 
-void eegWindow::newEstStates(phaseEstimateStates states) {
-    ui->checkBox_removeBCG->setChecked(states.performRemoveBCG);
+void eegWindow::newBCGState(bool state) {
+    ui->checkBox_removeBCG->setChecked(state);
 }
 
 void eegWindow::handleError(const QString &error)
@@ -125,6 +125,7 @@ void eegWindow::checkHandlerReady() {
             emit updateChannelNamesQt(QchannelNames);
         }
         preProcessing_start();
+        emit requestBCGState();
     }
 }
 
