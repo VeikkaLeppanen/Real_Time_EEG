@@ -44,6 +44,8 @@ public:
                                   QObject* parent = nullptr);
     ~preProcessingWorker();
 
+    preprocessingParameters getPreprocessingParameters() { return currentPrepParams; }
+
 signals:
     void finished();
     void error(QString err);
@@ -69,6 +71,7 @@ public slots:
     void setRemoveBCG(bool isChecked) { performRemoveBCG = isChecked; }
 
     void setPreprocessingParameters(preprocessingParameters newParams);
+    void set_processing_pause(bool pause) { processing_pause = pause; }
 
 private:
     void process();
@@ -87,6 +90,8 @@ private:
 
     bool performRemoveBCG = false;
 
+    bool processing_pause = false;
+    preprocessingParameters currentPrepParams;
     int n_EEG_channels_to_use = 5;      
     int n_CWL_channels_to_use = 7;
     int n_channels;

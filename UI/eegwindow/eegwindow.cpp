@@ -124,12 +124,14 @@ void eegWindow::checkHandlerReady() {
 
             emit updateChannelNamesQt(QchannelNames);
         }
+        preProcessing_start();
     }
 }
 
 
 void eegWindow::on_disconnectButton_clicked()
 {
+    preProcessing_stop();
     signal_received = 1;
 }
 
@@ -277,9 +279,14 @@ void eegWindow::on_numberOfSamples_editingFinished()
     bool ok;
     int value = ui->numberOfSamples->text().toInt(&ok);
     if (ok) {
-        prepParams.numberOfSamples = value;
-        updateChannelLength(value);
-        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
+        if (prepParams.numberOfSamples != value) {
+            prepParams.numberOfSamples = value;
+            updateChannelLength(value);
+            
+            emit set_processing_pause(true);
+            emit sendPrepStates(prepParams);
+            emit set_processing_pause(false);
+        }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -289,9 +296,14 @@ void eegWindow::on_downsampling_editingFinished()
 {
     bool ok;
     int value = ui->downsampling->text().toInt(&ok);
-    if (ok && (value > 0)) {
-        prepParams.downsampling_factor = value;
-        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
+    if (ok) {
+        if (prepParams.downsampling_factor != value) {
+            prepParams.downsampling_factor = value;
+            
+            emit set_processing_pause(true);
+            emit sendPrepStates(prepParams);
+            emit set_processing_pause(false);
+        }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
@@ -303,14 +315,19 @@ void eegWindow::on_delay_editingFinished()
     bool ok;
     int value = ui->delay->text().toInt(&ok);
     if (ok) {
-        prepParams.delay = value;
-        if (preprocessingWorkerRunning) { QMessageBox::information(this, "Information.", "Please restart the processing thread for changes to take effect."); }
+        if (prepParams.delay != value) {
+            prepParams.delay = value;
+
+            emit set_processing_pause(true);
+            emit sendPrepStates(prepParams);
+            emit set_processing_pause(false);
+        }
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
 }
 
-void eegWindow::on_startButton_clicked()
+void eegWindow::preProcessing_start()
 {
     if(processingWorkerRunning) {
         QMessageBox::warning(this, "Error", "Processing is already running.");
@@ -330,7 +347,7 @@ void eegWindow::on_startButton_clicked()
     }
 }
 
-void eegWindow::on_stopButton_clicked()
+void eegWindow::preProcessing_stop()
 {
     std::cout << "Preprocessing stop" << '\n';
     preprocessingWorkerRunning = false;

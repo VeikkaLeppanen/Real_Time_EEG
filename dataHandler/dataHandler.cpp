@@ -137,6 +137,7 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             
             if (getTriggerConnectStatus()) send_trigger();
             
+            // seqNum_list.push_back(SeqNo);
 
 
             removeTrigger(SeqNo);
@@ -145,7 +146,8 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
             trigger_buffer_out(current_data_index_) = 0;
         }
 
-        // if (SeqNo > 4000000 && !data_saved) {
+        // if (SeqNo >= 1600000 && !data_saved) {
+        //     std::cout << "Saving data..." << seqNum_list.size() << std::endl;
         //     writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
         //     data_saved = true;
         // }

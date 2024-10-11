@@ -360,6 +360,23 @@
                </property>
               </widget>
              </item>
+             <item row="6" column="2">
+              <widget class="QCheckBox" name="checkBox_SNRcheck">
+               <property name="text">
+                <string>SNR check</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
+              <widget class="QLabel" name="label_11">
+               <property name="text">
+                <string>SNR threshold</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="2">
+              <widget class="QLineEdit" name="SNRtreshold"/>
+             </item>
             </layout>
            </widget>
           </item>

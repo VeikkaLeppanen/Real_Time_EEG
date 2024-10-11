@@ -24,6 +24,7 @@ phaseEstimationWorker::~phaseEstimationWorker()
 
 void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters newParams) {
     std::cout << "New phaseEstimateParameters Parameters: " << newParams << std::endl;
+    currentPhaseEstParams = newParams;
 
     n_channels = handler.get_channel_count();
     samples_to_process = newParams.numberOfSamples;
@@ -38,6 +39,7 @@ void phaseEstimationWorker::setPhaseEstimateParameters(phaseEstimateParameters n
     triggers_out = Eigen::VectorXi::Zero(samples_to_process);
     time_stamps = Eigen::VectorXd::Zero(samples_to_process);
 
+    SNR_threshold = newParams.SNR_threshold;
     edge = newParams.edge;
     modelOrder = newParams.modelOrder;
     hilbertWinLength = newParams.hilbertWinLength; 
@@ -97,23 +99,20 @@ void phaseEstimationWorker::process()
         std::vector<std::string> PhaseEst_channel_names;
         print_debug("Channel names set");
 
-        // int index = 0;
-        // std::vector<int> seqNum_list;
+        int index = 0;
+        int last_save_index = -1;
+        std::vector<int> seqNum_list;
 
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
         while(processingWorkerRunning) {
+            if (processing_pause) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                continue;
+            }
+            
             print_debug("Processing start");
 
-            PhaseEst_channel_names.clear();
-            EEG_channel_names = handler.getChannelNames();
-
-            if (EEG_channel_names.size() >= n_EEG_channels_to_use) { 
-                std::vector<std::string> EEG_spatial_channel_names(EEG_channel_names.begin(), EEG_channel_names.begin() + n_EEG_channels_to_use);
-                emit updateSpatialChannelNames(EEG_spatial_channel_names);
-            }
-
-            // int sequence_number = handler.getPreprocessingOutput(EEG_corrected, triggers_A, triggers_B, triggers_out, time_stamps, samples_to_process);
 
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) {
@@ -128,6 +127,14 @@ void phaseEstimationWorker::process()
             }
 
             print_debug("Checks passed");
+            
+            PhaseEst_channel_names.clear();
+            EEG_channel_names = handler.getChannelNames();
+
+            if (EEG_channel_names.size() >= n_EEG_channels_to_use) { 
+                std::vector<std::string> EEG_spatial_channel_names(EEG_channel_names.begin(), EEG_channel_names.begin() + n_EEG_channels_to_use);
+                emit updateSpatialChannelNames(EEG_spatial_channel_names);
+            }
 
             if (!phaseEstStates.performPhaseEstimation) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -142,11 +149,15 @@ void phaseEstimationWorker::process()
                 Eigen::VectorXd sum_of_rows = Eigen::VectorXd::Zero(downsampled_cols);
                 int outer_channel_index = 0;
                 for (int i = 0; i < EEG_corrected.rows(); i++) {
-                    if (i == spatial_channel_index) continue;
-                        
-                    if (outerElectrodeCheckStates_[outer_channel_index]) {
-                            sum_of_rows += EEG_corrected.row(i);
+                    if (i == spatial_channel_index) {
+                        outer_channel_index++;
+                        continue;
                     }
+
+                    if (outerElectrodeCheckStates_[outer_channel_index]) {
+                        sum_of_rows += EEG_corrected.row(i);
+                    }
+
                     outer_channel_index++;
                 }
                 
@@ -161,16 +172,24 @@ void phaseEstimationWorker::process()
                 // Handle the case where the index is out of bounds
                 std::cerr << "Error: Row index is out of bounds." << std::endl;
             }
-            
+
+            double SNR = 0.0;
+            bool SNR_passed = true;
             // SNR check
             if (phaseEstStates.performSNRcheck) {
                 print_debug("SNR check");
-                double SNR = calculateSNR(EEG_spatial, 64, 500, 500.0, 10.0, 2.0);
-                if (SNR < 1.0) {
-                    std::cout << "SNR too small: " << SNR << '\n';
-                    seq_num_tracker = sequence_number;
-                    continue;
+
+                SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 3.0);
+
+                if (SNR_list.size() < n_SNR) {
+                    SNR_list.push_back(SNR);
+                    SNR_passed = false;
+                } else if (SNR < SNR_threshold * (std::accumulate(SNR_list.begin(), SNR_list.end(), 0.0) / n_SNR)) {
+                    // std::cout << "SNR too low: " << SNR << std::endl;
+                    SNR_passed = false;
                 }
+                SNR_list.erase(SNR_list.begin());
+                SNR_list.push_back(SNR);
             }
 
             // Filter2
@@ -199,8 +218,15 @@ void phaseEstimationWorker::process()
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
-                if (trigger_seqNum) { 
-                    // seqNum_list.push_back(trigger_seqNum);
+                if (trigger_seqNum && SNR_passed) { 
+
+                    if (/*trigger_seqNum > 300000 && */trigger_seqNum > 200 + last_save_index) {
+                        seqNum_list.push_back(trigger_seqNum);
+                        // std::cout << "Trigger inserted: " << seqNum << std::endl;
+                    }
+
+                    last_save_index = trigger_seqNum;
+
                     handler.insertTrigger(trigger_seqNum); 
                     if (stimulation_tracker < 0) stimulation_tracker++;
                 }
@@ -298,7 +324,8 @@ void phaseEstimationWorker::process()
             print_debug("Processing end");
         }
 
-        // writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+        std::cout << "Saving data..." << seqNum_list.size() << std::endl;
+        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
         
         emit finished();
     } catch (std::exception& e) {

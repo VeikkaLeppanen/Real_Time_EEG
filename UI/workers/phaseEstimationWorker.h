@@ -26,6 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
+    double SNR_threshold = 0.5;
 
     // phase estimate
     size_t edge = 35;
@@ -33,8 +34,8 @@ struct phaseEstimateParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = 0;          //M_PI * 0.5;
-    int phase_shift = 0;                    // for 5000Hz
+    double stimulation_target = 0;          //M_PI * 0.5;    [0, 2*pi]
+    int phase_shift = -40;                    // for 5000Hz
 };
 
 struct phaseEstimateStates {
@@ -112,6 +113,14 @@ public slots:
     void setPhaseDifference(bool isChecked) { phaseEstStates.performPhaseDifference = isChecked; };
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
+    void setSNRcheck(bool isChecked) { 
+        SNR_list.clear();
+        phaseEstStates.performSNRcheck = isChecked; 
+    }
+    
+    void setSNRthreshold(double value) { SNR_threshold = value; }
+    void resetSNRlist() { SNR_list.clear(); }
+
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
     void setPhaseEstimateParameters(phaseEstimateParameters newParams);
@@ -136,6 +145,13 @@ public slots:
     void setPhaseErrorType(int index) { phaseErrorType = index; };
 
     void sendEstStates() { emit newEstStates(phaseEstStates); }
+    void receivePrepStates(preprocessingParameters prepParams) {
+        currentPhaseEstParams.numberOfSamples = prepParams.numberOfSamples;
+        currentPhaseEstParams.downsampling_factor = prepParams.downsampling_factor;
+        setPhaseEstimateParameters(currentPhaseEstParams);
+    }
+
+    void set_processing_pause(bool pause) { processing_pause = pause; }
 
 private:
     void process();
@@ -152,6 +168,8 @@ private:
 
     int downsampled_cols;
 
+    bool processing_pause = false;
+    phaseEstimateParameters currentPhaseEstParams;
     phaseEstimateStates phaseEstStates;
 
     int spatial_channel_index = 0;
@@ -166,6 +184,10 @@ private:
     int downsampling_factor;
     int delay;
     
+    int n_SNR = 10;
+    std::vector<double> SNR_list;
+    double SNR_threshold;
+
     size_t edge;
     int filter2_length;
     int edge_cut_cols;
@@ -201,7 +223,6 @@ private:
     int display_length;
     Eigen::MatrixXd EEG_win_data_to_display;
     Eigen::MatrixXd Data_to_display;
-
 };
 
 #endif // PHASEESTIMATIONWORKER_H

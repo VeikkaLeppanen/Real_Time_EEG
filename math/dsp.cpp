@@ -27,6 +27,27 @@ Eigen::VectorXd computeAutocorrelation(const Eigen::VectorXd& data, int maxLag, 
     return autocorrelations;
 }
 
+// Function to estimate AR coefficients using Yule-Walker method
+std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule(const Eigen::VectorXd& data, int order, const std::string& norm, bool allow_singularity) {
+    Eigen::VectorXd autocorrelations = computeAutocorrelation(data, order, norm);
+
+    Eigen::MatrixXd R(order, order);
+    Eigen::VectorXd r(order);
+    for (int i = 0; i < order; ++i) {
+        r(i) = autocorrelations(i + 1);
+        for (int j = 0; j < order; ++j) {
+            R(i, j) = autocorrelations(std::abs(i - j));
+        }
+    }
+
+    // Solve the Yule-Walker equations using matrix operations
+    Eigen::VectorXd arParams = R.ldlt().solve(r);
+    double sigma2 = autocorrelations(0) - arParams.dot(r);
+    Eigen::VectorXd k = Eigen::VectorXd::Zero(order);  // Placeholder, no reflection coefficients computed here
+
+    return std::make_tuple(arParams, sigma2, k);
+}
+
 // Perform FFT using FFTW
 std::vector<std::complex<double>> performFFT(const std::vector<double>& data) {
     int N = data.size();
@@ -228,7 +249,70 @@ Eigen::VectorXd pwelch(const Eigen::VectorXd& x, unsigned int Nfft, unsigned int
     }
 }
 
-double calculateSNR(const Eigen::VectorXd& data, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
+std::tuple<Eigen::VectorXd, Eigen::VectorXd> computePSD(
+    const Eigen::VectorXd& arParams, 
+    double noiseVariance, 
+    int nfft, 
+    double Fs)
+{
+    int p = arParams.size();
+
+    // Generate the frequency vector from 0 to Fs/2
+    Eigen::VectorXd freq = Eigen::VectorXd::LinSpaced(nfft, 0, Fs / 2);
+
+    // Compute angular frequencies omega
+    Eigen::VectorXd omega = (2 * M_PI * freq.array()) / Fs;  // omega = 2*pi*f / Fs
+
+    // Create a row vector k = [1, 2, ..., p]
+    Eigen::RowVectorXd k = Eigen::RowVectorXd::LinSpaced(p, 1, p);
+
+    // Compute omega_k = omega * k (outer product)
+    Eigen::MatrixXd omega_k = omega * k; // Resulting in an nfft x p matrix
+
+    // Compute the complex exponentials e^{-j * omega_k}
+    Eigen::MatrixXcd exp_neg_j_omega_k = omega_k.unaryExpr(
+        [](double x) { return std::polar(1.0, -x); }
+    );
+
+    // Multiply the exponentials by the AR coefficients and sum over k
+    Eigen::VectorXcd denom = Eigen::VectorXcd::Ones(nfft);
+    denom -= exp_neg_j_omega_k * arParams;
+
+    // Compute the frequency response H(f) = 1 / A(e^{j * omega})
+    Eigen::VectorXcd H = denom.array().inverse();
+
+    // Compute the PSD estimate Pxx(f) = sigma2 * |H(f)|^2
+    Eigen::VectorXd Pxx = (noiseVariance * H.array().abs2()).real();
+
+    // Return the PSD estimate and the corresponding frequency vector
+    return std::make_tuple(Pxx, freq);
+}
+
+// C++ version of the SNR calculation
+double calculateSNR_max(const Eigen::VectorXd& data, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
+    // Eigen::VectorXd psd = pwelch(data.array(), nfft, overlap);
+
+    // Estimate AR coefficients and noise variance
+    auto [arParams, noiseVariance, reflectionCoeffs] = aryule(data, 200, "biased", false);
+
+    // Compute the PSD estimate
+    auto [Pxx, freq] = computePSD(arParams, noiseVariance, nfft, fs);
+
+    double df = fs / nfft; // Frequency resolution
+    int target_index = static_cast<int>(target_freq / df);
+    int half_bandwidth = static_cast<int>(bandwidth / (2 * df));
+
+    double signal_power = 0.0;
+    for (int i = target_index - half_bandwidth; i <= target_index + half_bandwidth; ++i) {
+        if (i >= 0 && i < Pxx.size()) {
+            if (Pxx(i) > signal_power) signal_power = Pxx(i);
+        }
+    }
+
+    return signal_power; // SNR in dB
+}
+
+double calculateSNR_mean(const Eigen::VectorXd& data, int overlap, int nfft, double fs, double target_freq, double bandwidth) {
     Eigen::VectorXd psd = pwelch(data.array(), nfft, overlap);
 
     double df = fs / nfft; // Frequency resolution

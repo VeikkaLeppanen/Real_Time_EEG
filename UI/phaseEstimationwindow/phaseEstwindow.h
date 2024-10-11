@@ -41,6 +41,9 @@ signals:
     void setphaseEstimateState(bool isChecked);
     void setSpatilaTargetChannel(int index);
 
+    void setSNRcheck(bool isChecked);
+    void setSNRthreshold(double value);
+
     void setPhaseEstParams(phaseEstimateParameters phaseEstParams);
 
     void setShowTriggers_A(bool isChecked);
@@ -89,6 +92,10 @@ private slots:
     void on_lineEdit_XaxisSpacing_editingFinished();
     void on_checkBox_triggers_out_stateChanged(int arg1);
     void on_comboBox_phaseError_currentIndexChanged(int index);
+
+    void on_checkBox_SNRcheck_stateChanged(int arg1);
+
+    void on_SNRtreshold_editingFinished();
 
 private:
     Ui::phaseEstwindow *ui;
