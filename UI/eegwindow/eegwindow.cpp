@@ -391,6 +391,9 @@ void eegWindow::on_checkBox_removeBCG_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setRemoveBCG(isChecked);
+    emit set_processing_pause(true);
+    emit sendPrepStates(prepParams);
+    emit set_processing_pause(false);
 }
 
 void eegWindow::on_checkBox_Xaxis_stateChanged(int arg1)

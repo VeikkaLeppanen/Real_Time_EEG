@@ -42,7 +42,7 @@ struct phaseEstimateStates {
     bool performPreprocessing = true;
     bool performPhaseEstimation = false;
     bool performSNRcheck = false;
-    bool performRemoveBCG = false;
+    bool performRemoveBCG = true;
     bool performFiltering = false;
     bool performEstimation = true;
     bool performHilbertTransform = true;
