@@ -173,7 +173,7 @@ void MainWindow::on_processing_clicked()
         phaseEstParams.downsampling_factor = tempParams.downsampling_factor;
         startPhaseEstimationprocessing(phaseEstParams);
     } else {
-        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab and start the processing thread from the preprocessing tab.");
+        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab.");
     }
 }
 

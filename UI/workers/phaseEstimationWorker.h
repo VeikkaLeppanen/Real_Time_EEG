@@ -26,7 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
-    double SNR_threshold = 1.0;
+    double SNR_threshold = 0.5;
 
     // phase estimate
     size_t edge = 35;
@@ -113,8 +113,13 @@ public slots:
     void setPhaseDifference(bool isChecked) { phaseEstStates.performPhaseDifference = isChecked; };
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
-    void setSNRcheck(bool isChecked) { phaseEstStates.performSNRcheck = isChecked; }
+    void setSNRcheck(bool isChecked) { 
+        SNR_list.clear();
+        phaseEstStates.performSNRcheck = isChecked; 
+    }
+    
     void setSNRthreshold(double value) { SNR_threshold = value; }
+    void resetSNRlist() { SNR_list.clear(); }
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
@@ -179,7 +184,10 @@ private:
     int downsampling_factor;
     int delay;
     
+    int n_SNR = 10;
+    std::vector<double> SNR_list;
     double SNR_threshold;
+
     size_t edge;
     int filter2_length;
     int edge_cut_cols;

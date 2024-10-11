@@ -102,7 +102,6 @@ void phaseEstimationWorker::process()
         int index = 0;
         int last_save_index = -1;
         std::vector<int> seqNum_list;
-        std::vector<double> max_power_list;
 
         int seq_num_tracker = 0;
         int stimulation_tracker = -1;
@@ -175,18 +174,22 @@ void phaseEstimationWorker::process()
             }
 
             double SNR = 0.0;
+            bool SNR_passed = true;
             // SNR check
             if (phaseEstStates.performSNRcheck) {
                 print_debug("SNR check");
 
                 SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 3.0);
-                // std::cout << "SNR: " << SNR << '\n';
 
-                if (SNR < SNR_threshold) {
-                    std::cout << "signal_ceiling too small: " << SNR << '\n';
-                    seq_num_tracker = sequence_number;
-                    continue;
+                if (SNR_list.size() < n_SNR) {
+                    SNR_list.push_back(SNR);
+                    SNR_passed = false;
+                } else if (SNR < SNR_threshold * (std::accumulate(SNR_list.begin(), SNR_list.end(), 0.0) / n_SNR)) {
+                    // std::cout << "SNR too low: " << SNR << std::endl;
+                    SNR_passed = false;
                 }
+                SNR_list.erase(SNR_list.begin());
+                SNR_list.push_back(SNR);
             }
 
             // Filter2
@@ -215,11 +218,10 @@ void phaseEstimationWorker::process()
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
-                if (trigger_seqNum) { 
+                if (trigger_seqNum && SNR_passed) { 
 
                     if (/*trigger_seqNum > 300000 && */trigger_seqNum > 200 + last_save_index) {
-                        seqNum_list.push_back(sequence_number);
-                        max_power_list.push_back(SNR);
+                        seqNum_list.push_back(trigger_seqNum);
                         // std::cout << "Trigger inserted: " << seqNum << std::endl;
                     }
 
@@ -324,7 +326,6 @@ void phaseEstimationWorker::process()
 
         std::cout << "Saving data..." << seqNum_list.size() << std::endl;
         writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
-        writeMatrixdToCSV("trigger_max_power.csv", vectorToColumnMatrixd(max_power_list));
         
         emit finished();
     } catch (std::exception& e) {
