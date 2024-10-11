@@ -50,7 +50,7 @@ public slots:
     void updateData();
     void preProcessing_start();
     void preProcessing_stop();
-    void newEstStates(phaseEstimateStates states);
+    void newBCGState(bool state);
 
 signals:
     void connectEegBridge(int port, int timeout);
@@ -71,7 +71,7 @@ signals:
     void setDrawXaxis(bool isChecked);
     void updateTLineSpacing(int value);
 
-    void requestEstStates();
+    void requestBCGState();
     void sendPrepStates(preprocessingParameters prepParams);
     void set_processing_pause(bool pause);
 
