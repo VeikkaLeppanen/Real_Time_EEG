@@ -245,15 +245,16 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    // // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/testdata_veikka_raw.csv");
     // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     // std::ifstream csvFile("/home/user/EEG/data/testdata_interleaved_sept.csv");
+    // std::ifstream csvFile("/home/user/EEG/data/testdata_continuous_sept.csv");
     std::ifstream csvFile("/home/user/EEG/data/5_eeg_7_cwl_reference.csv");
     // std::ifstream csvFile("/home/user/EEG/data/testdata_sine.csv");
     // std::ifstream csvFile("/home/veikka/Work/EEG/DataStream/mat_file_conversion/testdata_veikka_raw.csv");
     std::string line;
     uint32_t sequenceNumber = 0;
-    auto sleepDurationMicroseconds = static_cast<long long>(1000000) / 3000; // SAMPLINGRATE;
+    auto sleepDurationMicroseconds = static_cast<long long>(1000000) / SAMPLINGRATE;
 
     auto startTimePoint = std::chrono::system_clock::now();
     auto lastTimePoint = std::chrono::steady_clock::now();
@@ -276,7 +277,7 @@ int main() {
         sendUDP(samplePacket, IP_address, PORT);
 
         std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - lastTimePoint;
-        // std::cout << "Package " << sequenceNumber << " sent! Time since last packet: " << elapsed.count() << " seconds.\n";
+        std::cout << "Package " << sequenceNumber << " sent! Time since last packet: " << elapsed.count() << " seconds.\n";
 
         // Throttle sending to maintain sampling rate
         std::this_thread::sleep_for(std::chrono::microseconds(sleepDurationMicroseconds));
