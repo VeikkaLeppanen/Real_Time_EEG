@@ -179,17 +179,21 @@ void phaseEstimationWorker::process()
             if (phaseEstStates.performSNRcheck) {
                 print_debug("SNR check");
 
-                SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 3.0);
+                SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 6.0);
 
                 if (SNR_list.size() < n_SNR) {
                     SNR_list.push_back(SNR);
                     SNR_passed = false;
-                } else if (SNR < SNR_threshold * (std::accumulate(SNR_list.begin(), SNR_list.end(), 0.0) / n_SNR)) {
-                    // std::cout << "SNR too low: " << SNR << std::endl;
-                    SNR_passed = false;
+                // } else if (SNR < SNR_threshold * (std::accumulate(SNR_list.begin(), SNR_list.end(), 0.0) / n_SNR)) {
+                } else {
+                    double SNR_max = *std::max_element(SNR_list.begin(), SNR_list.end());
+                    if (SNR < SNR_threshold * SNR_max) {
+                        // std::cout << "SNR too low: " << SNR << std::endl;
+                        SNR_passed = false;
+                    }
                 }
-                SNR_list.erase(SNR_list.begin());
-                SNR_list.push_back(SNR);
+                // SNR_list.erase(SNR_list.begin());
+                // SNR_list.push_back(SNR);
             }
 
             // Filter2
@@ -220,12 +224,11 @@ void phaseEstimationWorker::process()
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum && SNR_passed) { 
 
-                    if (/*trigger_seqNum > 300000 && */trigger_seqNum > 200 + last_save_index) {
+                    if (/*trigger_seqNum > 300000 && */trigger_seqNum > 5000 + last_save_index) {
                         seqNum_list.push_back(trigger_seqNum);
                         // std::cout << "Trigger inserted: " << seqNum << std::endl;
+                        last_save_index = trigger_seqNum;
                     }
-
-                    last_save_index = trigger_seqNum;
 
                     handler.insertTrigger(trigger_seqNum); 
                     if (stimulation_tracker < 0) stimulation_tracker++;
@@ -322,6 +325,7 @@ void phaseEstimationWorker::process()
             seq_num_tracker = sequence_number;
 
             print_debug("Processing end");
+
         }
 
         std::cout << "Saving data..." << seqNum_list.size() << std::endl;

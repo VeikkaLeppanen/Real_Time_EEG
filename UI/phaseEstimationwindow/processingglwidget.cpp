@@ -154,7 +154,7 @@ void ProcessingGlWidget::paintGL()
     // Initialize tracker to the next whole second
     double time_line_spacing_seconds = time_line_spacing * 1e-3;
     double initialTimeInSeconds = time_stamps_(0) / 1e3;
-    double tracker = std::ceil(initialTimeInSeconds);
+    double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
 
     if (drawXaxis) {
         // Enable stipple for dashed lines

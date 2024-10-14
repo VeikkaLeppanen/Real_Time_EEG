@@ -92,7 +92,7 @@ private:
     volatile std::sig_atomic_t &processingWorkerRunning;
     QFuture<void> process_future;
 
-    bool performRemoveBCG = true;
+    bool performRemoveBCG = false;
 
     bool processing_pause = false;
     preprocessingParameters currentPrepParams;

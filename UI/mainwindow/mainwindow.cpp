@@ -110,7 +110,7 @@ void MainWindow::on_EEG_clicked()
 
     if (preProcessingworker) {
         connect_EEG_Prepworker();
-        emit eegwindow->requestBCGState();
+        // emit eegwindow->requestBCGState();
     }
 }
 
@@ -204,7 +204,7 @@ void MainWindow::connect_EEG_Prepworker()
 {
     QObject::connect(preProcessingworker, &preProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
     QObject::connect(preProcessingworker, &preProcessingWorker::newBCGState, eegwindow, &eegWindow::newBCGState);
-    QObject::connect(eegwindow, &eegWindow::requestBCGState, preProcessingworker, &preProcessingWorker::sendBCGState);
+    // QObject::connect(eegwindow, &eegWindow::requestBCGState, preProcessingworker, &preProcessingWorker::sendBCGState);
     QObject::connect(eegwindow, &eegWindow::sendPrepStates, preProcessingworker, &preProcessingWorker::setPreprocessingParameters);
     QObject::connect(eegwindow, &eegWindow::setRemoveBCG, preProcessingworker, &preProcessingWorker::setRemoveBCG);
     QObject::connect(eegwindow, &eegWindow::set_processing_pause, preProcessingworker, &preProcessingWorker::set_processing_pause);

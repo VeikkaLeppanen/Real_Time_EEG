@@ -26,7 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
-    double SNR_threshold = 0.5;
+    double SNR_threshold = 0.3;
 
     // phase estimate
     size_t edge = 35;
@@ -42,7 +42,7 @@ struct phaseEstimateStates {
     bool performPreprocessing = true;
     bool performPhaseEstimation = false;
     bool performSNRcheck = false;
-    bool performRemoveBCG = true;
+    bool performRemoveBCG = false;
     bool performFiltering = false;
     bool performEstimation = true;
     bool performHilbertTransform = true;
@@ -184,7 +184,7 @@ private:
     int downsampling_factor;
     int delay;
     
-    int n_SNR = 10;
+    int n_SNR = 2000;
     std::vector<double> SNR_list;
     double SNR_threshold;
 
