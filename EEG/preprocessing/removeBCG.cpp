@@ -1,4 +1,12 @@
 #include "removeBCG.h"
+void pin_thread_to_core(int core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+
+    pthread_t current_thread = pthread_self();
+    pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+}
 
 // Function to perform delay embedding of a signal with incremental shifts and edge value padding
 void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
@@ -12,6 +20,10 @@ void delayEmbed(const Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int step) {
     // Apply shifts to the left and right
     #pragma omp parallel for
     for (int offset = 1; offset <= step; ++offset) {
+        // int thread_id = omp_get_thread_num();
+        // int core_id = thread_id;  // You can modify this to map thread IDs to specific cores if needed.
+        // pin_thread_to_core(core_id); // Pin this OpenMP thread to the specific core
+
         int leftStartRow = originalStartRow - offset * n;
         int rightStartRow = originalStartRow + offset * n;
 

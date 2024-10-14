@@ -59,7 +59,7 @@ void preProcessingWorker::process()
 
     int number_of_threads = std::thread::hardware_concurrency() - 4;
     Eigen::setNbThreads(number_of_threads);
-    omp_set_num_threads(number_of_threads);
+    omp_set_num_threads(1);
     
     int eigen_threads = Eigen::nbThreads();
     std::cout << "Eigen is using " << eigen_threads << " threads." << std::endl;
