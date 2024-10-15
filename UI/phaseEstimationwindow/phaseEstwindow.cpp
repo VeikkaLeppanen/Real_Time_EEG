@@ -15,6 +15,11 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
     ui->setupUi(this);
 
     // Initialize values for lineEdits
+    ui->SNRmax->setText(QString::number(0.0f));
+    ui->SNRmax->setAttribute(Qt::WA_Hover);         // Enable hover events
+    ui->SNRmax->setMouseTracking(true);             // Enable mouse tracking
+    ui->SNRmax->setAttribute(Qt::WA_AlwaysShowToolTips);  // Always show tooltips, even if the widget is disabled
+
     ui->SNRtreshold->setText(QString::number(phaseEstParams.SNR_threshold));
     ui->edge->setText(QString::number(phaseEstParams.edge));
     ui->modelOrder->setText(QString::number(phaseEstParams.modelOrder));
@@ -24,6 +29,8 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
     ui->lineEdit_XaxisSpacing->setText(QString::number(500));
     ui->checkBox_Stimulation->setChecked(handler.getTriggerEnableStatus());
 
+    ui->tabWidget->setTabText(0, "Phase Estimation");
+    ui->tabWidget->setTabText(1, "View");
     ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
     ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
     ui->checkBox_triggers_out->setStyleSheet("QCheckBox { color : cyan; }");
@@ -340,6 +347,45 @@ void phaseEstwindow::on_SNRtreshold_editingFinished()
     double value = ui->SNRtreshold->text().toDouble(&ok);
     if (ok) {
         emit setSNRthreshold(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void phaseEstwindow::newSNRmax_list(const std::vector<double>& list)
+{
+    // Initialize an empty QString to hold the tooltip text
+    QString tooltipText;
+
+    // Loop through the list and append each value to the tooltip text
+    for (size_t i = 0; i < list.size(); ++i) {
+        // Format each value with a label or index if desired
+        tooltipText += QString("SNR max %1: %2").arg(i + 1).arg(list[i], 0, 'f', 2);
+
+        // Add a newline character after each value except the last one
+        if (i < list.size() - 1) {
+            tooltipText += "\n";
+        }
+    }
+
+    tooltipText += "\n";
+    tooltipText += QString("Mean: %2").arg(std::accumulate(list.begin(), list.end(), 0.0) / list.size(), 0, 'f', 2);
+    
+    ui->SNRmax->setToolTip(tooltipText);
+}
+
+
+void phaseEstwindow::newSNRmax(double value) 
+{
+    ui->SNRmax->setText(QString::number(value));
+}
+
+void phaseEstwindow::on_SNRmax_editingFinished()
+{
+    bool ok;
+    double value = ui->SNRmax->text().toDouble(&ok);
+    if (ok) {
+        emit sendSNRmax(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }

@@ -103,8 +103,8 @@ void phaseEstimationWorker::process()
         int last_save_index = -1;
         std::vector<int> seqNum_list;
 
+        int last_SNR_pass = 0;
         int seq_num_tracker = 0;
-        int stimulation_tracker = -1;
         while(processingWorkerRunning) {
             if (processing_pause) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -113,6 +113,7 @@ void phaseEstimationWorker::process()
             
             print_debug("Processing start");
 
+            if (sequence_number > 1000000) processingWorkerRunning = false;
 
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) {
@@ -173,28 +174,48 @@ void phaseEstimationWorker::process()
                 std::cerr << "Error: Row index is out of bounds." << std::endl;
             }
 
-            double SNR = 0.0;
             bool SNR_passed = true;
             // SNR check
             if (phaseEstStates.performSNRcheck) {
                 print_debug("SNR check");
 
-                SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 6.0);
+                double SNR = calculateSNR_max(EEG_spatial.tail(filter2_length), 64, 256, 500.0, 10.0, 6.0);
 
-                if (SNR_list.size() < n_SNR) {
-                    SNR_list.push_back(SNR);
+                if (SNR_max_list.size() < n_SNR_max) {
+
+                    if (!SNR_max_set) {
+                        if (SNR_list.size() < n_SNR) {
+                            SNR_list.push_back(SNR);
+                        } else {
+                            SNR_max_temp = *std::max_element(SNR_list.begin(), SNR_list.end());
+                            SNR_max_set = true;
+                        }
+                    } else {
+
+                        //Choose the max or mean of the SNR_max_list for the SNR check
+                        if (SNR_max_final < SNR_max_temp) SNR_max_final = SNR_max_temp;
+                        emit sendSNRmax(SNR_max_final);
+
+                        SNR_max_list.push_back(SNR_max_temp);
+                        SNR_list.clear();
+                        SNR_max_set = false;
+                        emit sendSNRmax_list(SNR_max_list);
+                    }
+
                     SNR_passed = false;
-                // } else if (SNR < SNR_threshold * (std::accumulate(SNR_list.begin(), SNR_list.end(), 0.0) / n_SNR)) {
+
                 } else {
-                    double SNR_max = *std::max_element(SNR_list.begin(), SNR_list.end());
-                    if (SNR < SNR_threshold * SNR_max) {
+                    if (SNR < SNR_max_final * SNR_threshold) {
                         // std::cout << "SNR too low: " << SNR << std::endl;
                         SNR_passed = false;
                     }
                 }
-                // SNR_list.erase(SNR_list.begin());
-                // SNR_list.push_back(SNR);
+
+                // Extra check that ensures the last 200 samples did not pass the SNR check ensuring that we are at the beginning of a clean epoch
+                // if (sequence_number < 200 + last_SNR_pass) SNR_passed = false;
             }
+
+            // if (SNR_passed) last_SNR_pass = sequence_number;
 
             // Filter2
             print_debug("Second filtering");
@@ -224,14 +245,13 @@ void phaseEstimationWorker::process()
                 int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum && SNR_passed) { 
 
-                    if (/*trigger_seqNum > 300000 && */trigger_seqNum > 5000 + last_save_index) {
+                    if (sequence_number > 40000 && trigger_seqNum > 200 + last_save_index) {
                         seqNum_list.push_back(trigger_seqNum);
-                        // std::cout << "Trigger inserted: " << seqNum << std::endl;
                         last_save_index = trigger_seqNum;
                     }
+                    // if (sequence_number > 40000) seqNum_list.push_back(trigger_seqNum);
 
-                    handler.insertTrigger(trigger_seqNum); 
-                    if (stimulation_tracker < 0) stimulation_tracker++;
+                    handler.insertTrigger(trigger_seqNum);
                 }
             }
 
@@ -327,8 +347,8 @@ void phaseEstimationWorker::process()
             print_debug("Processing end");
 
         }
-
-        std::cout << "Saving data..." << seqNum_list.size() << std::endl;
+        std::cout << "SNR max: " << SNR_max_final << std::endl;
+        std::cout << "Phase estimation finished. Saving data..." << seqNum_list.size() << std::endl;
         writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
         
         emit finished();

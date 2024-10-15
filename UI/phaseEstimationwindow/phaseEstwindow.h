@@ -42,6 +42,7 @@ signals:
     void setSpatilaTargetChannel(int index);
 
     void setSNRcheck(bool isChecked);
+    void sendSNRmax(double value);
     void setSNRthreshold(double value);
 
     void setPhaseEstParams(phaseEstimateParameters phaseEstParams);
@@ -65,6 +66,8 @@ public slots:
     void updateSpatialChannelNames(std::vector<std::string> names);
     void setNumSamples(int numSamples) { if (processingglWidget) processingglWidget->updateWindowLength_seconds(numSamples / sampling_rate_); }
     void newEstStates(phaseEstimateStates states);
+    void newSNRmax(double value);
+    void newSNRmax_list(const std::vector<double>& list);
 
 private slots:
     void on_edge_editingFinished();
@@ -96,6 +99,8 @@ private slots:
     void on_checkBox_SNRcheck_stateChanged(int arg1);
 
     void on_SNRtreshold_editingFinished();
+
+    void on_SNRmax_editingFinished();
 
 private:
     Ui::phaseEstwindow *ui;

@@ -196,6 +196,12 @@ void MainWindow::connect_processing_worker()
     QObject::connect(phaseEstwin, &phaseEstwindow::setSNRthreshold, phaseEstworker, &phaseEstimationWorker::setSNRthreshold);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
+
+    //SNR
+    QObject::connect(phaseEstwin, &phaseEstwindow::sendSNRmax, phaseEstworker, &phaseEstimationWorker::setSNRmax);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax, phaseEstwin, &phaseEstwindow::newSNRmax);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax_list, phaseEstwin, &phaseEstwindow::newSNRmax_list);
+    
     QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
     QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
 }

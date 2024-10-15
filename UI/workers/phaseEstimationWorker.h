@@ -89,6 +89,9 @@ signals:
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
     void sendNumSamples(int numSamples);
     void newEstStates(phaseEstimateStates states);
+    
+    void sendSNRmax(double value);
+    void sendSNRmax_list(const std::vector<double>& list);
 
 public slots:
     void process_start() {
@@ -114,12 +117,18 @@ public slots:
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
     void setSNRcheck(bool isChecked) { 
+        SNR_max_set = false;
         SNR_list.clear();
+        SNR_max_list.clear();
         phaseEstStates.performSNRcheck = isChecked; 
     }
     
+    void setSNRmax(double value) { SNR_max_final = value; }
     void setSNRthreshold(double value) { SNR_threshold = value; }
-    void resetSNRlist() { SNR_list.clear(); }
+    // void resetSNRlist() { 
+    //     SNR_max_set = false;
+    //     SNR_list.clear(); 
+    // }
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
@@ -184,8 +193,14 @@ private:
     int downsampling_factor;
     int delay;
     
+    // SNR check variables
     int n_SNR = 2000;
+    int n_SNR_max = 10;
     std::vector<double> SNR_list;
+    std::vector<double> SNR_max_list;
+    double SNR_max_temp = 0.0;
+    double SNR_max_final = 0.0;
+    bool SNR_max_set = false;
     double SNR_threshold;
 
     size_t edge;
