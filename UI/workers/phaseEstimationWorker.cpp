@@ -113,7 +113,7 @@ void phaseEstimationWorker::process()
             
             print_debug("Processing start");
 
-            if (sequence_number > 1000000) processingWorkerRunning = false;
+            // if (sequence_number > 1000000) processingWorkerRunning = false;
 
             // Check if current sample is processed
             if (seq_num_tracker == sequence_number) {
@@ -151,10 +151,8 @@ void phaseEstimationWorker::process()
                 int outer_channel_index = 0;
                 for (int i = 0; i < EEG_corrected.rows(); i++) {
                     if (i == spatial_channel_index) {
-                        outer_channel_index++;
                         continue;
                     }
-
                     if (outerElectrodeCheckStates_[outer_channel_index]) {
                         sum_of_rows += EEG_corrected.row(i);
                     }
@@ -193,10 +191,11 @@ void phaseEstimationWorker::process()
                     } else {
 
                         //Choose the max or mean of the SNR_max_list for the SNR check
-                        if (SNR_max_final < SNR_max_temp) SNR_max_final = SNR_max_temp;
+                        // if (SNR_max_final < SNR_max_temp) SNR_max_final = SNR_max_temp;
+                        SNR_max_list.push_back(SNR_max_temp);
+                        SNR_max_final = std::accumulate(SNR_max_list.begin(), SNR_max_list.end(), 0.0) / SNR_max_list.size();
                         emit sendSNRmax(SNR_max_final);
 
-                        SNR_max_list.push_back(SNR_max_temp);
                         SNR_list.clear();
                         SNR_max_set = false;
                         emit sendSNRmax_list(SNR_max_list);

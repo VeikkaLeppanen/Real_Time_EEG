@@ -368,6 +368,10 @@ void phaseEstwindow::newSNRmax_list(const std::vector<double>& list)
         }
     }
 
+    double Total_max = *std::max_element(list.begin(), list.end());
+
+    tooltipText += "\n";
+    tooltipText += QString("Max: %2").arg(Total_max, 0, 'f', 2);
     tooltipText += "\n";
     tooltipText += QString("Mean: %2").arg(std::accumulate(list.begin(), list.end(), 0.0) / list.size(), 0, 'f', 2);
     
