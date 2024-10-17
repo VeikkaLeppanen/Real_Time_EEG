@@ -182,32 +182,37 @@ void phaseEstimationWorker::process()
                 if (SNR_max_list.size() < n_SNR_max) {
 
                     if (!SNR_max_set) {
+
                         if (SNR_list.size() < n_SNR) {
                             SNR_list.push_back(SNR);
                         } else {
                             SNR_max_temp = *std::max_element(SNR_list.begin(), SNR_list.end());
                             SNR_max_set = true;
                         }
+
                     } else {
+
+                        SNR_max_list.push_back(SNR_max_temp);
 
                         //Choose the max or mean of the SNR_max_list for the SNR check
                         // if (SNR_max_final < SNR_max_temp) SNR_max_final = SNR_max_temp;
-                        SNR_max_list.push_back(SNR_max_temp);
                         SNR_max_final = std::accumulate(SNR_max_list.begin(), SNR_max_list.end(), 0.0) / SNR_max_list.size();
                         emit sendSNRmax(SNR_max_final);
 
                         SNR_list.clear();
                         SNR_max_set = false;
                         emit sendSNRmax_list(SNR_max_list);
+
                     }
 
                     SNR_passed = false;
 
                 } else {
+
                     if (SNR < SNR_max_final * SNR_threshold) {
-                        // std::cout << "SNR too low: " << SNR << std::endl;
                         SNR_passed = false;
                     }
+
                 }
 
                 // Extra check that ensures the last 200 samples did not pass the SNR check ensuring that we are at the beginning of a clean epoch

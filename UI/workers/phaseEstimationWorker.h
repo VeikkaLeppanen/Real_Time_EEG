@@ -194,7 +194,7 @@ private:
     int delay;
     
     // SNR check variables
-    int n_SNR = 200;
+    int n_SNR = 500;
     int n_SNR_max = 10;
     std::vector<double> SNR_list;
     std::vector<double> SNR_max_list;
