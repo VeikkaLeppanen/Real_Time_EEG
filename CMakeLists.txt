@@ -25,6 +25,12 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+include_directories("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/install/include/nibrary_v0.1.0")
+link_directories("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/install/lib/nibrary_v0.1.0")
+set(ZLIB_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/external/zlib/src/build_zlib-build")
+set(GEOG_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/external/geogram/src/build_geogram-build")
+
+# add_subdirectory(external/nibrary)
 
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
 file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
@@ -43,6 +49,9 @@ add_executable(real_time_eeg ${SOURCES}
     UI/TMSwindow.ui
     UI/phaseEstwindow.ui)
 
+target_include_directories(real_time_eeg PRIVATE "${ZLIB_ROOT}")
+target_include_directories(real_time_eeg PRIVATE "${GEOG_ROOT}")
+
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::OpenGL
@@ -51,6 +60,9 @@ target_link_libraries(real_time_eeg PRIVATE
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
+    /home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/libNibrary.a
+    "${ZLIB_ROOT}/libz.a"
+    "${GEOG_ROOT}/lib/libgeogram.a"
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)

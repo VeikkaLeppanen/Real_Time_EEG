@@ -13,6 +13,8 @@
 
 #include <algorithm>
 
+#include <image/image.h>
+
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT

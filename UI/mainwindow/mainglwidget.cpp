@@ -7,6 +7,12 @@ MainGlWidget::MainGlWidget(QWidget *parent)
     matrixCapasity_ = 30000;
     n_channels_ = 0;
     dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
+    
+    std::cout << "Loading dMRI image" << std::endl;
+    std::string inp_dMRI_img = "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/devices/MRI/T1.nii.gz";
+    NIBR::Image<float> dMRI_image(inp_dMRI_img);
+    dMRI_image.read();
+    std::cout << "Image loaded, voxel count: " << dMRI_image.voxCnt << std::endl;
 
     connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
