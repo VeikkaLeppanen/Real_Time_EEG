@@ -11,9 +11,8 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     resize(1280, 720);
 
     MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (false && mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET
+    if (mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET
 
-        connect(mainglWidget, &MainGlWidget::fetchData, this, &MainWindow::updateData);
 
     } else {
         // Error handling if glWidget is not found
@@ -31,7 +30,7 @@ void MainWindow::updateData()
     MainGlWidget* mainglWidget = ui->mainGlWidget;
     if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
-        mainglWidget->updateMatrix(processed_data);
+        // mainglWidget->updateMatrix(processed_data);
     }
 }
 
@@ -179,31 +178,31 @@ void MainWindow::on_processing_clicked()
 
 void MainWindow::connect_processing_worker()
 {
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updatePhaseEstDisplayedData, phaseEstwin->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updatePhaseEstwindowNames, phaseEstwin->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updateSpatialChannelNames, phaseEstwin, &phaseEstwindow::updateSpatialChannelNames);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setFilterState, phaseEstworker, &phaseEstimationWorker::setFilterState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setEEGViewState, phaseEstworker, &phaseEstimationWorker::setEEGViewState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setphaseEstimateState, phaseEstworker, &phaseEstimationWorker::setPhaseEstimationState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseTargetingState, phaseEstworker, &phaseEstimationWorker::setPhaseTargetingState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseEstParams, phaseEstworker, &phaseEstimationWorker::setPhaseEstimateParameters);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseError, phaseEstworker, &phaseEstimationWorker::setPhaseDifference);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSpatilaTargetChannel, phaseEstworker, &phaseEstimationWorker::setSpatilaTargetChannel);
-    QObject::connect(phaseEstwin, &phaseEstwindow::outerElectrodesStateChanged, phaseEstworker, &phaseEstimationWorker::outerElectrodesStateChanged);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseErrorType, phaseEstworker, &phaseEstimationWorker::setPhaseErrorType);
-    QObject::connect(phaseEstwin, &phaseEstwindow::requestEstStates, phaseEstworker, &phaseEstimationWorker::sendEstStates);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRcheck, phaseEstworker, &phaseEstimationWorker::setSNRcheck);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRthreshold, phaseEstworker, &phaseEstimationWorker::setSNRthreshold);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updatePhaseEstDisplayedData,    phaseEstwin->getProcessingGlWidget(),       &ProcessingGlWidget::updateMatrix);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updatePhaseEstwindowNames,      phaseEstwin->getProcessingGlWidget(),       &ProcessingGlWidget::updateChannelNamesSTD);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updateSpatialChannelNames,      phaseEstwin,                                &phaseEstwindow::updateSpatialChannelNames);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setFilterState,                        phaseEstworker,                             &phaseEstimationWorker::setFilterState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setEEGViewState,                       phaseEstworker,                             &phaseEstimationWorker::setEEGViewState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setphaseEstimateState,                 phaseEstworker,                             &phaseEstimationWorker::setPhaseEstimationState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseTargetingState,                phaseEstworker,                             &phaseEstimationWorker::setPhaseTargetingState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseEstParams,                     phaseEstworker,                             &phaseEstimationWorker::setPhaseEstimateParameters);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseError,                         phaseEstworker,                             &phaseEstimationWorker::setPhaseDifference);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSpatilaTargetChannel,               phaseEstworker,                             &phaseEstimationWorker::setSpatilaTargetChannel);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::outerElectrodesStateChanged,           phaseEstworker,                             &phaseEstimationWorker::outerElectrodesStateChanged);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseErrorType,                     phaseEstworker,                             &phaseEstimationWorker::setPhaseErrorType);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::requestEstStates,                      phaseEstworker,                             &phaseEstimationWorker::sendEstStates);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSNRcheck,                           phaseEstworker,                             &phaseEstimationWorker::setSNRcheck);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSNRthreshold,                       phaseEstworker,                             &phaseEstimationWorker::setSNRthreshold);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendNumSamples,                 phaseEstwin,                                &phaseEstwindow::setNumSamples);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::newEstStates,                   phaseEstwin,                                &phaseEstwindow::newEstStates);
 
     //SNR
-    QObject::connect(phaseEstwin, &phaseEstwindow::sendSNRmax, phaseEstworker, &phaseEstimationWorker::setSNRmax);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax, phaseEstwin, &phaseEstwindow::newSNRmax);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax_list, phaseEstwin, &phaseEstwindow::newSNRmax_list);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::sendSNRmax,                            phaseEstworker,                             &phaseEstimationWorker::setSNRmax);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendSNRmax,                     phaseEstwin,                                &phaseEstwindow::newSNRmax);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendSNRmax_list,                phaseEstwin,                                &phaseEstwindow::newSNRmax_list);
     
-    QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
-    QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
+    QObject::connect(eegwindow,         &eegWindow::sendPrepStates,                             phaseEstworker,                             &phaseEstimationWorker::receivePrepStates);
+    QObject::connect(eegwindow,         &eegWindow::set_processing_pause,                       phaseEstworker,                             &phaseEstimationWorker::set_processing_pause);
 }
 
 void MainWindow::connect_EEG_Prepworker()

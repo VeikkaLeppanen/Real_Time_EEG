@@ -4,15 +4,10 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QTimer>
-#include <QLabel>
-#include <algorithm>
-#include "../dataHandler/dataHandler.h"
-#include <QPainter>
-#include <QFont>
-#include <QString>
-
-#include <algorithm>
-
+#include <iostream>
+#include <float.h>
+#include <QMouseEvent>
+#include <QWheelEvent>
 #include <image/image.h>
 
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -21,66 +16,43 @@ class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 
 public:
     explicit MainGlWidget(QWidget *parent = nullptr);
-
-signals:
-    void fetchData();
+    void setSliceIndices(int new_i, int new_j, int new_k);
 
 protected:
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override; // Add this line
+    void mouseReleaseEvent(QMouseEvent *event) override; // Add this line
+    void wheelEvent(QWheelEvent *event) override; // Add this line
 
-public slots:
-    void updateMatrix(Eigen::MatrixXd &newMatrix) {
-        // Check if dimensions differ
-        if (dataMatrix_.rows() != newMatrix.rows() || dataMatrix_.cols() != newMatrix.cols()) {
-            // Resize dataMatrix_ to match the dimensions of newMatrix
-            dataMatrix_.resize(newMatrix.rows(), newMatrix.cols());
-        }
-
-        // Assign the new matrix
-        dataMatrix_ = newMatrix;
-
-        // Update other attributes based on the new matrix
-        matrixCapasity_ = newMatrix.cols(); 
-        n_channels_ = newMatrix.rows();
-    }
-
-    void updateMatrix(Eigen::VectorXd &newVector) {
-        // Check if dimensions differ
-        if (dataMatrix_.rows() != newVector.rows() || dataMatrix_.cols() != newVector.cols()) {
-            // Resize dataMatrix_ to match the dimensions of newMatrix
-            dataMatrix_.resize(newVector.rows(), newVector.cols());
-        }
-
-        // Assign the new matrix
-        dataMatrix_.row(0) = newVector;
-
-        // Update other attributes based on the new matrix
-        matrixCapasity_ = newVector.cols(); 
-        n_channels_ = newVector.rows();
-    }
-
-    void updateChannelDisplayState(std::vector<bool> channelCheckStates) { channelCheckStates_ = channelCheckStates; }
+private slots:
     void updateGraph();
-    void updateChannelNamesQt(QStringList channelNames) { channelNames_ = channelNames; }
-    void updateChannelNamesSTD(std::vector<std::string> channelNames) {
-        QStringList newNames;
-        for(size_t i = 0; i < channelNames.size(); i++) {
-            newNames.append(QString::fromStdString(channelNames[i])); 
-        }
-        channelNames_ = newNames;
-    }
-    void scaleDrawStateChanged(bool isChecked) { draw_channel_scales = isChecked; }
 
 private:
-    Eigen::MatrixXd dataMatrix_;
-    std::vector<bool> channelCheckStates_;
-    bool draw_channel_scales = false;
-    QStringList channelNames_;
+    // MRI image data
+    NIBR::Image<float> dMRI_image;
+    float minValue;
+    float maxValue;
 
-    int matrixCapasity_;
-    int n_channels_;
+    // Slice indices for each plane
+    int i; // Sagittal (along x-axis)
+    int j; // Coronal (along y-axis)
+    int k; // Axial (along z-axis)
+
+    // Mouse event handlers
+    void handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);
+    void handleCoronalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);
+    void handleSagittalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);
+
+    // Scroll event handlers
+    void handleAxialScroll(QWheelEvent *event);
+    void handleCoronalScroll(QWheelEvent *event);
+    void handleSagittalScroll(QWheelEvent *event);
+    
+    // Mouse state
+    bool mousePressed; // Add this line
 };
 
 #endif // MAINGLWIDGET_H
