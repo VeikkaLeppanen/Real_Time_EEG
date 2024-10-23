@@ -464,24 +464,24 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 
         if (viewportIndex == 0) {
             // Axial slice (x, y plane)
-            scaleX = (dMRI_image.imgDims[0] / zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[1] / zoomFactor) / widgetHeight;
+            scaleX = (dMRI_image.imgDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (dMRI_image.imgDims[1] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
             panOffset.setY(panOffset.y() - deltaY * scaleY);
 
         } else if (viewportIndex == 1) {
             // Coronal slice (x, z plane)
-            scaleX = (dMRI_image.imgDims[0] / zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[2] / zoomFactor) / widgetHeight;
+            scaleX = (dMRI_image.imgDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (dMRI_image.imgDims[2] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
 
         } else {
             // Sagittal slice (y, z plane)
-            scaleX = (dMRI_image.imgDims[1] / zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[2] / zoomFactor) / widgetHeight;
+            scaleX = (dMRI_image.imgDims[1] + zoomFactor) / viewportWidth;
+            scaleY = (dMRI_image.imgDims[2] + zoomFactor) / widgetHeight;
 
             panOffset.setY(panOffset.y() - deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
