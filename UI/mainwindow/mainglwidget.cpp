@@ -1,35 +1,24 @@
 #include "mainglwidget.h"
 
 MainGlWidget::MainGlWidget(QWidget *parent)
-    : QOpenGLWidget(parent), 
-      dMRI_image("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/devices/MRI/T1.nii.gz"), 
+    : QOpenGLWidget(parent),
       mousePressed(false),
       zoomFactor(1.0f),
-      panOffset(0.0f, 0.0f, 0.0f) // Initialize panOffset as QVector3D
+      panOffset(0.0f, 0.0f, 0.0f)
 {
-    QTimer *timer = new QTimer(this);
+    // Initialize minValue and maxValue
+    minValue = 0.0f;
+    maxValue = 1.0f;
 
-    std::cout << "Loading dMRI image" << std::endl;
-    dMRI_image.read();
-    dMRI_image.printInfo();
+    // Initialize slice indices
+    i = j = k = 0;
 
-    // Compute min and max voxel values
-    minValue = FLT_MAX;
-    maxValue = -FLT_MAX;
-    for (int idx = 0; idx < dMRI_image.voxCnt; ++idx) {
-        float value = dMRI_image.data[idx];
-        if (value < minValue) minValue = value;
-        if (value > maxValue) maxValue = value;
-    }
-    std::cout << "Voxel value range: [" << minValue << ", " << maxValue << "]" << std::endl;
-
-    // Set default slice indices to the middle of the image
-    i = dMRI_image.imgDims[0] / 2; // Sagittal slice index
-    j = dMRI_image.imgDims[1] / 2; // Coronal slice index
-    k = dMRI_image.imgDims[2] / 2; // Axial slice index
+    overlayOpacity = 0.5f;
     
     this->setFocusPolicy ( Qt::StrongFocus );
-    
+
+    // Set up the timer for updating the graph
+    QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -40,6 +29,94 @@ void MainGlWidget::setSliceIndices(int new_i, int new_j, int new_k)
     j = new_j;
     k = new_k;
     update(); // Trigger a repaint
+}
+
+Eigen::Matrix4f MainGlWidget::constructMatrix(float ijk2xyz[3][4]) {
+    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            mat(row, col) = ijk2xyz[row][col];
+        }
+    }
+    return mat;
+}
+
+void MainGlWidget::loadImage_T1(const QString& filePath)
+{
+    // Load the new MRI image
+    std::cout << "\nLoading MRI image from: " << filePath.toStdString() << std::endl;
+
+    NIBR::Image<float> newImage(filePath.toStdString());
+    dMRI_image = newImage;
+    dMRI_image.read();
+    dMRI_image.printInfo();
+
+    // Check if the image was loaded successfully
+    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+        std::cerr << "Failed to load image from: " << filePath.toStdString() << std::endl;
+        return;
+    }
+
+    // Recalculate minValue and maxValue
+    minValue = FLT_MAX;
+    maxValue = -FLT_MAX;
+    for (int idx = 0; idx < dMRI_image.voxCnt; ++idx) {
+        float value = dMRI_image.data[idx];
+        if (value < minValue) minValue = value;
+        if (value > maxValue) maxValue = value;
+    }
+    std::cout << "Voxel value range: [" << minValue << ", " << maxValue << "]" << std::endl;
+
+    // Update slice indices to the middle of the new image dimensions
+    i = dMRI_image.imgDims[0] / 2; // Sagittal (x-axis)
+    j = dMRI_image.imgDims[1] / 2; // Coronal (y-axis)
+    k = dMRI_image.imgDims[2] / 2; // Axial (z-axis)
+
+    // Construct transformation matrices
+    t1_ijk2xyz = constructMatrix(dMRI_image.ijk2xyz);
+    t1_xyz2ijk = constructMatrix(dMRI_image.xyz2ijk);
+
+    // Trigger a repaint
+    update();
+}
+
+void MainGlWidget::loadImage_fMRI(const QString& filePath)
+{
+    // Load the new MRI image
+    std::cout << "\nLoading fMRI image from: " << filePath.toStdString() << std::endl;
+
+    NIBR::Image<float> newImage(filePath.toStdString());
+    fMRI_image = newImage;
+    fMRI_image.read();
+    fMRI_image.printInfo();
+
+    // Check if the image was loaded successfully
+    if (fMRI_image.data == nullptr || fMRI_image.voxCnt == 0) {
+        std::cerr << "Failed to load image from: " << filePath.toStdString() << std::endl;
+        return;
+    }
+
+    // Recalculate minValue and maxValue
+    minValue_f = FLT_MAX;
+    maxValue_f = -FLT_MAX;
+    for (int idx = 0; idx < fMRI_image.voxCnt; ++idx) {
+        float value = fMRI_image.data[idx];
+        if (value < minValue_f) minValue_f = value;
+        if (value > maxValue_f) maxValue_f = value;
+    }
+    std::cout << "Voxel value range: [" << minValue_f << ", " << maxValue_f << "]" << std::endl;
+
+    // Update slice indices to the middle of the new image dimensions
+    i_f = fMRI_image.imgDims[0] / 2; // Sagittal (x-axis)
+    j_f = fMRI_image.imgDims[1] / 2; // Coronal (y-axis)
+    k_f = fMRI_image.imgDims[2] / 2; // Axial (z-axis)
+
+    // Construct transformation matrices
+    fmri_ijk2xyz = constructMatrix(fMRI_image.ijk2xyz);
+    fmri_xyz2ijk = constructMatrix(fMRI_image.xyz2ijk);
+
+    // Trigger a repaint
+    update();
 }
 
 void MainGlWidget::initializeGL()
@@ -56,6 +133,12 @@ void MainGlWidget::resizeGL(int w, int h)
 void MainGlWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Check if image data is available
+    if (dMRI_image.voxCnt == 0) {
+        // No image loaded; you might want to display a message or a blank screen
+        return;
+    }
 
     // Dimensions of the MRI image
     int dimX = dMRI_image.imgDims[0];
@@ -414,6 +497,11 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
 
 void MainGlWidget::mousePressEvent(QMouseEvent *event)
 {
+    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+        // No image loaded; ignore the event
+        return;
+    }
+
     mousePressed = true;
     pressedButton = event->button();
 
@@ -441,6 +529,11 @@ void MainGlWidget::mousePressEvent(QMouseEvent *event)
 
 void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+        // No image loaded; ignore the event
+        return;
+    }
+
     if (!mousePressed) {
         return;
     }
@@ -507,6 +600,11 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 
 void MainGlWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+        // No image loaded; ignore the event
+        return;
+    }
+
     Q_UNUSED(event);
     // Reset the mouse pressed flag
     mousePressed = false;
@@ -535,6 +633,11 @@ void MainGlWidget::handleSagittalScroll(QWheelEvent *event)
 
 void MainGlWidget::wheelEvent(QWheelEvent *event)
 {
+    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+        // No image loaded; ignore the event
+        return;
+    }
+
     // Check if Ctrl key is held
     if (event->modifiers() & Qt::ControlModifier) {
         // Handle zooming

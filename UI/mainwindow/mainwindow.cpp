@@ -11,7 +11,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     resize(1280, 720);
 
     MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET
+    if (mainglWidget) {
 
 
     } else {
@@ -34,9 +34,33 @@ void MainWindow::updateData()
     }
 }
 
+void MainWindow::on_MRI_T1_load_clicked()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "Open MRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
+    if (!filePath.isEmpty()) {
+        MainGlWidget* mainglWidget = ui->mainGlWidget;
+        if (mainglWidget) {
+            mainglWidget->loadImage_T1(filePath);
+        } else {
+            // Error handling if glWidget is not found
+            qWarning("Glwidget not found in UI!");
+        }
+    }
+}
 
-
-
+void MainWindow::on_fMRI_load_clicked()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "Open fMRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
+    if (!filePath.isEmpty()) {
+        MainGlWidget* mainglWidget = ui->mainGlWidget;
+        if (mainglWidget) {
+            mainglWidget->loadImage_fMRI(filePath);
+        } else {
+            // Error handling if glWidget is not found
+            qWarning("Glwidget not found in UI!");
+        }
+    }
+}
 
 // eeg window utilities
 void MainWindow::eegBridgeSpin(int port, int timeout)

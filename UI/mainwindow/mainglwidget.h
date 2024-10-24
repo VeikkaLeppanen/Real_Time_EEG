@@ -11,6 +11,7 @@
 #include <QPainter>
 #include <QFont>
 #include <image/image.h>
+#include <Eigen/Dense>
 
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -19,15 +20,17 @@ class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     explicit MainGlWidget(QWidget *parent = nullptr);
     void setSliceIndices(int new_i, int new_j, int new_k);
+    void loadImage_T1(const QString& filePath);
+    void loadImage_fMRI(const QString& filePath);
 
 protected:
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
     void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override; // Add this line
-    void mouseReleaseEvent(QMouseEvent *event) override; // Add this line
-    void wheelEvent(QWheelEvent *event) override; // Add this line
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
@@ -36,18 +39,35 @@ private slots:
 private:
     // MRI image data
     NIBR::Image<float> dMRI_image;
+    NIBR::Image<float> fMRI_image;
     float minValue;
     float maxValue;
+    float minValue_f;
+    float maxValue_f;
 
-    // Slice indices for each plane
+    // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)
     int j; // Coronal (along y-axis)
     int k; // Axial (along z-axis)
+
+    // Slice indices for each plane fMRI
+    int i_f; // Sagittal (along x-axis)
+    int j_f; // Coronal (along y-axis)
+    int k_f; // Axial (along z-axis)
+
+    Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
+
+    // Transformation matrices
+    Eigen::Matrix4f t1_ijk2xyz;
+    Eigen::Matrix4f t1_xyz2ijk;
+    Eigen::Matrix4f fmri_ijk2xyz;
+    Eigen::Matrix4f fmri_xyz2ijk;
     
     // Zoom and Pan
     float zoomFactor;
     QVector3D panOffset;
     QPoint lastPanPoint; // For tracking mouse movement during panning
+    float overlayOpacity; // Value between 0.0f and 1.0f
 
     // Mouse event handlers
     void handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);
@@ -60,8 +80,8 @@ private:
     void handleSagittalScroll(QWheelEvent *event);
     
     // Mouse state
-    bool mousePressed; // Add this line
-    Qt::MouseButton pressedButton; // Add this line
+    bool mousePressed;
+    Qt::MouseButton pressedButton;
 };
 
 #endif // MAINGLWIDGET_H

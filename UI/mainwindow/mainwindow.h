@@ -57,6 +57,9 @@ private slots:
     void on_triggering_clicked();
     void resetTMSwinPointer();
 
+    void on_MRI_T1_load_clicked();
+    void on_fMRI_load_clicked();
+
 private:
     Ui::MainWindow *ui;
 
