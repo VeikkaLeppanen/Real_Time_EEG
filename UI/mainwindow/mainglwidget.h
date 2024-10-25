@@ -55,13 +55,11 @@ private:
     int j_f; // Coronal (along y-axis)
     int k_f; // Axial (along z-axis)
 
-    Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
+    Eigen::Matrix<float, 3, 4> constructMatrix(float ijk2xyz[3][4]);
 
     // Transformation matrices
-    Eigen::Matrix4f t1_ijk2xyz;
-    Eigen::Matrix4f t1_xyz2ijk;
-    Eigen::Matrix4f fmri_ijk2xyz;
-    Eigen::Matrix4f fmri_xyz2ijk;
+    Eigen::Matrix<float, 3, 4> t1_ijk2xyz;
+    Eigen::Matrix<float, 3, 4> fmri_xyz2ijk;
     
     // Zoom and Pan
     float zoomFactor;

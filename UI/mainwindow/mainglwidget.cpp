@@ -31,8 +31,8 @@ void MainGlWidget::setSliceIndices(int new_i, int new_j, int new_k)
     update(); // Trigger a repaint
 }
 
-Eigen::Matrix4f MainGlWidget::constructMatrix(float ijk2xyz[3][4]) {
-    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+Eigen::Matrix<float, 3, 4> MainGlWidget::constructMatrix(float ijk2xyz[3][4]) {
+    Eigen::Matrix<float, 3, 4> mat;
     for (int row = 0; row < 3; ++row) {
         for (int col = 0; col < 4; ++col) {
             mat(row, col) = ijk2xyz[row][col];
@@ -74,7 +74,6 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
 
     // Construct transformation matrices
     t1_ijk2xyz = constructMatrix(dMRI_image.ijk2xyz);
-    t1_xyz2ijk = constructMatrix(dMRI_image.xyz2ijk);
 
     // Trigger a repaint
     update();
@@ -112,7 +111,6 @@ void MainGlWidget::loadImage_fMRI(const QString& filePath)
     k_f = fMRI_image.imgDims[2] / 2; // Axial (z-axis)
 
     // Construct transformation matrices
-    fmri_ijk2xyz = constructMatrix(fMRI_image.ijk2xyz);
     fmri_xyz2ijk = constructMatrix(fMRI_image.xyz2ijk);
 
     // Trigger a repaint
@@ -149,6 +147,18 @@ void MainGlWidget::paintGL()
 
     // Function to compute the 1D index from 3D coordinates
     auto voxelIndex = [&](int x, int y, int z) -> int {
+        return x + y * dimX + z * dimX * dimY;
+    };
+
+    // Dimensions of the MRI image
+    int dimX_f = fMRI_image.imgDims[0];
+    int dimY_f = fMRI_image.imgDims[1];
+    int dimZ_f = fMRI_image.imgDims[2];
+
+    float* voxelData_f = fMRI_image.data;
+
+    // Function to compute the 1D index from 3D coordinates
+    auto voxelIndex_f = [&](int x, int y, int z) -> int {
         return x + y * dimX + z * dimX * dimY;
     };
 
@@ -226,6 +236,63 @@ void MainGlWidget::paintGL()
         }
     }
     glEnd();
+
+    // --------------------
+    // Draw fMRI Overlay
+    // --------------------
+    if (fMRI_image.voxCnt != 0) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glBegin(GL_QUADS);
+        for (int y = 0; y < dimY; ++y) {
+            int flippedY = dimY - y - 1; // Flip the y-coordinate
+            for (int x = 0; x < dimX; ++x) {
+                // Convert T1 voxel (x, flippedY, z) to world coordinates
+                Eigen::Vector4f t1_voxel;
+                t1_voxel << x, flippedY, z, 1.0f;
+                Eigen::Vector3f world_coords = t1_ijk2xyz * t1_voxel;
+
+                // Transform world coordinates to fMRI voxel coordinates
+                Eigen::Vector4f world_coords_homogeneous;
+                world_coords_homogeneous << world_coords(0), world_coords(1), world_coords(2), 1.0f;
+                Eigen::Vector3f ijk_fmri_float = fmri_xyz2ijk * world_coords_homogeneous;
+
+                // Get fMRI voxel indices (with interpolation)
+                int fmri_x_int = static_cast<int>(std::round(ijk_fmri_float(0)));
+                int fmri_y_int = static_cast<int>(std::round(ijk_fmri_float(1)));
+                int fmri_z_int = static_cast<int>(std::round(ijk_fmri_float(2)));
+
+                // Check bounds
+                if (fmri_x_int >= 0 && fmri_x_int < dimX_f &&
+                    fmri_y_int >= 0 && fmri_y_int < dimY_f &&
+                    fmri_z_int >= 0 && fmri_z_int < dimZ_f) {
+
+                    int fmri_idx = voxelIndex_f(fmri_x_int, fmri_y_int, fmri_z_int);
+                    float fmri_value = voxelData_f[fmri_idx];
+
+                    // Normalize fMRI value for visualization
+                    float intensity = std::clamp((fmri_value - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+
+                    // Use intensity to modulate red color with adjustable opacity
+                    glColor4f(intensity, 0.0f, 0.0f, overlayOpacity * intensity);
+
+                    // Adjust coordinates to center around (0,0)
+                    float x0 = (x - dimX / 2.0f) + 0.5f;
+                    float y0 = (y - dimY / 2.0f) + 0.5f;
+                    float x1 = x0 + 1.0f;
+                    float y1 = y0 + 1.0f;
+
+                    glVertex2f(x0, y0);
+                    glVertex2f(x1, y0);
+                    glVertex2f(x1, y1);
+                    glVertex2f(x0, y1);
+                }
+            }
+        }
+        glEnd();
+        glDisable(GL_BLEND);
+    }
 
     // Draw lines on axial slice
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
