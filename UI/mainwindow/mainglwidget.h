@@ -55,12 +55,13 @@ private:
     int j_f; // Coronal (along y-axis)
     int k_f; // Axial (along z-axis)
 
-    Eigen::Matrix<float, 3, 4> constructMatrix(float ijk2xyz[3][4]);
+    Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
 
     // Transformation matrices
-    Eigen::Matrix<float, 3, 4> t1_ijk2xyz;
-    Eigen::Matrix<float, 3, 4> fmri_xyz2ijk;
-    
+    Eigen::Matrix4f t1_xyz2ijk;
+    Eigen::Matrix4f fmri_ijk2xyz;
+    Eigen::Matrix4f fmri_to_t1_voxel;
+
     // Zoom and Pan
     float zoomFactor;
     QVector3D panOffset;
@@ -76,7 +77,7 @@ private:
     void handleAxialScroll(QWheelEvent *event);
     void handleCoronalScroll(QWheelEvent *event);
     void handleSagittalScroll(QWheelEvent *event);
-    
+
     // Mouse state
     bool mousePressed;
     Qt::MouseButton pressedButton;
