@@ -56,11 +56,13 @@ private:
     int k_f; // Axial (along z-axis)
 
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
+    float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
 
     // Transformation matrices
+    Eigen::Matrix4f t1_ijk2xyz;
     Eigen::Matrix4f t1_xyz2ijk;
     Eigen::Matrix4f fmri_ijk2xyz;
-    Eigen::Matrix4f fmri_to_t1_voxel;
+    Eigen::Matrix4f fmri_xyz2ijk;
 
     // Zoom and Pan
     float zoomFactor;
