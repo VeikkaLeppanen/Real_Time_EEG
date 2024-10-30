@@ -594,24 +594,43 @@ void MainGlWidget::paintGL()
     int ix = std::clamp(i, 0, dimX - 1);
     int iy = std::clamp(j, 0, dimY - 1);
     int iz = std::clamp(k, 0, dimZ - 1);
-
+    
     // Retrieve the target voxel value
     int trgt_idx = voxelIndex(ix, iy, iz);
     float trgt_voxelValue = voxelData[trgt_idx];
+    float trgt_voxelValue_f = 0;
+
+    if (fMRI_image.voxCnt != 0) {
+        // Map T1 voxel indices to world coordinates
+        Eigen::Vector4f voxel_t1(ix, iy, iz, 1.0f);
+        Eigen::Vector4f world_coords = t1_ijk2xyz * voxel_t1;
+
+        // Map world coordinates to fMRI voxel indices
+        Eigen::Vector4f voxel_f = fmri_xyz2ijk * world_coords;
+
+        float i_f = voxel_f(0);
+        float j_f = voxel_f(1);
+        float k_f = voxel_f(2);
+
+        // Retrieve the target voxel value
+        trgt_voxelValue_f = getInterpolatedVoxelValue(voxelData_f, i_f, j_f, k_f, dimX_f, dimY_f, dimZ_f);
+    }
 
     // Begin QPainter
     QPainter painter(this);
 
     // Set text properties
     painter.setPen(Qt::yellow);
-    painter.setFont(QFont("Arial", 12));
+    painter.setFont(QFont("Arial", 10));
 
     // Prepare the text
-    QString text = QString("Value: %1\nVoxel: (%2, %3, %4)")
-        .arg(trgt_voxelValue).arg(ix).arg(iy).arg(iz);
+    QString text = QString("Value T1: %1\nValue fMRI: %2\nVoxel: [ %3, %4, %5 ]")
+        .arg(trgt_voxelValue)
+        .arg(trgt_voxelValue_f)
+        .arg(ix).arg(iy).arg(iz);
 
     // Position the text at the bottom left corner
-    QRect textRect(10, height() - 60, 200, 50); // x, y, width, height
+    QRect textRect(10, height() - 110, 200, 100); // x, y, width, height
 
     painter.drawText(textRect, Qt::AlignLeft | Qt::AlignBottom | Qt::TextWordWrap, text);
 
