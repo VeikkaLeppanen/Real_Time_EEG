@@ -133,41 +133,6 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QPushButton" name="EEG">
-            <property name="text">
-             <string>EEG</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="processing">
-            <property name="text">
-             <string>Phase estimate</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="triggering">
-            <property name="text">
-             <string>TMS</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="MRI_T1_load">
-            <property name="text">
-             <string>Load T1 image</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="fMRI_load">
-            <property name="text">
-             <string>Load fMRI image</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>

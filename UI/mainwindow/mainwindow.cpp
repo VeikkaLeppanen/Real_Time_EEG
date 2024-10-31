@@ -10,6 +10,59 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     ui->setupUi(this);
     resize(1280, 720);
 
+    // Create the menu bar
+    QMenuBar *menuBar = this->menuBar();
+
+    // Create the File menu and add actions
+    QMenu *eegMenu = menuBar->addMenu("EEG");
+    QAction *prepAction = eegMenu->addAction("Preprocessing");
+    QAction *phaseEstAction = eegMenu->addAction("Phase estimation");
+
+    // Create the Edit menu and add actions
+    QMenu *mriMenu = menuBar->addMenu("MRI");
+    QAction *T1LoadAction = mriMenu->addAction("Load T1 image");
+    QAction *fmriLoadAction = mriMenu->addAction("Load fMRI image");
+    QAction *mriSettingsAction = mriMenu->addAction("Settings");
+
+    // Create the View menu and add actions
+    QMenu *tmsMenu = menuBar->addMenu("TMS");
+    QAction *tmsSettingsAction = tmsMenu->addAction("Settings");
+
+    // Connect actions to slots
+    connect(prepAction, &QAction::triggered, this, &MainWindow::EEG_clicked);
+    connect(phaseEstAction, &QAction::triggered, this, &MainWindow::processing_clicked);
+    connect(T1LoadAction, &QAction::triggered, this, &MainWindow::MRI_T1_load_clicked);
+    connect(fmriLoadAction, &QAction::triggered, this, &MainWindow::fMRI_load_clicked);
+    connect(mriSettingsAction, &QAction::triggered, this, &MainWindow::onMRIsettings);
+    connect(tmsSettingsAction, &QAction::triggered, this, &MainWindow::triggering_clicked);
+
+    // Create a toolbar and add actions
+    // QToolBar *toolbar = addToolBar("MRI image controls");
+    // toolbar->addAction(openAction);
+    // toolbar->addAction(saveAction);
+    // toolbar->addAction(copyAction);
+    // toolbar->addAction(pasteAction);
+
+    // Store a pointer to the toolbar if you want to show/hide it later
+    // mainToolbar = toolbar;
+
+    // Create the status bar
+    QStatusBar *statusBar = this->statusBar();
+
+    // Create labels for different conditions
+    eegBridgeLabel = new QLabel("EEG Bridge: <span style='color: red;'>OFF</span>");
+    preprocessingLabel = new QLabel("EEG preprocessing: <span style='color: red;'>OFF</span>");
+    phaseEstLabel = new QLabel("EEG phase estimation: <span style='color: red;'>OFF</span>");
+    fMRILabel = new QLabel("fMRI: <span style='color: red;'>OFF</span>");
+    TMSLabel = new QLabel("TMS: <span style='color: red;'>OFF</span>");
+
+    // Add labels to the status bar
+    statusBar->addWidget(eegBridgeLabel);
+    statusBar->addWidget(preprocessingLabel);
+    statusBar->addWidget(phaseEstLabel);
+    statusBar->addWidget(fMRILabel);
+    statusBar->addWidget(TMSLabel);
+
     MainGlWidget* mainglWidget = ui->mainGlWidget;
     if (mainglWidget) {
 
@@ -34,7 +87,7 @@ void MainWindow::updateData()
     }
 }
 
-void MainWindow::on_MRI_T1_load_clicked()
+void MainWindow::MRI_T1_load_clicked()
 {
     QString filePath = QFileDialog::getOpenFileName(this, "Open MRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
     if (!filePath.isEmpty()) {
@@ -48,7 +101,7 @@ void MainWindow::on_MRI_T1_load_clicked()
     }
 }
 
-void MainWindow::on_fMRI_load_clicked()
+void MainWindow::fMRI_load_clicked()
 {
     QString filePath = QFileDialog::getOpenFileName(this, "Open fMRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
     if (!filePath.isEmpty()) {
@@ -81,7 +134,9 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         connect(eeg_worker, &EEGSpinWorker::finished, eeg_worker, &EEGSpinWorker::deleteLater);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
+        toggleEegBridgeCondition(true);
         connect(thread, &QThread::finished, this, [=]() {
+            toggleEegBridgeCondition(false);
             qDebug("EEG_bridge Thread and EEGSpinWorker cleaned up properly");
         });
         
@@ -115,7 +170,7 @@ void MainWindow::stopGACorrection() {
     handler.reset_GACorr_tracker();
 }
 
-void MainWindow::on_EEG_clicked()
+void MainWindow::EEG_clicked()
 {
     if (!eegwindow) {
         eegwindow = new eegWindow(handler, signal_received, processingWorkerRunning, this);
@@ -157,10 +212,12 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
         QObject::connect(preProcessingworker, &preProcessingWorker::finished, preProcessingworker, &preProcessingWorker::deleteLater);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
+        togglePreprocessingCondition(true);
         QObject::connect(thread, &QThread::finished, this, [=]() {
             preProcessingworker = nullptr;
             preprocessingWorkerRunning = false;
             processingWorkerRunning = 0;
+            togglePreprocessingCondition(false);
             qDebug("Processing Thread and preProcessingWorker cleaned up properly");
         });
 
@@ -175,7 +232,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
     }
 }
 
-void MainWindow::on_processing_clicked()
+void MainWindow::processing_clicked()
 {
     if (bridge.isRunning() && handler.isReady() && processingWorkerRunning) {
         if (!phaseEstwin) {
@@ -196,7 +253,7 @@ void MainWindow::on_processing_clicked()
         phaseEstParams.downsampling_factor = tempParams.downsampling_factor;
         startPhaseEstimationprocessing(phaseEstParams);
     } else {
-        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab.");
+        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG preprocessing windows device tab.");
     }
 }
 
@@ -258,11 +315,13 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
         QObject::connect(phaseEstworker, &phaseEstimationWorker::error, this, &MainWindow::handleError);
         QObject::connect(phaseEstworker, &phaseEstimationWorker::finished, phaseEstworker, &phaseEstimationWorker::deleteLater);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-
+        
+        togglePhaseEstCondition(true);
         QObject::connect(thread, &QThread::finished, this, [=]() {
             phaseEstworker = nullptr;
             phaseEstWorkerRunning = false;
             processingWorkerRunning = 0;
+            togglePhaseEstCondition(false);
             qDebug("Processing Thread and phaseEstimationWorker cleaned up properly");
         });
 
@@ -279,13 +338,14 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
     }
 }
 
-void MainWindow::on_triggering_clicked()
+void MainWindow::triggering_clicked()
 {
     std::cout << "Triggering start" << '\n';
     if (!TMSwin) {
         TMSwin = new TMSwindow(handler, signal_received, this);
         TMSwin->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
         connect(TMSwin, &TMSwindow::destroyed, this, &MainWindow::resetTMSwinPointer);
+        connect(TMSwin, &TMSwindow::TMSStatusChanged, this, &MainWindow::toggleTMSCondition);
     }
     TMSwin->show();
     TMSwin->raise();

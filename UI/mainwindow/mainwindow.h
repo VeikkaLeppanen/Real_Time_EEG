@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include <QThread>
+#include <QToolBar>
+#include <QStatusBar>
+#include <QLabel>
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QIntValidator>
@@ -30,6 +33,38 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~MainWindow();
+    
+    void toggleEegBridgeCondition(bool isOn) {
+        eegBridgeLabel->setText(
+            QString("EEG Bridge: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglePreprocessingCondition(bool isOn) {
+        preprocessingLabel->setText(
+            QString("EEG preprocessing: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglePhaseEstCondition(bool isOn) {
+        phaseEstLabel->setText(
+            QString("EEG phase estimation: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglefMRICondition(bool isOn) {
+        fMRILabel->setText(
+            QString("fMRI: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
 
 signals:
 
@@ -43,25 +78,48 @@ public slots:
     void startPreprocessing(preprocessingParameters &parameters);
     void startPhaseEstimationprocessing(phaseEstimateParameters phaseEstParams);
 
+    void toggleTMSCondition(bool isOn) {
+        TMSLabel->setText(
+            QString("TMS: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+    
 private slots:
     void handleError(const QString& error);
 
-    void on_EEG_clicked();
+    void EEG_clicked();
     void resetEegWindowPointer();
 
-    void on_processing_clicked();
+    void processing_clicked();
     void connect_processing_worker();
     void connect_EEG_Prepworker();
     void resetProcessingWindowPointer();
 
-    void on_triggering_clicked();
+    void triggering_clicked();
     void resetTMSwinPointer();
 
-    void on_MRI_T1_load_clicked();
-    void on_fMRI_load_clicked();
+    void MRI_T1_load_clicked();
+    void fMRI_load_clicked();
+    
+    void onMRIsettings() {
+        QMessageBox::information(this, "onMRIsettings", "onMRIsettings action triggered.");
+    }
+
+    void toggleToolbar() {
+        if (mainToolbar)
+            mainToolbar->setVisible(!mainToolbar->isVisible());
+    }
 
 private:
     Ui::MainWindow *ui;
+    QToolBar *mainToolbar;
+    QLabel *eegBridgeLabel;
+    QLabel *preprocessingLabel;
+    QLabel *phaseEstLabel;
+    QLabel *fMRILabel;
+    QLabel *TMSLabel;
 
     // eeg_bridge parameters
     EegBridge bridge;

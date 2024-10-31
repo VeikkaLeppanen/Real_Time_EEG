@@ -20,7 +20,7 @@ MainGlWidget::MainGlWidget(QWidget *parent)
     // Set up the timer for updating the graph
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
-    timer->start(16); // Update approximately every 16 ms (60 FPS)
+    // timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
 
 void MainGlWidget::setSliceIndices(int new_i, int new_j, int new_k)
@@ -275,7 +275,7 @@ void MainGlWidget::paintGL()
     glViewport(axialViewport.x, axialViewport.y, axialViewport.width, axialViewport.height);
 
     // Use the panOffset and zoomFactor
-    setupOrtho(dimX, dimY, panOffset.x(), panOffset.y());
+    setupOrtho(dimX, dimY, panOffset.x(), -panOffset.y());
 
     int z = std::clamp(k, 0, dimZ - 1);
 
@@ -657,7 +657,7 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     float halfHeight = dimY / 2.0f;
 
     float panX = panOffset.x();
-    float panY = panOffset.y();
+    float panY = -panOffset.y();
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -830,7 +830,7 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
             scaleY = (dMRI_image.imgDims[1] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
-            panOffset.setY(panOffset.y() - deltaY * scaleY);
+            panOffset.setY(panOffset.y() + deltaY * scaleY);
 
         } else if (viewportIndex == 1) {
             // Coronal slice (x, z plane)

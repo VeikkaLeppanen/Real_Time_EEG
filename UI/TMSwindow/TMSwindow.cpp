@@ -100,6 +100,7 @@ void TMSwindow::on_enable_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         handler.set_enable(true);
+        emit TMSStatusChanged(true);
         std::cout << "Trigger port enabled" << '\n';
     } else {
         QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
@@ -111,6 +112,7 @@ void TMSwindow::on_disable_clicked()
 {
     if(handler.getTriggerConnectStatus()) {
         handler.set_enable(false);
+        emit TMSStatusChanged(false);
         std::cout << "Trigger port disabled" << '\n';
     } else {
         QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
