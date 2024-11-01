@@ -13,7 +13,7 @@ MainGlWidget::MainGlWidget(QWidget *parent)
     // Initialize slice indices
     i = j = k = 0;
 
-    overlayOpacity = 0.5f;
+    overlayOpacity = 1.0f;
     
     this->setFocusPolicy ( Qt::StrongFocus );
 
@@ -48,12 +48,12 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
     std::cout << "\nLoading MRI image from: " << filePath.toStdString() << std::endl;
 
     NIBR::Image<float> newImage(filePath.toStdString());
-    dMRI_image = newImage;
-    dMRI_image.read();
-    dMRI_image.printInfo();
+    T1_image = newImage;
+    T1_image.read();
+    T1_image.printInfo();
 
     // Check if the image was loaded successfully
-    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+    if (T1_image.data == nullptr || T1_image.voxCnt == 0) {
         std::cerr << "Failed to load image from: " << filePath.toStdString() << std::endl;
         return;
     }
@@ -61,21 +61,17 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
     // Recalculate minValue and maxValue
     minValue = FLT_MAX;
     maxValue = -FLT_MAX;
-    for (int idx = 0; idx < dMRI_image.voxCnt; ++idx) {
-        float value = dMRI_image.data[idx];
+    for (int idx = 0; idx < T1_image.voxCnt; ++idx) {
+        float value = T1_image.data[idx];
         if (value < minValue) minValue = value;
         if (value > maxValue) maxValue = value;
     }
     std::cout << "Voxel value range: [" << minValue << ", " << maxValue << "]" << std::endl;
 
     // Update slice indices to the middle of the new image dimensions
-    i = dMRI_image.imgDims[0] / 2; // Sagittal (x-axis)
-    j = dMRI_image.imgDims[1] / 2; // Coronal (y-axis)
-    k = dMRI_image.imgDims[2] / 2; // Axial (z-axis)
-
-    // Construct transformation matrices
-    t1_ijk2xyz = constructMatrix(dMRI_image.ijk2xyz);
-    t1_xyz2ijk = constructMatrix(dMRI_image.xyz2ijk);
+    i = T1_image.imgDims[0] / 2; // Sagittal (x-axis)
+    j = T1_image.imgDims[1] / 2; // Coronal (y-axis)
+    k = T1_image.imgDims[2] / 2; // Axial (z-axis)
 
     // Trigger a repaint
     update();
@@ -97,24 +93,27 @@ void MainGlWidget::loadImage_fMRI(const QString& filePath)
         return;
     }
 
+    fMRI_image_resampled.createFromTemplate(T1_image, true);
+    // imgResample(&fMRI_image_resampled, &fMRI_image);
+    
+    float* p = new float[3];
+    for (int n = 0; n < fMRI_image_resampled.voxCnt; n++) {   
+        fMRI_image_resampled.to_xyz(n,p);   
+        fMRI_image_resampled.data[n] = fMRI_image(p, static_cast<int64_t>(0));
+    }
+
+    delete[] p;
+
     // Recalculate minValue and maxValue
     minValue_f = FLT_MAX;
     maxValue_f = -FLT_MAX;
-    for (int idx = 0; idx < fMRI_image.voxCnt; ++idx) {
-        float value = fMRI_image.data[idx];
+    for (int idx = 0; idx < fMRI_image_resampled.voxCnt; ++idx) {
+        float value = fMRI_image_resampled.data[idx];
         if (value < minValue_f) minValue_f = value;
         if (value > maxValue_f) maxValue_f = value;
     }
+    
     std::cout << "Voxel value range: [" << minValue_f << ", " << maxValue_f << "]" << std::endl;
-
-    // Update slice indices to the middle of the new image dimensions
-    i_f = fMRI_image.imgDims[0] / 2; // Sagittal (x-axis)
-    j_f = fMRI_image.imgDims[1] / 2; // Coronal (y-axis)
-    k_f = fMRI_image.imgDims[2] / 2; // Axial (z-axis)
-
-    // Construct transformation matrices
-    fmri_ijk2xyz = constructMatrix(fMRI_image.ijk2xyz);
-    fmri_xyz2ijk = constructMatrix(fMRI_image.xyz2ijk);
 
     // Trigger a repaint
     update();
@@ -193,41 +192,25 @@ void MainGlWidget::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // Check if image data is available
-    if (dMRI_image.voxCnt == 0) {
+    if (T1_image.voxCnt == 0) {
         // No image loaded; you might want to display a message or a blank screen
         return;
     }
 
     // Dimensions of the MRI image
-    int dimX = dMRI_image.imgDims[0];
-    int dimY = dMRI_image.imgDims[1];
-    int dimZ = dMRI_image.imgDims[2];
+    int dimX = T1_image.imgDims[0];
+    int dimY = T1_image.imgDims[1];
+    int dimZ = T1_image.imgDims[2];
 
-    float pixDimX_T1 = dMRI_image.pixDims[0];
-    float pixDimY_T1 = dMRI_image.pixDims[1];
-    float pixDimZ_T1 = dMRI_image.pixDims[2];
+    float pixDimX_T1 = T1_image.pixDims[0];
+    float pixDimY_T1 = T1_image.pixDims[1];
+    float pixDimZ_T1 = T1_image.pixDims[2];
 
-    float* voxelData = dMRI_image.data;
+    float* voxelData = T1_image.data;
 
     // Function to compute the 1D index from 3D coordinates
     auto voxelIndex = [&](int x, int y, int z) -> int {
         return x + y * dimX + z * dimX * dimY;
-    };
-
-    // Dimensions of the MRI image
-    int dimX_f = fMRI_image.imgDims[0];
-    int dimY_f = fMRI_image.imgDims[1];
-    int dimZ_f = fMRI_image.imgDims[2];
-
-    float pixDimX_fMRI = fMRI_image.pixDims[0];
-    float pixDimY_fMRI = fMRI_image.pixDims[1];
-    float pixDimZ_fMRI = fMRI_image.pixDims[2];
-
-    float* voxelData_f = fMRI_image.data;
-
-    // Function to compute the 1D index from 3D coordinates
-    auto voxelIndex_f = [&](int x, int y, int z) -> int {
-        return x + y * dimX_f + z * dimX_f * dimY_f;
     };
 
     // Width and height of the widget
@@ -275,21 +258,47 @@ void MainGlWidget::paintGL()
     glViewport(axialViewport.x, axialViewport.y, axialViewport.width, axialViewport.height);
 
     // Use the panOffset and zoomFactor
-    setupOrtho(dimX, dimY, panOffset.x(), -panOffset.y());
+    setupOrtho(dimX, dimY, panOffset.x(), panOffset.y());
 
     int z = std::clamp(k, 0, dimZ - 1);
 
-    // Draw the axial slice
+    // Draw the T1 axial slice
     glBegin(GL_QUADS);
     for (int y = 0; y < dimY; ++y) {
-        int flippedY = dimY - y - 1; // Flip the y-coordinate
         for (int x = 0; x < dimX; ++x) {
-            int idx = voxelIndex(x, flippedY, z);
+            int idx = voxelIndex(x, y, z);
             float value = voxelData[idx];
 
+            // Normalize T1 voxel value for grayscale color
             float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
-            glColor3f(gray, gray, gray);
+            // Base color from T1 image
+            float r = gray;
+            float g = gray;
+            float b = gray;
+            float a = 1.0f; // Full opacity for T1 image
+
+            // Initialize overlay intensity
+            float overlayIntensity = 0.0f;
+
+            // Check if fMRI data is available
+            if (fMRI_image_resampled.voxCnt != 0) {
+                // If images are resampled and aligned, use the same index
+                float value_f = fMRI_image_resampled.data[idx];
+
+                // Normalize fMRI value for visualization
+                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+
+                // Update overlay intensity based on the fMRI value
+                overlayIntensity = intensity * overlayOpacity;
+            }
+
+            // Combine the T1 and fMRI colors
+            // For example, enhance the red channel based on the overlay
+            r = r * (1.0f - overlayIntensity) + overlayIntensity;
+
+            // Set the final color with alpha blending
+            glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
             float x0 = (x - dimX / 2.0f) + 0.5f;
@@ -297,6 +306,7 @@ void MainGlWidget::paintGL()
             float x1 = x0 + 1.0f;
             float y1 = y0 + 1.0f;
 
+            // Draw the quad
             glVertex2f(x0, y0);
             glVertex2f(x1, y0);
             glVertex2f(x1, y1);
@@ -304,62 +314,6 @@ void MainGlWidget::paintGL()
         }
     }
     glEnd();
-    
-    // Enable blending for transparency
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Set the overlay opacity (adjust as needed)
-    float overlayOpacity = 0.5f;
-
-    // Draw the fMRI axial slice over the T1 image
-    if (fMRI_image.voxCnt != 0) {
-        glBegin(GL_QUADS);
-        for (int y = 0; y < dimY; ++y) {
-            int flippedY = dimY - y - 1; // Flip the y-coordinate
-            for (int x = 0; x < dimX; ++x) {
-                // T1 voxel indices
-                int ix = x;
-                int iy = flippedY;
-                int iz = z; // Current axial slice
-
-                // Map T1 voxel indices to world coordinates
-                Eigen::Vector4f voxel_t1(ix, iy, iz, 1.0f);
-                Eigen::Vector4f world_coords = t1_ijk2xyz * voxel_t1;
-
-                // Map world coordinates to fMRI voxel indices
-                Eigen::Vector4f voxel_f = fmri_xyz2ijk * world_coords;
-
-                float i_f = voxel_f(0);
-                float j_f = voxel_f(1);
-                float k_f = voxel_f(2);
-
-                // Check if fMRI voxel indices are within bounds
-                if (i_f >= 0 && i_f < dimX_f - 1 && j_f >= 0 && j_f < dimY_f - 1 && k_f >= 0 && k_f < dimZ_f - 1) {
-                    // Retrieve interpolated fMRI voxel value
-                    float value_f = getInterpolatedVoxelValue(voxelData_f, i_f, j_f, k_f, dimX_f, dimY_f, dimZ_f);
-
-                    // Normalize fMRI value for visualization
-                    float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
-
-                    // Set the color with opacity
-                    glColor4f(intensity, 0.0f, 0.0f, overlayOpacity * intensity);
-
-                    // Adjust coordinates to center around (0,0)
-                    float x0 = (x - dimX / 2.0f) + 0.5f;
-                    float y0 = (y - dimY / 2.0f) + 0.5f;
-                    float x1 = x0 + 1.0f;
-                    float y1 = y0 + 1.0f;
-
-                    glVertex2f(x0, y0);
-                    glVertex2f(x1, y0);
-                    glVertex2f(x1, y1);
-                    glVertex2f(x0, y1);
-                }
-            }
-        }
-        glEnd();
-    }
 
     // Disable blending after overlay
     glDisable(GL_BLEND);
@@ -373,7 +327,7 @@ void MainGlWidget::paintGL()
     glVertex2f(lineX, -dimY / 2.0f);
     glVertex2f(lineX, dimY / 2.0f);
     // Horizontal line at y = j
-    float lineY = ((dimY - j - 1) - dimY / 2.0f) + 1.0f;
+    float lineY = (j - dimY / 2.0f) + 1.0f;
     glVertex2f(-dimX / 2.0f, lineY);
     glVertex2f(dimX / 2.0f, lineY);
     glEnd();
@@ -391,14 +345,40 @@ void MainGlWidget::paintGL()
     // Draw the T1 coronal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
-        int flippedZ = dimZ - z - 1; // Flip the z-coordinate
         for (int x = 0; x < dimX; ++x) {
             int idx = voxelIndex(x, y, z);
             float value = voxelData[idx];
 
+            // Normalize T1 voxel value for grayscale color
             float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
-            glColor3f(gray, gray, gray);
+            // Base color from T1 image
+            float r = gray;
+            float g = gray;
+            float b = gray;
+            float a = 1.0f; // Full opacity for T1 image
+
+            // Initialize overlay intensity
+            float overlayIntensity = 0.0f;
+
+            // Check if fMRI data is available
+            if (fMRI_image_resampled.voxCnt != 0) {
+                // If images are resampled and aligned, use the same index
+                float value_f = fMRI_image_resampled.data[idx];
+
+                // Normalize fMRI value for visualization
+                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+
+                // Update overlay intensity based on the fMRI value
+                overlayIntensity = intensity * overlayOpacity;
+            }
+
+            // Combine the T1 and fMRI colors
+            // For example, enhance the red channel based on the overlay
+            r = r * (1.0f - overlayIntensity) + overlayIntensity;
+
+            // Set the final color with alpha blending
+            glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
             float x0 = (x - dimX / 2.0f) + 0.5f;
@@ -406,6 +386,7 @@ void MainGlWidget::paintGL()
             float x1 = x0 + 1.0f;
             float y1 = y0 + 1.0f;
 
+            // Draw the quad
             glVertex2f(x0, y0);
             glVertex2f(x1, y0);
             glVertex2f(x1, y1);
@@ -413,62 +394,6 @@ void MainGlWidget::paintGL()
         }
     }
     glEnd();
-
-    // Enable blending for transparency
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Draw the fMRI coronal slice over the T1 image
-    if (fMRI_image.voxCnt != 0) {
-        glBegin(GL_QUADS);
-        for (int z = 0; z < dimZ; ++z) {
-            int flippedZ = z; // Flip the z-coordinate
-            for (int x = 0; x < dimX; ++x) {
-                // T1 voxel indices
-                int ix = x;
-                int iy = y; // Current coronal slice
-                int iz = flippedZ;
-
-                // Map T1 voxel indices to world coordinates
-                Eigen::Vector4f voxel_t1(ix, iy, iz, 1.0f);
-                Eigen::Vector4f world_coords = t1_ijk2xyz * voxel_t1;
-
-                // Map world coordinates to fMRI voxel indices
-                Eigen::Vector4f voxel_f = fmri_xyz2ijk * world_coords;
-
-                float i_f = voxel_f(0);
-                float j_f = voxel_f(1);
-                float k_f = voxel_f(2);
-
-                // Check if fMRI voxel indices are within bounds
-                if (i_f >= 0 && i_f < dimX_f - 1 && j_f >= 0 && j_f < dimY_f - 1 && k_f >= 0 && k_f < dimZ_f - 1) {
-                    // Retrieve interpolated fMRI voxel value
-                    float value_f = getInterpolatedVoxelValue(voxelData_f, i_f, j_f, k_f, dimX_f, dimY_f, dimZ_f);
-
-                    // Normalize fMRI value for visualization
-                    float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
-
-                    // Set the color with opacity
-                    glColor4f(intensity, 0.0f, 0.0f, overlayOpacity * intensity);
-
-                    // Adjust coordinates to center around (0,0)
-                    float x0 = (x - dimX / 2.0f) + 0.5f;
-                    float y0 = (z - dimZ / 2.0f) + 0.5f;
-                    float x1 = x0 + 1.0f;
-                    float y1 = y0 + 1.0f;
-
-                    glVertex2f(x0, y0);
-                    glVertex2f(x1, y0);
-                    glVertex2f(x1, y1);
-                    glVertex2f(x0, y1);
-                }
-            }
-        }
-        glEnd();
-    }
-
-    // Disable blending after overlay
-    glDisable(GL_BLEND);
 
     // Draw crosshairs on coronal slice
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
@@ -497,21 +422,48 @@ void MainGlWidget::paintGL()
     // Draw the T1 sagittal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
-        int flippedZ = dimZ - z - 1; // Flip the z-coordinate
         for (int y = 0; y < dimY; ++y) {
             int idx = voxelIndex(x, y, z);
             float value = voxelData[idx];
 
+            // Normalize T1 voxel value for grayscale color
             float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
-            glColor3f(gray, gray, gray);
+            // Base color from T1 image
+            float r = gray;
+            float g = gray;
+            float b = gray;
+            float a = 1.0f; // Full opacity for T1 image
 
-            // Adjust coordinates using physical dimensions
+            // Initialize overlay intensity
+            float overlayIntensity = 0.0f;
+
+            // Check if fMRI data is available
+            if (fMRI_image_resampled.voxCnt != 0) {
+                // If images are resampled and aligned, use the same index
+                float value_f = fMRI_image_resampled.data[idx];
+
+                // Normalize fMRI value for visualization
+                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+
+                // Update overlay intensity based on the fMRI value
+                overlayIntensity = intensity * overlayOpacity;
+            }
+
+            // Combine the T1 and fMRI colors
+            // For example, enhance the red channel based on the overlay
+            r = r * (1.0f - overlayIntensity) + overlayIntensity;
+
+            // Set the final color with alpha blending
+            glColor4f(r, g, b, a);
+
+            // Adjust coordinates to center around (0,0)
             float x0 = (y - dimY / 2.0f) + 0.5f;
             float y0 = (z - dimZ / 2.0f) + 0.5f;
             float x1 = x0 + 1.0f;
             float y1 = y0 + 1.0f;
 
+            // Draw the quad
             glVertex2f(x0, y0);
             glVertex2f(x1, y0);
             glVertex2f(x1, y1);
@@ -519,62 +471,6 @@ void MainGlWidget::paintGL()
         }
     }
     glEnd();
-
-    // Enable blending for transparency
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Draw the fMRI sagittal slice over the T1 image
-    if (fMRI_image.voxCnt != 0) {
-        glBegin(GL_QUADS);
-        for (int z = 0; z < dimZ; ++z) {
-            int flippedZ = z; // Flip the z-coordinate
-            for (int y = 0; y < dimY; ++y) {
-                // T1 voxel indices
-                int ix = x; // Current sagittal slice
-                int iy = y;
-                int iz = flippedZ;
-
-                // Map T1 voxel indices to world coordinates
-                Eigen::Vector4f voxel_t1(ix, iy, iz, 1.0f);
-                Eigen::Vector4f world_coords = t1_ijk2xyz * voxel_t1;
-
-                // Map world coordinates to fMRI voxel indices
-                Eigen::Vector4f voxel_f = fmri_xyz2ijk * world_coords;
-
-                float i_f = voxel_f(0);
-                float j_f = voxel_f(1);
-                float k_f = voxel_f(2);
-
-                // Check if fMRI voxel indices are within bounds
-                if (i_f >= 0 && i_f < dimX_f - 1 && j_f >= 0 && j_f < dimY_f - 1 && k_f >= 0 && k_f < dimZ_f - 1) {
-                    // Retrieve interpolated fMRI voxel value
-                    float value_f = getInterpolatedVoxelValue(voxelData_f, i_f, j_f, k_f, dimX_f, dimY_f, dimZ_f);
-
-                    // Normalize fMRI value for visualization
-                    float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
-
-                    // Set the color with opacity
-                    glColor4f(intensity, 0.0f, 0.0f, overlayOpacity * intensity);
-
-                    // Adjust coordinates to center around (0,0)
-                    float x0 = (y - dimY / 2.0f) + 0.5f;
-                    float y0 = (z - dimZ / 2.0f) + 0.5f;
-                    float x1 = x0 + 1.0f;
-                    float y1 = y0 + 1.0f;
-
-                    glVertex2f(x0, y0);
-                    glVertex2f(x1, y0);
-                    glVertex2f(x1, y1);
-                    glVertex2f(x0, y1);
-                }
-            }
-        }
-        glEnd();
-    }
-
-    // Disable blending after overlay
-    glDisable(GL_BLEND);
 
     // Draw crosshairs on sagittal slice
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
@@ -590,30 +486,24 @@ void MainGlWidget::paintGL()
     glVertex2f(dimY / 2.0f, lineY);
     glEnd();
     
-    // Retrieve the voxel value
-    int ix = std::clamp(i, 0, dimX - 1);
-    int iy = std::clamp(j, 0, dimY - 1);
-    int iz = std::clamp(k, 0, dimZ - 1);
-    
+    // Retrieve the voxel indices
+    int i_trgt = std::clamp(i, 0, dimX - 1);
+    int j_trgt = std::clamp(j, 0, dimY - 1);
+    int k_trgt = std::clamp(k, 0, dimZ - 1);
+
+
     // Retrieve the target voxel value
-    int trgt_idx = voxelIndex(ix, iy, iz);
+    int trgt_idx = voxelIndex(i_trgt, j_trgt, k_trgt);
     float trgt_voxelValue = voxelData[trgt_idx];
     float trgt_voxelValue_f = 0;
 
+    // Retrieve the voxel positions
+    float p[3];
+    T1_image.to_xyz(trgt_idx, p);
+
     if (fMRI_image.voxCnt != 0) {
-        // Map T1 voxel indices to world coordinates
-        Eigen::Vector4f voxel_t1(ix, iy, iz, 1.0f);
-        Eigen::Vector4f world_coords = t1_ijk2xyz * voxel_t1;
-
-        // Map world coordinates to fMRI voxel indices
-        Eigen::Vector4f voxel_f = fmri_xyz2ijk * world_coords;
-
-        float i_f = voxel_f(0);
-        float j_f = voxel_f(1);
-        float k_f = voxel_f(2);
-
         // Retrieve the target voxel value
-        trgt_voxelValue_f = getInterpolatedVoxelValue(voxelData_f, i_f, j_f, k_f, dimX_f, dimY_f, dimZ_f);
+        trgt_voxelValue_f = fMRI_image_resampled.data[trgt_idx];
     }
 
     // Begin QPainter
@@ -623,14 +513,18 @@ void MainGlWidget::paintGL()
     painter.setPen(Qt::yellow);
     painter.setFont(QFont("Arial", 10));
 
+    // Get the position unit
+    QString spaceUnit = QString::fromStdString(T1_image.getSpaceUnit());
+
     // Prepare the text
-    QString text = QString("Value T1: %1\nValue fMRI: %2\nVoxel: [ %3, %4, %5 ]")
+    QString text = QString("value T1: %1\nvalue fMRI: %2\nvoxel index: [ %3, %4, %5 ]\nposition: [ %6, %7, %8 ] %9")
         .arg(trgt_voxelValue)
         .arg(trgt_voxelValue_f)
-        .arg(ix).arg(iy).arg(iz);
+        .arg(i_trgt).arg(j_trgt).arg(k_trgt)
+        .arg(p[0]).arg(p[1]).arg(p[2]).arg(spaceUnit);
 
     // Position the text at the bottom left corner
-    QRect textRect(10, height() - 110, 200, 100); // x, y, width, height
+    QRect textRect(10, height() - 110, 300, 100); // x, y, width, height
 
     painter.drawText(textRect, Qt::AlignLeft | Qt::AlignBottom | Qt::TextWordWrap, text);
 
@@ -641,8 +535,8 @@ void MainGlWidget::paintGL()
 void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
     // Dimensions of the Axial slice
-    int dimX = dMRI_image.imgDims[0];
-    int dimY = dMRI_image.imgDims[1];
+    int dimX = T1_image.imgDims[0];
+    int dimY = T1_image.imgDims[1];
 
     // Calculate the position within the axial viewport
     int xInViewport = mousePos.x();
@@ -657,7 +551,7 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     float halfHeight = dimY / 2.0f;
 
     float panX = panOffset.x();
-    float panY = -panOffset.y();
+    float panY = panOffset.y();
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -672,9 +566,6 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     int imgX = static_cast<int>(worldX + dimX / 2.0f - 0.5f);
     int imgY = static_cast<int>(worldY + dimY / 2.0f - 0.5f);
 
-    // Flip imgY due to image flipping
-    imgY = dimY - imgY - 1;
-
     // Clamp the indices to valid ranges
     i = std::clamp(imgX, 0, dimX - 1);
     j = std::clamp(imgY, 0, dimY - 1);
@@ -685,8 +576,8 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
 void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
     // Dimensions of the Coronal slice
-    int dimX = dMRI_image.imgDims[0];
-    int dimZ = dMRI_image.imgDims[2];
+    int dimX = T1_image.imgDims[0];
+    int dimZ = T1_image.imgDims[2];
 
     // Adjust mouse position for the coronal viewport
     int xInViewport = mousePos.x() - viewportWidth; // Subtract viewport offset
@@ -726,8 +617,8 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
 void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
     // Dimensions of the Sagittal slice
-    int dimY = dMRI_image.imgDims[1];
-    int dimZ = dMRI_image.imgDims[2];
+    int dimY = T1_image.imgDims[1];
+    int dimZ = T1_image.imgDims[2];
 
     // Adjust mouse position for the sagittal viewport
     int xInViewport = mousePos.x() - 2 * viewportWidth; // Subtract viewport offset
@@ -766,7 +657,7 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
 
 void MainGlWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+    if (T1_image.data == nullptr || T1_image.voxCnt == 0) {
         // No image loaded; ignore the event
         return;
     }
@@ -798,7 +689,7 @@ void MainGlWidget::mousePressEvent(QMouseEvent *event)
 
 void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+    if (T1_image.data == nullptr || T1_image.voxCnt == 0) {
         // No image loaded; ignore the event
         return;
     }
@@ -826,24 +717,24 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 
         if (viewportIndex == 0) {
             // Axial slice (x, y plane)
-            scaleX = (dMRI_image.imgDims[0] + zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[1] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[1] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
-            panOffset.setY(panOffset.y() + deltaY * scaleY);
+            panOffset.setY(panOffset.y() - deltaY * scaleY);
 
         } else if (viewportIndex == 1) {
             // Coronal slice (x, z plane)
-            scaleX = (dMRI_image.imgDims[0] + zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[2] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[2] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
 
         } else {
             // Sagittal slice (y, z plane)
-            scaleX = (dMRI_image.imgDims[1] + zoomFactor) / viewportWidth;
-            scaleY = (dMRI_image.imgDims[2] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[1] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[2] + zoomFactor) / widgetHeight;
 
             panOffset.setY(panOffset.y() - deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
@@ -869,7 +760,7 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 
 void MainGlWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+    if (T1_image.data == nullptr || T1_image.voxCnt == 0) {
         // No image loaded; ignore the event
         return;
     }
@@ -882,27 +773,27 @@ void MainGlWidget::mouseReleaseEvent(QMouseEvent *event)
 void MainGlWidget::handleAxialScroll(QWheelEvent *event)
 {
     int delta = event->angleDelta().y() / 120; // Each notch is 15 degrees; 120 units per notch
-    k = std::clamp(k + delta, 0, static_cast<int>(dMRI_image.imgDims[2] - 1)); // Adjust axial index (z-axis)
+    k = std::clamp(k + delta, 0, static_cast<int>(T1_image.imgDims[2] - 1)); // Adjust axial index (z-axis)
     update();
 }
 
 void MainGlWidget::handleCoronalScroll(QWheelEvent *event)
 {
     int delta = event->angleDelta().y() / 120;
-    j = std::clamp(j + delta, 0, static_cast<int>(dMRI_image.imgDims[1] - 1)); // Adjust coronal index (y-axis)
+    j = std::clamp(j + delta, 0, static_cast<int>(T1_image.imgDims[1] - 1)); // Adjust coronal index (y-axis)
     update();
 }
 
 void MainGlWidget::handleSagittalScroll(QWheelEvent *event)
 {
     int delta = event->angleDelta().y() / 120;
-    i = std::clamp(i + delta, 0, static_cast<int>(dMRI_image.imgDims[0] - 1)); // Adjust sagittal index (x-axis)
+    i = std::clamp(i + delta, 0, static_cast<int>(T1_image.imgDims[0] - 1)); // Adjust sagittal index (x-axis)
     update();
 }
 
 void MainGlWidget::wheelEvent(QWheelEvent *event)
 {
-    if (dMRI_image.data == nullptr || dMRI_image.voxCnt == 0) {
+    if (T1_image.data == nullptr || T1_image.voxCnt == 0) {
         // No image loaded; ignore the event
         return;
     }

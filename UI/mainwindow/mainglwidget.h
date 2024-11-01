@@ -11,6 +11,7 @@
 #include <QPainter>
 #include <QFont>
 #include <image/image.h>
+#include <image/image_operators.h>
 #include <Eigen/Dense>
 
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -38,8 +39,9 @@ private slots:
 
 private:
     // MRI image data
-    NIBR::Image<float> dMRI_image;
+    NIBR::Image<float> T1_image;
     NIBR::Image<float> fMRI_image;
+    NIBR::Image<float> fMRI_image_resampled;
     float minValue;
     float maxValue;
     float minValue_f;
@@ -50,19 +52,8 @@ private:
     int j; // Coronal (along y-axis)
     int k; // Axial (along z-axis)
 
-    // Slice indices for each plane fMRI
-    int i_f; // Sagittal (along x-axis)
-    int j_f; // Coronal (along y-axis)
-    int k_f; // Axial (along z-axis)
-
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
     float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
-
-    // Transformation matrices
-    Eigen::Matrix4f t1_ijk2xyz;
-    Eigen::Matrix4f t1_xyz2ijk;
-    Eigen::Matrix4f fmri_ijk2xyz;
-    Eigen::Matrix4f fmri_xyz2ijk;
 
     // Zoom and Pan
     float zoomFactor;
