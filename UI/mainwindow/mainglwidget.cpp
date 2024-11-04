@@ -13,7 +13,7 @@ MainGlWidget::MainGlWidget(QWidget *parent)
     // Initialize slice indices
     i = j = k = 0;
 
-    overlayOpacity = 1.0f;
+    overlayOpacity = 0.5f;
     
     this->setFocusPolicy ( Qt::StrongFocus );
 
@@ -72,6 +72,9 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
     i = T1_image.imgDims[0] / 2; // Sagittal (x-axis)
     j = T1_image.imgDims[1] / 2; // Coronal (y-axis)
     k = T1_image.imgDims[2] / 2; // Axial (z-axis)
+
+    T1_orientation = T1_image.getOrientation();
+    std::cout << "Image orientation: " << T1_orientation[0] << T1_orientation[1] << T1_orientation[2] << std::endl;
 
     // Trigger a repaint
     update();

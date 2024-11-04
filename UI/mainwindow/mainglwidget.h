@@ -12,6 +12,7 @@
 #include <QFont>
 #include <image/image.h>
 #include <image/image_operators.h>
+#include <image/orientation.h>
 #include <Eigen/Dense>
 
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -51,6 +52,8 @@ private:
     int i; // Sagittal (along x-axis)
     int j; // Coronal (along y-axis)
     int k; // Axial (along z-axis)
+
+    std::vector<std::string> T1_orientation;
 
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
     float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
