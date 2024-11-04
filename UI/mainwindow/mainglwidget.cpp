@@ -73,7 +73,7 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
     j = T1_image.imgDims[1] / 2; // Coronal (y-axis)
     k = T1_image.imgDims[2] / 2; // Axial (z-axis)
 
-    T1_orientation = T1_image.getOrientation();
+    // T1_orientation = T1_image.getOrientation();
     std::cout << "Image orientation: " << T1_orientation[0] << T1_orientation[1] << T1_orientation[2] << std::endl;
 
     // Trigger a repaint
@@ -268,8 +268,16 @@ void MainGlWidget::paintGL()
     // Draw the T1 axial slice
     glBegin(GL_QUADS);
     for (int y = 0; y < dimY; ++y) {
+        
+        int yFlipped = y;
+        if (T1_orientation[1] == "P") yFlipped = dimY - 1 - y;
+
         for (int x = 0; x < dimX; ++x) {
-            int idx = voxelIndex(x, y, z);
+
+            int xFlipped = x;
+            if (T1_orientation[0] == "R") xFlipped = dimX - 1 - x;
+
+            int idx = voxelIndex(xFlipped, yFlipped, z);
             float value = voxelData[idx];
 
             // Normalize T1 voxel value for grayscale color
@@ -327,10 +335,12 @@ void MainGlWidget::paintGL()
     glBegin(GL_LINES);
     // Vertical line at x = i
     float lineX = (i - dimX / 2.0f) + 1.0f;
+    if (T1_orientation[0] == "R") lineX = ((dimX - 1 - i) - dimX / 2.0f) + 1.0f;
     glVertex2f(lineX, -dimY / 2.0f);
     glVertex2f(lineX, dimY / 2.0f);
     // Horizontal line at y = j
     float lineY = (j - dimY / 2.0f) + 1.0f;
+    if (T1_orientation[1] == "P") lineY = ((dimY - 1 - j) - dimY / 2.0f) + 1.0f;
     glVertex2f(-dimX / 2.0f, lineY);
     glVertex2f(dimX / 2.0f, lineY);
     glEnd();
@@ -348,8 +358,16 @@ void MainGlWidget::paintGL()
     // Draw the T1 coronal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
+        
+        int zFlipped = z;
+        if (T1_orientation[2] == "I") zFlipped = dimZ - 1 - z;
+
         for (int x = 0; x < dimX; ++x) {
-            int idx = voxelIndex(x, y, z);
+
+            int xFlipped = x;
+            if (T1_orientation[0] == "R") xFlipped = dimX - 1 - x; 
+
+            int idx = voxelIndex(xFlipped, y, zFlipped);
             float value = voxelData[idx];
 
             // Normalize T1 voxel value for grayscale color
@@ -404,10 +422,12 @@ void MainGlWidget::paintGL()
     glBegin(GL_LINES);
     // Vertical line at x = i
     lineX = (i - dimX / 2.0f) + 1.0f;
+    if (T1_orientation[0] == "R") lineX = ((dimX - 1 - i) - dimX / 2.0f) + 1.0f;
     glVertex2f(lineX, -dimZ / 2.0f);
     glVertex2f(lineX, dimZ / 2.0f);
     // Horizontal line at z = k
     lineY = ((k - dimZ / 2.0f) + 1.0f);
+    if (T1_orientation[2] == "I") lineY = ((dimZ - 1 - k) - dimZ / 2.0f) + 1.0f;
     glVertex2f(-dimX / 2.0f, lineY);
     glVertex2f(dimX / 2.0f, lineY);
     glEnd();
@@ -425,8 +445,16 @@ void MainGlWidget::paintGL()
     // Draw the T1 sagittal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
+        
+        int zFlipped = z;
+        if (T1_orientation[2] == "I") zFlipped = dimZ - 1 - z;
+
         for (int y = 0; y < dimY; ++y) {
-            int idx = voxelIndex(x, y, z);
+
+            int yFlipped = y;
+            if (T1_orientation[1] == "A") yFlipped = dimY - 1 - y;
+
+            int idx = voxelIndex(x, yFlipped, zFlipped);
             float value = voxelData[idx];
 
             // Normalize T1 voxel value for grayscale color
@@ -481,10 +509,12 @@ void MainGlWidget::paintGL()
     glBegin(GL_LINES);
     // Vertical line at y = j
     lineX = (j - dimY / 2.0f) + 1.0f;
+    if (T1_orientation[1] == "A") lineX = ((dimY - 1 - j) - dimY / 2.0f) + 1.0f;
     glVertex2f(lineX, -dimZ / 2.0f);
     glVertex2f(lineX, dimZ / 2.0f);
     // Horizontal line at z = k
     lineY = ((k - dimZ / 2.0f) + 1.0f);
+    if (T1_orientation[2] == "I") lineY = ((dimZ - 1 - k) - dimZ / 2.0f) + 1.0f;
     glVertex2f(-dimY / 2.0f, lineY);
     glVertex2f(dimY / 2.0f, lineY);
     glEnd();
@@ -493,7 +523,6 @@ void MainGlWidget::paintGL()
     int i_trgt = std::clamp(i, 0, dimX - 1);
     int j_trgt = std::clamp(j, 0, dimY - 1);
     int k_trgt = std::clamp(k, 0, dimZ - 1);
-
 
     // Retrieve the target voxel value
     int trgt_idx = voxelIndex(i_trgt, j_trgt, k_trgt);
@@ -543,7 +572,10 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
 
     // Calculate the position within the axial viewport
     int xInViewport = mousePos.x();
+    if (T1_orientation[0] == "R") xInViewport = viewportWidth - mousePos.x();
+
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    if (T1_orientation[1] == "P") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to Normalized Device Coordinates (NDC)
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -554,7 +586,9 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     float halfHeight = dimY / 2.0f;
 
     float panX = panOffset.x();
+    if (T1_orientation[0] == "R") panX = -panOffset.x();
     float panY = panOffset.y();
+    if (T1_orientation[1] == "P") panY = -panOffset.y();
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -584,7 +618,10 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
 
     // Adjust mouse position for the coronal viewport
     int xInViewport = mousePos.x() - viewportWidth; // Subtract viewport offset
+    if (T1_orientation[0] == "R") xInViewport = viewportWidth - (mousePos.x() - viewportWidth);
+
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    if (T1_orientation[2] == "I") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -595,7 +632,9 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
     float halfHeight = dimZ / 2.0f;
 
     float panX = panOffset.x();
+    if (T1_orientation[0] == "R") panX = -panOffset.x();
     float panZ = panOffset.z();
+    if (T1_orientation[2] == "I") panZ = -panOffset.z();
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -625,7 +664,10 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
 
     // Adjust mouse position for the sagittal viewport
     int xInViewport = mousePos.x() - 2 * viewportWidth; // Subtract viewport offset
+    if (T1_orientation[1] == "A") xInViewport = viewportWidth - (mousePos.x() - 2 * viewportWidth);
+
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    if (T1_orientation[2] == "I") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -636,7 +678,9 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
     float halfHeight = dimZ / 2.0f;
 
     float panY = panOffset.y();
+    if (T1_orientation[1] == "A") panY = -panOffset.y();
     float panZ = panOffset.z();
+    if (T1_orientation[2] == "I") panZ = -panOffset.z();
 
     float left = (-halfWidth - panY) / zoomFactor;
     float right = (halfWidth - panY) / zoomFactor;
