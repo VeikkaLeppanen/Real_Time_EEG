@@ -101,7 +101,9 @@ void phaseEstimationWorker::process()
 
         int index = 0;
         int last_save_index = -1;
-        std::vector<int> seqNum_list;
+        std::vector<int> trigger_seqNum_list;
+        std::vector<int> angle_seqNum_list;
+        std::vector<double> angle_list;
 
         int last_SNR_pass = 0;
         int seq_num_tracker = 0;
@@ -243,6 +245,7 @@ void phaseEstimationWorker::process()
                 EEG_hilbert = hilbertTransform(EEG_predicted);
             }
 
+            bool save_angle = false;            //Remove later
             // Trigger phase targeting
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
@@ -250,10 +253,11 @@ void phaseEstimationWorker::process()
                 if (trigger_seqNum && SNR_passed) { 
 
                     if (sequence_number > 40000 && trigger_seqNum > 200 + last_save_index) {
-                        seqNum_list.push_back(trigger_seqNum);
+                        trigger_seqNum_list.push_back(trigger_seqNum);
                         last_save_index = trigger_seqNum;
+                        save_angle = true;
                     }
-                    // if (sequence_number > 40000) seqNum_list.push_back(trigger_seqNum);
+                    // if (sequence_number > 40000) trigger_seqNum_list.push_back(trigger_seqNum);
 
                     handler.insertTrigger(trigger_seqNum);
                 }
@@ -286,6 +290,11 @@ void phaseEstimationWorker::process()
                         case 0:
                             phase_diff_hilbert = hilbertTransform(EEG_filter2);
                             difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+
+                            if (save_angle) {
+                                angle_seqNum_list.push_back(sequence_number - 350);
+                                angle_list.push_back(std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+                            }
 
                             // Update the phase difference
                             phaseDifference(phaseDifference_current_index) = difference;
@@ -352,8 +361,10 @@ void phaseEstimationWorker::process()
 
         }
         std::cout << "SNR max: " << SNR_max_final << std::endl;
-        std::cout << "Phase estimation finished. Saving data..." << seqNum_list.size() << std::endl;
-        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list));
+        std::cout << "Phase estimation finished. Saving data..." << trigger_seqNum_list.size() << std::endl;
+        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(trigger_seqNum_list));
+        writeMatrixiToCSV("angle_seqNum_list.csv", vectorToColumnMatrixi(angle_seqNum_list));
+        writeMatrixdToCSV("angle_list.csv", vectorToColumnMatrixd(angle_list));
         
         emit finished();
     } catch (std::exception& e) {
