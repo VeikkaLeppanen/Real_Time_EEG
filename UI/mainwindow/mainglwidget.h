@@ -35,6 +35,24 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
+    // void resizeEvent(QResizeEvent *event) override {
+    //     int newWidth = event->size().width();
+    //     int newHeight = event->size().height();
+
+    //     // Calculate the maximum size that fits within the new dimensions
+    //     if (newWidth > newHeight * aspectRatio) {
+    //         // Height is the limiting dimension
+    //         newWidth = static_cast<int>(newHeight * aspectRatio);
+    //     } else {
+    //         // Width is the limiting dimension
+    //         newHeight = static_cast<int>(newWidth / aspectRatio);
+    //     }
+
+    //     // Set the viewport and resize the widget
+    //     setGeometry((width() - newWidth) / 2, (height() - newHeight) / 2, newWidth, newHeight);
+    //     QOpenGLWidget::resizeEvent(event);
+    // }
+
 private slots:
     void updateGraph();
 
@@ -55,6 +73,8 @@ private:
 
     std::vector<std::string> T1_orientation = {"R", "A", "S"};
     // std::vector<std::string> T1_orientation = {"L", "P", "I"};
+    std::vector<float> T1_pixDims = {1.0, 1.0, 1.0};
+    // std::vector<float> T1_pixDims = {2.0, 1.5, 0.5};
 
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
     float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
@@ -64,6 +84,7 @@ private:
     QVector3D panOffset;
     QPoint lastPanPoint; // For tracking mouse movement during panning
     float overlayOpacity; // Value between 0.0f and 1.0f
+    // const double aspectRatio; // Set your aspect ratio (e.g., 16:9 or 4:3)
 
     // Mouse event handlers
     void handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);

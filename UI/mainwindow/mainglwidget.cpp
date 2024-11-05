@@ -16,7 +16,8 @@ MainGlWidget::MainGlWidget(QWidget *parent)
     overlayOpacity = 0.5f;
     
     this->setFocusPolicy ( Qt::StrongFocus );
-
+    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    
     // Set up the timer for updating the graph
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
@@ -73,8 +74,12 @@ void MainGlWidget::loadImage_T1(const QString& filePath)
     j = T1_image.imgDims[1] / 2; // Coronal (y-axis)
     k = T1_image.imgDims[2] / 2; // Axial (z-axis)
 
-    // T1_orientation = T1_image.getOrientation();
+    T1_orientation = T1_image.getOrientation();
     std::cout << "Image orientation: " << T1_orientation[0] << T1_orientation[1] << T1_orientation[2] << std::endl;
+
+    T1_pixDims[0] = T1_image.pixDims[0];
+    T1_pixDims[1] = T1_image.pixDims[1];
+    T1_pixDims[2] = T1_image.pixDims[2];
 
     // Trigger a repaint
     update();
@@ -122,63 +127,6 @@ void MainGlWidget::loadImage_fMRI(const QString& filePath)
     update();
 }
 
-// Add this function to perform trilinear interpolation
-float MainGlWidget::getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ) {
-    int x0 = static_cast<int>(floor(x));
-    int y0 = static_cast<int>(floor(y));
-    int z0 = static_cast<int>(floor(z));
-
-    int x1 = x0 + 1;
-    int y1 = y0 + 1;
-    int z1 = z0 + 1;
-
-    float xd = x - x0;
-    float yd = y - y0;
-    float zd = z - z0;
-
-    // Clamp indices to image dimensions
-    x0 = std::clamp(x0, 0, dimX - 1);
-    x1 = std::clamp(x1, 0, dimX - 1);
-    y0 = std::clamp(y0, 0, dimY - 1);
-    y1 = std::clamp(y1, 0, dimY - 1);
-    z0 = std::clamp(z0, 0, dimZ - 1);
-    z1 = std::clamp(z1, 0, dimZ - 1);
-
-    // Calculate voxel indices directly
-    int idx000 = x0 + y0 * dimX + z0 * dimX * dimY;
-    int idx100 = x1 + y0 * dimX + z0 * dimX * dimY;
-    int idx010 = x0 + y1 * dimX + z0 * dimX * dimY;
-    int idx110 = x1 + y1 * dimX + z0 * dimX * dimY;
-    int idx001 = x0 + y0 * dimX + z1 * dimX * dimY;
-    int idx101 = x1 + y0 * dimX + z1 * dimX * dimY;
-    int idx011 = x0 + y1 * dimX + z1 * dimX * dimY;
-    int idx111 = x1 + y1 * dimX + z1 * dimX * dimY;
-
-    // Retrieve voxel values at the eight corners
-    float c000 = data[idx000];
-    float c100 = data[idx100];
-    float c010 = data[idx010];
-    float c110 = data[idx110];
-    float c001 = data[idx001];
-    float c101 = data[idx101];
-    float c011 = data[idx011];
-    float c111 = data[idx111];
-
-    // Perform trilinear interpolation
-    float c00 = c000 * (1 - xd) + c100 * xd;
-    float c01 = c001 * (1 - xd) + c101 * xd;
-    float c10 = c010 * (1 - xd) + c110 * xd;
-    float c11 = c011 * (1 - xd) + c111 * xd;
-
-    float c0 = c00 * (1 - yd) + c10 * yd;
-    float c1 = c01 * (1 - yd) + c11 * yd;
-
-    float c = c0 * (1 - zd) + c1 * zd;
-
-    return c;
-}
-
-
 void MainGlWidget::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -205,9 +153,13 @@ void MainGlWidget::paintGL()
     int dimY = T1_image.imgDims[1];
     int dimZ = T1_image.imgDims[2];
 
-    float pixDimX_T1 = T1_image.pixDims[0];
-    float pixDimY_T1 = T1_image.pixDims[1];
-    float pixDimZ_T1 = T1_image.pixDims[2];
+    float pixDimX_T1 = T1_pixDims[0];//T1_image.pixDims[0];
+    float pixDimY_T1 = T1_pixDims[1];//T1_image.pixDims[1];
+    float pixDimZ_T1 = T1_pixDims[2];//T1_image.pixDims[2];
+
+    int dimX_scaled = dimX * pixDimX_T1;
+    int dimY_scaled = dimY * pixDimY_T1;
+    int dimZ_scaled = dimZ * pixDimZ_T1;
 
     float* voxelData = T1_image.data;
 
@@ -236,21 +188,37 @@ void MainGlWidget::paintGL()
     Viewport sagittalViewport = {2 * viewportWidth, 0, viewportWidth, widgetHeight};
 
     // Helper function to set up projection and modelview matrices
-    auto setupOrtho = [&](int imgWidth, int imgHeight, float panX, float panY) {
+    auto setupOrtho = [&](float imgWidth, float imgHeight, float panX, float panY, int viewportWidth, int viewportHeight) {
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-    
+
         float halfWidth = imgWidth / 2.0f;
         float halfHeight = imgHeight / 2.0f;
-    
-        // Calculate the zoomed and panned view
-        float left = (-halfWidth - panX) / zoomFactor;
-        float right = (halfWidth - panX) / zoomFactor;
-        float bottom = (-halfHeight - panY) / zoomFactor;
-        float top = (halfHeight - panY) / zoomFactor;
-    
+
+        // Calculate aspect ratios
+        float aspectImage = imgWidth / imgHeight;
+        float aspectViewport = static_cast<float>(viewportWidth) / viewportHeight;
+
+        float left, right, bottom, top;
+
+        if (aspectViewport > aspectImage) {
+            // Viewport is wider than image; adjust width
+            float adjustedHalfWidth = halfHeight * aspectViewport;
+            left = (-adjustedHalfWidth - panX) / zoomFactor;
+            right = (adjustedHalfWidth - panX) / zoomFactor;
+            bottom = (-halfHeight - panY) / zoomFactor;
+            top = (halfHeight - panY) / zoomFactor;
+        } else {
+            // Viewport is taller than image; adjust height
+            float adjustedHalfHeight = halfWidth / aspectViewport;
+            left = (-halfWidth - panX) / zoomFactor;
+            right = (halfWidth - panX) / zoomFactor;
+            bottom = (-adjustedHalfHeight - panY) / zoomFactor;
+            top = (adjustedHalfHeight - panY) / zoomFactor;
+        }
+
         glOrtho(left, right, bottom, top, -1, 1);
-    
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
     };
@@ -260,8 +228,12 @@ void MainGlWidget::paintGL()
     // --------------------
     glViewport(axialViewport.x, axialViewport.y, axialViewport.width, axialViewport.height);
 
+    // Calculate the physical dimensions of the image in the axial plane
+    float imgWidth = dimX * pixDimX_T1;
+    float imgHeight = dimY * pixDimY_T1;
+
     // Use the panOffset and zoomFactor
-    setupOrtho(dimX, dimY, panOffset.x(), panOffset.y());
+    setupOrtho(imgWidth, imgHeight, panOffset.x(), panOffset.y(), axialViewport.width, axialViewport.height);
 
     int z = std::clamp(k, 0, dimZ - 1);
 
@@ -271,12 +243,12 @@ void MainGlWidget::paintGL()
         
         int yFlipped = y;
         if (T1_orientation[1] == "P") yFlipped = dimY - 1 - y;
-
+        
         for (int x = 0; x < dimX; ++x) {
-
+            
             int xFlipped = x;
             if (T1_orientation[0] == "R") xFlipped = dimX - 1 - x;
-
+            
             int idx = voxelIndex(xFlipped, yFlipped, z);
             float value = voxelData[idx];
 
@@ -312,10 +284,10 @@ void MainGlWidget::paintGL()
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (x - dimX / 2.0f) + 0.5f;
-            float y0 = (y - dimY / 2.0f) + 0.5f;
-            float x1 = x0 + 1.0f;
-            float y1 = y0 + 1.0f;
+            float x0 = (x * pixDimX_T1) - (imgWidth / 2.0f);
+            float y0 = (y * pixDimY_T1) - (imgHeight / 2.0f);
+            float x1 = x0 + pixDimX_T1;
+            float y1 = y0 + pixDimY_T1;
 
             // Draw the quad
             glVertex2f(x0, y0);
@@ -330,42 +302,60 @@ void MainGlWidget::paintGL()
     glDisable(GL_BLEND);
 
     // Draw crosshairs on axial slice
+    // Draw crosshairs on axial slice
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
     glLineWidth(1.0f);
     glBegin(GL_LINES);
-    // Vertical line at x = i
-    float lineX = (i - dimX / 2.0f) + 1.0f;
-    if (T1_orientation[0] == "R") lineX = ((dimX - 1 - i) - dimX / 2.0f) + 1.0f;
-    glVertex2f(lineX, -dimY / 2.0f);
-    glVertex2f(lineX, dimY / 2.0f);
-    // Horizontal line at y = j
-    float lineY = (j - dimY / 2.0f) + 1.0f;
-    if (T1_orientation[1] == "P") lineY = ((dimY - 1 - j) - dimY / 2.0f) + 1.0f;
-    glVertex2f(-dimX / 2.0f, lineY);
-    glVertex2f(dimX / 2.0f, lineY);
+
+    // Adjust x index for orientation
+    int xCrosshair = i;
+    if (T1_orientation[0] == "R") xCrosshair = dimX - 1 - i;
+
+    // Compute lineX in physical coordinates
+    float lineX = (xCrosshair * pixDimX_T1) - (imgWidth / 2.0f) + (pixDimX_T1 / 2.0f);
+
+    // Adjust y index for orientation
+    int yCrosshair = j;
+    if (T1_orientation[1] == "P") yCrosshair = dimY - 1 - j;
+
+    // Compute lineY in physical coordinates
+    float lineY = (yCrosshair * pixDimY_T1) - (imgHeight / 2.0f) + (pixDimY_T1 / 2.0f);
+
+    // Vertical line at x = lineX
+    glVertex2f(lineX, -imgHeight / 2.0f);
+    glVertex2f(lineX, imgHeight / 2.0f);
+
+    // Horizontal line at y = lineY
+    glVertex2f(-imgWidth / 2.0f, lineY);
+    glVertex2f(imgWidth / 2.0f, lineY);
+
     glEnd();
-    
+
     // --------------------
     // Draw Coronal Slice
     // --------------------
     glViewport(coronalViewport.x, coronalViewport.y, coronalViewport.width, widgetHeight);
 
+    // Calculate the physical dimensions of the image in the coronal plane
+    imgWidth = dimX * pixDimX_T1;
+    imgHeight = dimZ * pixDimZ_T1;
+
     // Use the panOffset and zoomFactor
-    setupOrtho(dimX, dimZ, panOffset.x(), panOffset.z());
+    setupOrtho(imgWidth, imgHeight, panOffset.x(), panOffset.z(), coronalViewport.width, coronalViewport.height);
 
     int y = std::clamp(j, 0, dimY - 1);
 
     // Draw the T1 coronal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
-        
+
         int zFlipped = z;
         if (T1_orientation[2] == "I") zFlipped = dimZ - 1 - z;
 
         for (int x = 0; x < dimX; ++x) {
 
             int xFlipped = x;
-            if (T1_orientation[0] == "R") xFlipped = dimX - 1 - x; 
+            if (T1_orientation[0] == "R") xFlipped = dimX - 1 - x;
 
             int idx = voxelIndex(xFlipped, y, zFlipped);
             float value = voxelData[idx];
@@ -402,10 +392,10 @@ void MainGlWidget::paintGL()
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (x - dimX / 2.0f) + 0.5f;
-            float y0 = (z - dimZ / 2.0f) + 0.5f;
-            float x1 = x0 + 1.0f;
-            float y1 = y0 + 1.0f;
+            float x0 = (x * pixDimX_T1) - (imgWidth / 2.0f);
+            float y0 = (z * pixDimZ_T1) - (imgHeight / 2.0f);
+            float x1 = x0 + pixDimX_T1;
+            float y1 = y0 + pixDimZ_T1;
 
             // Draw the quad
             glVertex2f(x0, y0);
@@ -416,20 +406,33 @@ void MainGlWidget::paintGL()
     }
     glEnd();
 
-    // Draw crosshairs on coronal slice
+    // Draw crosshairs on axial slice
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
     glLineWidth(1.0f);
     glBegin(GL_LINES);
-    // Vertical line at x = i
-    lineX = (i - dimX / 2.0f) + 1.0f;
-    if (T1_orientation[0] == "R") lineX = ((dimX - 1 - i) - dimX / 2.0f) + 1.0f;
-    glVertex2f(lineX, -dimZ / 2.0f);
-    glVertex2f(lineX, dimZ / 2.0f);
-    // Horizontal line at z = k
-    lineY = ((k - dimZ / 2.0f) + 1.0f);
-    if (T1_orientation[2] == "I") lineY = ((dimZ - 1 - k) - dimZ / 2.0f) + 1.0f;
-    glVertex2f(-dimX / 2.0f, lineY);
-    glVertex2f(dimX / 2.0f, lineY);
+    
+    // Adjust x index for orientation
+    xCrosshair = i;
+    if (T1_orientation[0] == "R") xCrosshair = dimX - 1 - i;
+    
+    // Compute lineX in physical coordinates
+    lineX = (xCrosshair * pixDimX_T1) - (imgWidth / 2.0f) + (pixDimX_T1 / 2.0f);
+    
+    // Adjust z index for orientation
+    yCrosshair = k;
+    if (T1_orientation[2] == "I") yCrosshair = dimZ - 1 - k;
+    
+    // Compute lineY in physical coordinates
+    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight / 2.0f) + (pixDimZ_T1 / 2.0f);
+    
+    // Vertical line at x = lineX
+    glVertex2f(lineX, -imgHeight / 2.0f);
+    glVertex2f(lineX, imgHeight / 2.0f);
+    
+    // Horizontal line at z = lineY
+    glVertex2f(-imgWidth / 2.0f, lineY);
+    glVertex2f(imgWidth / 2.0f, lineY);
+    
     glEnd();
 
     // --------------------
@@ -437,15 +440,19 @@ void MainGlWidget::paintGL()
     // --------------------
     glViewport(sagittalViewport.x, sagittalViewport.y, sagittalViewport.width, widgetHeight);
 
+    // Calculate the physical dimensions of the image in the sagittal plane
+    imgWidth = dimY * pixDimY_T1;
+    imgHeight = dimZ * pixDimZ_T1;
+    
     // Use the panOffset and zoomFactor
-    setupOrtho(dimY, dimZ, panOffset.y(), panOffset.z());
+    setupOrtho(imgWidth, imgHeight, -panOffset.y(), panOffset.z(), sagittalViewport.width, sagittalViewport.height);
 
     int x = std::clamp(i, 0, dimX - 1);
 
     // Draw the T1 sagittal slice
     glBegin(GL_QUADS);
     for (int z = 0; z < dimZ; ++z) {
-        
+
         int zFlipped = z;
         if (T1_orientation[2] == "I") zFlipped = dimZ - 1 - z;
 
@@ -489,10 +496,10 @@ void MainGlWidget::paintGL()
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (y - dimY / 2.0f) + 0.5f;
-            float y0 = (z - dimZ / 2.0f) + 0.5f;
-            float x1 = x0 + 1.0f;
-            float y1 = y0 + 1.0f;
+            float x0 = (y * pixDimY_T1) - (imgWidth / 2.0f);
+            float y0 = (z * pixDimZ_T1) - (imgHeight / 2.0f);
+            float x1 = x0 + pixDimY_T1;
+            float y1 = y0 + pixDimZ_T1;
 
             // Draw the quad
             glVertex2f(x0, y0);
@@ -507,22 +514,36 @@ void MainGlWidget::paintGL()
     glColor3f(0.5f, 0.5f, 0.0f); // Yellow color
     glLineWidth(1.0f);
     glBegin(GL_LINES);
-    // Vertical line at y = j
-    lineX = (j - dimY / 2.0f) + 1.0f;
-    if (T1_orientation[1] == "A") lineX = ((dimY - 1 - j) - dimY / 2.0f) + 1.0f;
-    glVertex2f(lineX, -dimZ / 2.0f);
-    glVertex2f(lineX, dimZ / 2.0f);
-    // Horizontal line at z = k
-    lineY = ((k - dimZ / 2.0f) + 1.0f);
-    if (T1_orientation[2] == "I") lineY = ((dimZ - 1 - k) - dimZ / 2.0f) + 1.0f;
-    glVertex2f(-dimY / 2.0f, lineY);
-    glVertex2f(dimY / 2.0f, lineY);
+    
+    // Adjust x index for orientation
+    xCrosshair = j;
+    if (T1_orientation[1] == "A") xCrosshair = dimY - 1 - j;
+    
+    // Compute lineX in physical coordinates
+    lineX = (xCrosshair * pixDimY_T1) - (imgWidth / 2.0f) + (pixDimY_T1 / 2.0f);
+    
+    // Adjust z index for orientation
+    yCrosshair = k;
+    if (T1_orientation[2] == "I") yCrosshair = dimZ - 1 - k;
+    
+    // Compute lineY in physical coordinates
+    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight / 2.0f) + (pixDimZ_T1 / 2.0f);
+    
+    // Vertical line at x = lineX
+    glVertex2f(lineX, -imgHeight / 2.0f);
+    glVertex2f(lineX, imgHeight / 2.0f);
+    
+    // Horizontal line at z = lineY
+    glVertex2f(-imgWidth / 2.0f, lineY);
+    glVertex2f(imgWidth / 2.0f, lineY);
+    
     glEnd();
     
     // Retrieve the voxel indices
     int i_trgt = std::clamp(i, 0, dimX - 1);
     int j_trgt = std::clamp(j, 0, dimY - 1);
     int k_trgt = std::clamp(k, 0, dimZ - 1);
+
 
     // Retrieve the target voxel value
     int trgt_idx = voxelIndex(i_trgt, j_trgt, k_trgt);
@@ -571,11 +592,8 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     int dimY = T1_image.imgDims[1];
 
     // Calculate the position within the axial viewport
-    int xInViewport = mousePos.x();
-    if (T1_orientation[0] == "R") xInViewport = viewportWidth - mousePos.x();
-
+    int xInViewport = viewportWidth - mousePos.x();
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
-    if (T1_orientation[1] == "P") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to Normalized Device Coordinates (NDC)
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -587,8 +605,10 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
 
     float panX = panOffset.x();
     if (T1_orientation[0] == "R") panX = -panOffset.x();
+    panX = panX / T1_pixDims[0];
     float panY = panOffset.y();
     if (T1_orientation[1] == "P") panY = -panOffset.y();
+    panY = panY / T1_pixDims[1];
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -600,8 +620,8 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
 
     // Convert world coordinates to image coordinates
-    int imgX = static_cast<int>(worldX + dimX / 2.0f - 0.5f);
-    int imgY = static_cast<int>(worldY + dimY / 2.0f - 0.5f);
+    int imgX = static_cast<int>(worldX + dimX / 2.0f);
+    int imgY = static_cast<int>(worldY + dimY / 2.0f);
 
     // Clamp the indices to valid ranges
     i = std::clamp(imgX, 0, dimX - 1);
@@ -617,11 +637,8 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
     int dimZ = T1_image.imgDims[2];
 
     // Adjust mouse position for the coronal viewport
-    int xInViewport = mousePos.x() - viewportWidth; // Subtract viewport offset
-    if (T1_orientation[0] == "R") xInViewport = viewportWidth - (mousePos.x() - viewportWidth);
-
+    int xInViewport = (viewportWidth - mousePos.x()) + viewportWidth; // Subtract viewport offset
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
-    if (T1_orientation[2] == "I") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -633,8 +650,10 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
 
     float panX = panOffset.x();
     if (T1_orientation[0] == "R") panX = -panOffset.x();
+    panX = panX / T1_pixDims[0];
     float panZ = panOffset.z();
     if (T1_orientation[2] == "I") panZ = -panOffset.z();
+    panZ = panZ / T1_pixDims[2];
 
     float left = (-halfWidth - panX) / zoomFactor;
     float right = (halfWidth - panX) / zoomFactor;
@@ -646,8 +665,8 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
     float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
 
     // Convert world coordinates to image coordinates
-    int imgX = static_cast<int>(worldX + dimX / 2.0f - 0.5f);
-    int imgZ = static_cast<int>(worldY + dimZ / 2.0f - 0.5f);
+    int imgX = static_cast<int>(worldX + dimX / 2.0f);
+    int imgZ = static_cast<int>(worldY + dimZ / 2.0f);
 
     // Clamp the indices to valid ranges
     i = std::clamp(imgX, 0, dimX - 1);
@@ -663,11 +682,8 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
     int dimZ = T1_image.imgDims[2];
 
     // Adjust mouse position for the sagittal viewport
-    int xInViewport = mousePos.x() - 2 * viewportWidth; // Subtract viewport offset
-    if (T1_orientation[1] == "A") xInViewport = viewportWidth - (mousePos.x() - 2 * viewportWidth);
-
+    int xInViewport = (viewportWidth - mousePos.x()) + 2 * viewportWidth; // Subtract viewport offset
     int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
-    if (T1_orientation[2] == "I") yInViewport = mousePos.y();
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
@@ -677,10 +693,12 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
     float halfWidth = dimY / 2.0f;
     float halfHeight = dimZ / 2.0f;
 
-    float panY = panOffset.y();
-    if (T1_orientation[1] == "A") panY = -panOffset.y();
+    float panY = -panOffset.y();
+    if (T1_orientation[1] == "A") panY = panOffset.y();
+    panY = panY / T1_pixDims[1];
     float panZ = panOffset.z();
     if (T1_orientation[2] == "I") panZ = -panOffset.z();
+    panZ = panZ / T1_pixDims[2];
 
     float left = (-halfWidth - panY) / zoomFactor;
     float right = (halfWidth - panY) / zoomFactor;
@@ -692,8 +710,8 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
     float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
 
     // Convert world coordinates to image coordinates
-    int imgY = static_cast<int>(worldX + dimY / 2.0f - 0.5f);
-    int imgZ = static_cast<int>(worldY + dimZ / 2.0f - 0.5f);
+    int imgY = static_cast<int>(worldX + dimY / 2.0f);
+    int imgZ = static_cast<int>(worldY + dimZ / 2.0f);
 
     // Clamp the indices to valid ranges
     j = std::clamp(imgY, 0, dimY - 1);
@@ -764,26 +782,26 @@ void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 
         if (viewportIndex == 0) {
             // Axial slice (x, y plane)
-            scaleX = (T1_image.imgDims[0] + zoomFactor) / viewportWidth;
-            scaleY = (T1_image.imgDims[1] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[0] * T1_pixDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[1] * T1_pixDims[1] + zoomFactor) / widgetHeight;
 
-            panOffset.setX(panOffset.x() - deltaX * scaleX);
-            panOffset.setY(panOffset.y() - deltaY * scaleY);
+            panOffset.setX((panOffset.x() - deltaX * scaleX));
+            panOffset.setY((panOffset.y() - deltaY * scaleY));
 
         } else if (viewportIndex == 1) {
             // Coronal slice (x, z plane)
-            scaleX = (T1_image.imgDims[0] + zoomFactor) / viewportWidth;
-            scaleY = (T1_image.imgDims[2] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[0] * T1_pixDims[0] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[2] * T1_pixDims[2] + zoomFactor) / widgetHeight;
 
             panOffset.setX(panOffset.x() - deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
 
         } else {
             // Sagittal slice (y, z plane)
-            scaleX = (T1_image.imgDims[1] + zoomFactor) / viewportWidth;
-            scaleY = (T1_image.imgDims[2] + zoomFactor) / widgetHeight;
+            scaleX = (T1_image.imgDims[1] * T1_pixDims[1] + zoomFactor) / viewportWidth;
+            scaleY = (T1_image.imgDims[2] * T1_pixDims[2] + zoomFactor) / widgetHeight;
 
-            panOffset.setY(panOffset.y() - deltaX * scaleX);
+            panOffset.setY(panOffset.y() + deltaX * scaleX);
             panOffset.setZ(panOffset.z() - deltaY * scaleY);
         }
 
@@ -883,6 +901,62 @@ void MainGlWidget::keyPressEvent(QKeyEvent *event)
         panOffset = QVector3D(0.0f, 0.0f, 0.0f);
         update();
     }
+}
+
+// Add this function to perform trilinear interpolation
+float MainGlWidget::getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ) {
+    int x0 = static_cast<int>(floor(x));
+    int y0 = static_cast<int>(floor(y));
+    int z0 = static_cast<int>(floor(z));
+
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+    int z1 = z0 + 1;
+
+    float xd = x - x0;
+    float yd = y - y0;
+    float zd = z - z0;
+
+    // Clamp indices to image dimensions
+    x0 = std::clamp(x0, 0, dimX - 1);
+    x1 = std::clamp(x1, 0, dimX - 1);
+    y0 = std::clamp(y0, 0, dimY - 1);
+    y1 = std::clamp(y1, 0, dimY - 1);
+    z0 = std::clamp(z0, 0, dimZ - 1);
+    z1 = std::clamp(z1, 0, dimZ - 1);
+
+    // Calculate voxel indices directly
+    int idx000 = x0 + y0 * dimX + z0 * dimX * dimY;
+    int idx100 = x1 + y0 * dimX + z0 * dimX * dimY;
+    int idx010 = x0 + y1 * dimX + z0 * dimX * dimY;
+    int idx110 = x1 + y1 * dimX + z0 * dimX * dimY;
+    int idx001 = x0 + y0 * dimX + z1 * dimX * dimY;
+    int idx101 = x1 + y0 * dimX + z1 * dimX * dimY;
+    int idx011 = x0 + y1 * dimX + z1 * dimX * dimY;
+    int idx111 = x1 + y1 * dimX + z1 * dimX * dimY;
+
+    // Retrieve voxel values at the eight corners
+    float c000 = data[idx000];
+    float c100 = data[idx100];
+    float c010 = data[idx010];
+    float c110 = data[idx110];
+    float c001 = data[idx001];
+    float c101 = data[idx101];
+    float c011 = data[idx011];
+    float c111 = data[idx111];
+
+    // Perform trilinear interpolation
+    float c00 = c000 * (1 - xd) + c100 * xd;
+    float c01 = c001 * (1 - xd) + c101 * xd;
+    float c10 = c010 * (1 - xd) + c110 * xd;
+    float c11 = c011 * (1 - xd) + c111 * xd;
+
+    float c0 = c00 * (1 - yd) + c10 * yd;
+    float c1 = c01 * (1 - yd) + c11 * yd;
+
+    float c = c0 * (1 - zd) + c1 * zd;
+
+    return c;
 }
 
 void MainGlWidget::updateGraph()

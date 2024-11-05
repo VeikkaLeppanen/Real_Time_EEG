@@ -8,6 +8,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
+    setMinimumSize(600, 200); // Ensure a reasonable starting size
     resize(1280, 720);
 
     // Create the menu bar

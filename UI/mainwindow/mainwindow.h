@@ -30,6 +30,20 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+protected:
+    // void resizeEvent(QResizeEvent *event) override {
+    //     int width = event->size().width();
+    //     int height = event->size().height();
+
+    //     // Ensure width is at least 3 times the height
+    //     if (height < width / 2) {
+    //         height = width / 2;
+    //         resize(width, height); // Resize the window to enforce the aspect ratio
+    //     }
+
+    //     QMainWindow::resizeEvent(event);
+    // }
+
 public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~MainWindow();
