@@ -246,14 +246,14 @@ void phaseEstimationWorker::process()
             }
 
             bool save_angle = false;            //Remove later
+            int trigger_seqNum = 0;
             // Trigger phase targeting
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
-                int trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+                trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
                 if (trigger_seqNum && SNR_passed) { 
 
                     if (sequence_number > 40000 && trigger_seqNum > 200 + last_save_index) {
-                        trigger_seqNum_list.push_back(trigger_seqNum);
                         last_save_index = trigger_seqNum;
                         save_angle = true;
                     }
@@ -292,6 +292,7 @@ void phaseEstimationWorker::process()
                             difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
 
                             if (save_angle) {
+                                trigger_seqNum_list.push_back(trigger_seqNum);
                                 angle_seqNum_list.push_back(sequence_number - 350);
                                 angle_list.push_back(std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
                             }
