@@ -53,6 +53,16 @@ protected:
     //     QOpenGLWidget::resizeEvent(event);
     // }
 
+signals:
+    void ROI_update(const std::vector<std::string> &names, const std::vector<bool> &ROI_visibility);
+
+public slots:
+    void addButton_clicked();
+    void loadButton_clicked(const QString& filePath);
+    void saveButton_clicked(const std::vector<bool>& states);
+    void deleteButton_clicked(const std::vector<bool>& states);
+    void visibleButton_clicked(const std::vector<bool>& states);
+
 private slots:
     void updateGraph();
 
@@ -65,6 +75,10 @@ private:
     float maxValue;
     float minValue_f;
     float maxValue_f;
+
+    std::vector<std::string> ROI_names;
+    std::vector<NIBR::Image<bool>> ROI_vector;
+    std::vector<bool> ROI_visibility;
 
     // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)

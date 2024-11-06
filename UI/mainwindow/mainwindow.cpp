@@ -11,7 +11,11 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     setMinimumSize(600, 200); // Ensure a reasonable starting size
     resize(1280, 720);
 
+    mainglWidget = ui->mainGlWidget;
+
+    // ----------------------------
     // Create the menu bar
+    // ----------------------------
     QMenuBar *menuBar = this->menuBar();
 
     // Create the File menu and add actions
@@ -23,7 +27,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     QMenu *mriMenu = menuBar->addMenu("MRI");
     QAction *T1LoadAction = mriMenu->addAction("Load T1 image");
     QAction *fmriLoadAction = mriMenu->addAction("Load fMRI image");
-    QAction *mriSettingsAction = mriMenu->addAction("Settings");
+    QAction *mriSettingsAction = mriMenu->addAction("Tools");
 
     // Create the View menu and add actions
     QMenu *tmsMenu = menuBar->addMenu("TMS");
@@ -34,7 +38,6 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     connect(phaseEstAction, &QAction::triggered, this, &MainWindow::processing_clicked);
     connect(T1LoadAction, &QAction::triggered, this, &MainWindow::MRI_T1_load_clicked);
     connect(fmriLoadAction, &QAction::triggered, this, &MainWindow::fMRI_load_clicked);
-    connect(mriSettingsAction, &QAction::triggered, this, &MainWindow::onMRIsettings);
     connect(tmsSettingsAction, &QAction::triggered, this, &MainWindow::triggering_clicked);
 
     // Create a toolbar and add actions
@@ -47,7 +50,111 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     // Store a pointer to the toolbar if you want to show/hide it later
     // mainToolbar = toolbar;
 
+    // Create the dock widget
+    QDockWidget *sidePanel = new QDockWidget("ROI controls", this);
+    sidePanel->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+
+    // Create the main control widget for the dock
+    QWidget *controlWidget = new QWidget();
+    QVBoxLayout *mainLayout = new QVBoxLayout(controlWidget);
+
+    // ----------------------------
+    // Create the top row of buttons
+    // ----------------------------
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+
+    QPushButton *addButton = new QPushButton(QString("add"), controlWidget);
+    QPushButton *loadButton = new QPushButton(QString("load"), controlWidget);
+    QPushButton *saveButton = new QPushButton(QString("save"), controlWidget);
+    QPushButton *deleteButton = new QPushButton(QString("delete"), controlWidget);
+    QPushButton *visibleButton = new QPushButton(QString("visible"), controlWidget);
+
+    // Connect buttons to slots
+    connect(addButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::addButton_clicked);
+    connect(loadButton, &QPushButton::clicked, this, &MainWindow::loadButton_clicked);
+    connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveButton_clicked);
+    connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteButton_clicked);
+    connect(visibleButton, &QPushButton::clicked, this, &MainWindow::visibleButton_clicked);
+
+    connect(mainglWidget, &MainGlWidget::ROI_update, this, &MainWindow::ROI_update);
+
+    addButton->setMinimumWidth(50);
+    loadButton->setMinimumWidth(50);
+    saveButton->setMinimumWidth(50);
+    deleteButton->setMinimumWidth(50);
+    visibleButton->setMinimumWidth(50);
+
+    buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(loadButton);
+    buttonLayout->addWidget(saveButton);
+    buttonLayout->addWidget(deleteButton);
+    buttonLayout->addWidget(visibleButton);
+    
+    mainLayout->addLayout(buttonLayout);
+
+    // ----------------------------
+    // Create the list of toggleable items
+    // ----------------------------
+    toggleList = new QListWidget(controlWidget);
+    mainLayout->addWidget(toggleList);
+
+    QSlider *slider = new QSlider(Qt::Horizontal, controlWidget);
+    mainLayout->addWidget(slider);
+
+    // ----------------------------
+    // Add Edit, Undo, and Redo buttons
+    // ----------------------------
+    QHBoxLayout *actionButtonsLayout = new QHBoxLayout();
+    QPushButton *editButton = new QPushButton("Edit", controlWidget);
+    QPushButton *undoButton = new QPushButton("Undo", controlWidget);
+    QPushButton *redoButton = new QPushButton("Redo", controlWidget);
+    actionButtonsLayout->addWidget(editButton);
+    actionButtonsLayout->addWidget(undoButton);
+    actionButtonsLayout->addWidget(redoButton);
+    mainLayout->addLayout(actionButtonsLayout);
+
+    // ----------------------------
+    // Add a frame for editing tools
+    // ----------------------------
+    QFrame *editFrame = new QFrame(controlWidget);
+    editFrame->setFrameShape(QFrame::StyledPanel);
+    QVBoxLayout *editFrameLayout = new QVBoxLayout(editFrame);
+
+    // Add Brush and Rectangle selection buttons
+    QHBoxLayout *toolButtonsLayout = new QHBoxLayout();
+    QPushButton *brushButton = new QPushButton("Brush", editFrame);
+    QPushButton *rectangleButton = new QPushButton("Rectangle", editFrame);
+    toolButtonsLayout->addWidget(brushButton);
+    toolButtonsLayout->addWidget(rectangleButton);
+    editFrameLayout->addLayout(toolButtonsLayout);
+
+    // Add label and Above/Below buttons for "Copy from slice"
+    QHBoxLayout *copyLayout = new QHBoxLayout();
+    QLabel *copyLabel = new QLabel("Copy from slice:", editFrame);
+    QPushButton *aboveButton = new QPushButton("Above", editFrame);
+    QPushButton *belowButton = new QPushButton("Below", editFrame);
+    copyLayout->addWidget(copyLabel);
+    copyLayout->addWidget(aboveButton);
+    copyLayout->addWidget(belowButton);
+    editFrameLayout->addLayout(copyLayout);
+
+    mainLayout->addWidget(editFrame); // Add the frame to the main layout
+
+    // Set the layout for the control widget and assign it to the dock
+    controlWidget->setLayout(mainLayout);
+    sidePanel->setWidget(controlWidget);
+
+    // Add the dock widget to the main window, docked to the right by default
+    addDockWidget(Qt::RightDockWidgetArea, sidePanel);
+
+    // Connect action to toggle the side panel visibility
+    connect(mriSettingsAction, &QAction::triggered, [=]() {
+        sidePanel->setVisible(!sidePanel->isVisible());
+    });
+
+    // ----------------------------
     // Create the status bar
+    // ----------------------------
     QStatusBar *statusBar = this->statusBar();
 
     // Create labels for different conditions
@@ -63,15 +170,6 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     statusBar->addWidget(phaseEstLabel);
     statusBar->addWidget(fMRILabel);
     statusBar->addWidget(TMSLabel);
-
-    MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget) {
-
-
-    } else {
-        // Error handling if glWidget is not found
-        qWarning("Glwidget not found in UI!");
-    }
 }
 
 MainWindow::~MainWindow()
@@ -92,7 +190,7 @@ void MainWindow::MRI_T1_load_clicked()
 {
     QString filePath = QFileDialog::getOpenFileName(this, "Open MRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
     if (!filePath.isEmpty()) {
-        MainGlWidget* mainglWidget = ui->mainGlWidget;
+        mainglWidget = ui->mainGlWidget;
         if (mainglWidget) {
             mainglWidget->loadImage_T1(filePath);
         } else {
@@ -106,7 +204,7 @@ void MainWindow::fMRI_load_clicked()
 {
     QString filePath = QFileDialog::getOpenFileName(this, "Open fMRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
     if (!filePath.isEmpty()) {
-        MainGlWidget* mainglWidget = ui->mainGlWidget;
+        mainglWidget = ui->mainGlWidget;
         if (mainglWidget) {
             mainglWidget->loadImage_fMRI(filePath);
         } else {
@@ -357,5 +455,35 @@ void MainWindow::resetTMSwinPointer() {
     TMSwin = nullptr;  // Reset the pointer after the window is destroyed
 }
 
+std::vector<bool> MainWindow::getToggleStatus() {
+    std::vector<bool> status;
+    for (int i = 0; i < toggleList->count(); ++i) {
+        QListWidgetItem *item = toggleList->item(i);
+        QString name = item->text();
+        bool isChecked = (item->checkState() == Qt::Checked);
+        status.push_back(isChecked);
+    }
+    return status;
+}
 
+void MainWindow::loadButton_clicked() {
+    QString filePath = QFileDialog::getOpenFileName(this, "Open MRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
+    if (!filePath.isEmpty()) {
+        mainglWidget->loadButton_clicked(filePath);
+    }
+}
 
+void MainWindow::saveButton_clicked() {
+    std::vector<bool> states = getToggleStatus();
+    mainglWidget->saveButton_clicked(states);
+}
+
+void MainWindow::deleteButton_clicked() {
+    std::vector<bool> states = getToggleStatus();
+    mainglWidget->deleteButton_clicked(states);
+}
+
+void MainWindow::visibleButton_clicked() {
+    std::vector<bool> states = getToggleStatus();
+    mainglWidget->visibleButton_clicked(states);
+}

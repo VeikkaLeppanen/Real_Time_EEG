@@ -5,6 +5,12 @@
 #include <QThread>
 #include <QToolBar>
 #include <QStatusBar>
+#include <QDockWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QListWidget>
+#include <QListWidgetItem>
+#include <QSlider>
 #include <QLabel>
 #include <QMessageBox>
 #include <QLineEdit>
@@ -99,6 +105,19 @@ public slots:
                 .arg(isOn ? "ON" : "OFF")
         );
     }
+
+    void ROI_update(const std::vector<std::string> &names, const std::vector<bool> &ROI_visibility) {
+        // Clear the existing items in the list
+        toggleList->clear();
+        
+        // Add new items from the names vector
+        for (const auto& name : names) {
+            QListWidgetItem *item = new QListWidgetItem(QString::fromStdString(name), toggleList);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // Make item checkable
+            item->setCheckState(Qt::Unchecked); // Set the initial state to unchecked
+            toggleList->addItem(item);
+        }
+    }
     
 private slots:
     void handleError(const QString& error);
@@ -126,14 +145,23 @@ private slots:
             mainToolbar->setVisible(!mainToolbar->isVisible());
     }
 
+    std::vector<bool> getToggleStatus();
+    void loadButton_clicked();
+    void saveButton_clicked();
+    void deleteButton_clicked();
+    void visibleButton_clicked();
+
 private:
     Ui::MainWindow *ui;
+    MainGlWidget *mainglWidget;
     QToolBar *mainToolbar;
     QLabel *eegBridgeLabel;
     QLabel *preprocessingLabel;
     QLabel *phaseEstLabel;
     QLabel *fMRILabel;
     QLabel *TMSLabel;
+
+    QListWidget *toggleList;
 
     // eeg_bridge parameters
     EegBridge bridge;

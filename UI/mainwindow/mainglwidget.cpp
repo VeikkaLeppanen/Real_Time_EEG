@@ -964,3 +964,94 @@ void MainGlWidget::updateGraph()
     // This method should ideally handle fetching new data and triggering a redraw
     update();  // Request a re-draw
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ----------------------------
+// ROI functions
+// ----------------------------
+void MainGlWidget::addButton_clicked() 
+{
+    NIBR::Image<bool> newImage;
+    newImage.createFromTemplate(T1_image, true);
+
+    // Find the next available number for "ROI"
+    int maxNumber = 0;
+    for (const auto& name : ROI_names) {
+        if (name.rfind("ROI", 0) == 0) { // Check if the name starts with "ROI"
+            try {
+                int number = std::stoi(name.substr(3)); // Extract number after "ROI"
+                maxNumber = std::max(maxNumber, number);
+            } catch (...) {
+                // Ignore any non-numeric entries
+            }
+        }
+    }
+
+    std::string newName = "ROI" + std::to_string(maxNumber + 1);
+    ROI_names.push_back(newName); // Add the new name
+    ROI_vector.push_back(newImage);
+    ROI_visibility.push_back(true);
+
+    emit ROI_update(ROI_names, ROI_visibility);
+}
+
+
+void MainGlWidget::loadButton_clicked(const QString& filePath) 
+{
+    std::string filePath_std = filePath.toStdString();
+    NIBR::Image<bool> newImage(filePath_std);
+    newImage.read();
+    ROI_vector.push_back(newImage);
+
+    // Find the file name in filePath
+    size_t lastSlash = filePath_std.find_last_of("/\\");
+    size_t lastDot = filePath_std.find_last_of(".");
+    std::string fileName = filePath_std.substr(lastSlash + 1, lastDot - lastSlash - 1);
+
+    ROI_names.push_back(fileName);
+    ROI_visibility.push_back(true);
+
+    emit ROI_update(ROI_names, ROI_visibility);
+}
+
+void MainGlWidget::saveButton_clicked(const std::vector<bool>& states) 
+{
+    for (int i = 0; i < states.size(); i++) {
+        if (states[i]) {
+            ROI_vector[i].write(ROI_names[i] + ".nii.gz");
+        }
+    }
+}
+
+void MainGlWidget::deleteButton_clicked(const std::vector<bool>& states) 
+{
+    for (int i = 0; i < states.size(); i++) {
+        if (states[i]) {
+            ROI_names.erase(ROI_names.begin() + i);
+            ROI_vector.erase(ROI_vector.begin() + i);
+            ROI_visibility.erase(ROI_visibility.begin() + i);
+        }
+    }
+    emit ROI_update(ROI_names, ROI_visibility);
+}
+
+void MainGlWidget::visibleButton_clicked(const std::vector<bool>& states) 
+{
+    for (int i = 0; i < states.size(); i++) {
+        if (states[i]) {
+            ROI_visibility[i] = !ROI_visibility[i];
+        }
+    }
+    emit ROI_update(ROI_names, ROI_visibility);
+}
