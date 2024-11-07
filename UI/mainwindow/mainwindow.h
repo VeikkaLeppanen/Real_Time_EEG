@@ -106,15 +106,15 @@ public slots:
         );
     }
 
-    void ROI_update(const std::vector<std::string> &names, const std::vector<bool> &ROI_visibility) {
+    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility) {
         // Clear the existing items in the list
         toggleList->clear();
         
         // Add new items from the names vector
-        for (const auto& name : names) {
-            QListWidgetItem *item = new QListWidgetItem(QString::fromStdString(name), toggleList);
+        for (int i = 0; i < names.size(); ++i) {
+            QListWidgetItem *item = new QListWidgetItem(QString::fromStdString(names[i]), toggleList);
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // Make item checkable
-            item->setCheckState(Qt::Unchecked); // Set the initial state to unchecked
+            item->setCheckState(ROI_toggleStatus[i] ? Qt::Checked : Qt::Unchecked); // Set the initial state to unchecked
             toggleList->addItem(item);
         }
     }
@@ -145,11 +145,8 @@ private slots:
             mainToolbar->setVisible(!mainToolbar->isVisible());
     }
 
-    std::vector<bool> getToggleStatus();
+    void updateToggleStatus();
     void loadButton_clicked();
-    void saveButton_clicked();
-    void deleteButton_clicked();
-    void visibleButton_clicked();
 
 private:
     Ui::MainWindow *ui;

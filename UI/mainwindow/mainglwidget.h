@@ -54,14 +54,22 @@ protected:
     // }
 
 signals:
-    void ROI_update(const std::vector<std::string> &names, const std::vector<bool> &ROI_visibility);
+    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility);
 
 public slots:
     void addButton_clicked();
     void loadButton_clicked(const QString& filePath);
-    void saveButton_clicked(const std::vector<bool>& states);
-    void deleteButton_clicked(const std::vector<bool>& states);
-    void visibleButton_clicked(const std::vector<bool>& states);
+    void saveButton_clicked();
+    void deleteButton_clicked();
+    void visibleButton_clicked();
+
+    void updateToggleStates(std::vector<bool> states) { ROI_toggle_states = states; };
+
+    void onSliderValueChanged(int value);
+    
+    void editButton_toggled(bool checked);
+    void undoButton_clicked();
+    void redoButton_clicked();
 
 private slots:
     void updateGraph();
@@ -78,7 +86,10 @@ private:
 
     std::vector<std::string> ROI_names;
     std::vector<NIBR::Image<bool>> ROI_vector;
+    std::vector<bool> ROI_toggle_states;
     std::vector<bool> ROI_visibility;
+    std::vector<QColor> ROI_colors;
+    std::vector<float> ROI_opacities;
 
     // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)
@@ -89,6 +100,18 @@ private:
     // std::vector<std::string> T1_orientation = {"L", "P", "I"};
     std::vector<float> T1_pixDims = {1.0, 1.0, 1.0};
     // std::vector<float> T1_pixDims = {2.0, 1.5, 0.5};
+
+    // Member variables to store projection parameters
+    float leftAxial, rightAxial, bottomAxial, topAxial;
+    float leftCoronal, rightCoronal, bottomCoronal, topCoronal;
+    float leftSagittal, rightSagittal, bottomSagittal, topSagittal;
+
+    float imgWidth_axial;
+    float imgHeight_axial;
+    float imgWidth_coronal;
+    float imgHeight_coronal;
+    float imgWidth_sagittal;
+    float imgHeight_sagittal;
 
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
     float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
@@ -113,6 +136,9 @@ private:
     // Mouse state
     bool mousePressed;
     Qt::MouseButton pressedButton;
+
+    // ROI parameters
+    bool editMode = false;
 };
 
 #endif // MAINGLWIDGET_H

@@ -153,9 +153,9 @@ void MainGlWidget::paintGL()
     int dimY = T1_image.imgDims[1];
     int dimZ = T1_image.imgDims[2];
 
-    float pixDimX_T1 = T1_pixDims[0];//T1_image.pixDims[0];
-    float pixDimY_T1 = T1_pixDims[1];//T1_image.pixDims[1];
-    float pixDimZ_T1 = T1_pixDims[2];//T1_image.pixDims[2];
+    float pixDimX_T1 = T1_pixDims[0];
+    float pixDimY_T1 = T1_pixDims[1];
+    float pixDimZ_T1 = T1_pixDims[2];
 
     int dimX_scaled = dimX * pixDimX_T1;
     int dimY_scaled = dimY * pixDimY_T1;
@@ -188,7 +188,9 @@ void MainGlWidget::paintGL()
     Viewport sagittalViewport = {2 * viewportWidth, 0, viewportWidth, widgetHeight};
 
     // Helper function to set up projection and modelview matrices
-    auto setupOrtho = [&](float imgWidth, float imgHeight, float panX, float panY, int viewportWidth, int viewportHeight) {
+    auto setupOrtho = [&](float imgWidth, float imgHeight, float panX, float panY,
+                          int viewportWidth, int viewportHeight,
+                          float& left, float& right, float& bottom, float& top) {
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
 
@@ -198,8 +200,6 @@ void MainGlWidget::paintGL()
         // Calculate aspect ratios
         float aspectImage = imgWidth / imgHeight;
         float aspectViewport = static_cast<float>(viewportWidth) / viewportHeight;
-
-        float left, right, bottom, top;
 
         if (aspectViewport > aspectImage) {
             // Viewport is wider than image; adjust width
@@ -229,11 +229,14 @@ void MainGlWidget::paintGL()
     glViewport(axialViewport.x, axialViewport.y, axialViewport.width, axialViewport.height);
 
     // Calculate the physical dimensions of the image in the axial plane
-    float imgWidth = dimX * pixDimX_T1;
-    float imgHeight = dimY * pixDimY_T1;
+    imgWidth_axial = dimX * pixDimX_T1;
+    imgHeight_axial = dimY * pixDimY_T1;
 
     // Use the panOffset and zoomFactor
-    setupOrtho(imgWidth, imgHeight, panOffset.x(), panOffset.y(), axialViewport.width, axialViewport.height);
+    // For Axial Slice
+    setupOrtho(imgWidth_axial, imgHeight_axial, panOffset.x(), panOffset.y(),
+               axialViewport.width, axialViewport.height,
+               leftAxial, rightAxial, bottomAxial, topAxial);
 
     int z = std::clamp(k, 0, dimZ - 1);
 
@@ -280,12 +283,34 @@ void MainGlWidget::paintGL()
             // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
+            for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                if(!ROI_visibility[ROI_num]) continue;
+
+                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                QColor ROI_color = ROI_colors[ROI_num];
+                float ROI_opacity = ROI_opacities[ROI_num];
+                if (ROI_image.data[idx]) {
+                    // Extract RGB components from the ROI color
+                    float roi_r = ROI_color.redF();   // Normalize to range [0, 1]
+                    float roi_g = ROI_color.greenF(); // Normalize to range [0, 1]
+                    float roi_b = ROI_color.blueF();  // Normalize to range [0, 1]
+
+                    // Blend the current color with the ROI color using alpha blending (ROI_opacity)
+                    r = r * (1.0f - ROI_opacity) + roi_r * ROI_opacity;
+                    g = g * (1.0f - ROI_opacity) + roi_g * ROI_opacity;
+                    b = b * (1.0f - ROI_opacity) + roi_b * ROI_opacity;
+
+                    // Adjust the alpha value (transparency) based on ROI_opacity
+                    a = a * (1.0f - ROI_opacity) + ROI_opacity;
+                }
+            }
+
             // Set the final color with alpha blending
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (x * pixDimX_T1) - (imgWidth / 2.0f);
-            float y0 = (y * pixDimY_T1) - (imgHeight / 2.0f);
+            float x0 = (x * pixDimX_T1) - (imgWidth_axial / 2.0f);
+            float y0 = (y * pixDimY_T1) - (imgHeight_axial / 2.0f);
             float x1 = x0 + pixDimX_T1;
             float y1 = y0 + pixDimY_T1;
 
@@ -312,22 +337,22 @@ void MainGlWidget::paintGL()
     if (T1_orientation[0] == "R") xCrosshair = dimX - 1 - i;
 
     // Compute lineX in physical coordinates
-    float lineX = (xCrosshair * pixDimX_T1) - (imgWidth / 2.0f) + (pixDimX_T1 / 2.0f);
+    float lineX = (xCrosshair * pixDimX_T1) - (imgWidth_axial / 2.0f) + (pixDimX_T1 / 2.0f);
 
     // Adjust y index for orientation
     int yCrosshair = j;
     if (T1_orientation[1] == "P") yCrosshair = dimY - 1 - j;
 
     // Compute lineY in physical coordinates
-    float lineY = (yCrosshair * pixDimY_T1) - (imgHeight / 2.0f) + (pixDimY_T1 / 2.0f);
+    float lineY = (yCrosshair * pixDimY_T1) - (imgHeight_axial / 2.0f) + (pixDimY_T1 / 2.0f);
 
     // Vertical line at x = lineX
-    glVertex2f(lineX, -imgHeight / 2.0f);
-    glVertex2f(lineX, imgHeight / 2.0f);
+    glVertex2f(lineX, -imgHeight_axial / 2.0f);
+    glVertex2f(lineX, imgHeight_axial / 2.0f);
 
     // Horizontal line at y = lineY
-    glVertex2f(-imgWidth / 2.0f, lineY);
-    glVertex2f(imgWidth / 2.0f, lineY);
+    glVertex2f(-imgWidth_axial / 2.0f, lineY);
+    glVertex2f(imgWidth_axial / 2.0f, lineY);
 
     glEnd();
 
@@ -337,12 +362,14 @@ void MainGlWidget::paintGL()
     glViewport(coronalViewport.x, coronalViewport.y, coronalViewport.width, widgetHeight);
 
     // Calculate the physical dimensions of the image in the coronal plane
-    imgWidth = dimX * pixDimX_T1;
-    imgHeight = dimZ * pixDimZ_T1;
+    imgWidth_coronal = dimX * pixDimX_T1;
+    imgHeight_coronal = dimZ * pixDimZ_T1;
 
     // Use the panOffset and zoomFactor
-    setupOrtho(imgWidth, imgHeight, panOffset.x(), panOffset.z(), coronalViewport.width, coronalViewport.height);
-
+    setupOrtho(imgWidth_coronal, imgHeight_coronal, panOffset.x(), panOffset.z(),
+               coronalViewport.width, coronalViewport.height,
+               leftCoronal, rightCoronal, bottomCoronal, topCoronal);
+    
     int y = std::clamp(j, 0, dimY - 1);
 
     // Draw the T1 coronal slice
@@ -388,12 +415,34 @@ void MainGlWidget::paintGL()
             // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
+            for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                if(!ROI_visibility[ROI_num]) continue;
+
+                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                QColor ROI_color = ROI_colors[ROI_num];
+                float ROI_opacity = ROI_opacities[ROI_num];
+                if (ROI_image.data[idx]) {
+                    // Extract RGB components from the ROI color
+                    float roi_r = ROI_color.redF();   // Normalize to range [0, 1]
+                    float roi_g = ROI_color.greenF(); // Normalize to range [0, 1]
+                    float roi_b = ROI_color.blueF();  // Normalize to range [0, 1]
+            
+                    // Blend the current color with the ROI color using alpha blending (ROI_opacity)
+                    r = r * (1.0f - ROI_opacity) + roi_r * ROI_opacity;
+                    g = g * (1.0f - ROI_opacity) + roi_g * ROI_opacity;
+                    b = b * (1.0f - ROI_opacity) + roi_b * ROI_opacity;
+            
+                    // Adjust the alpha value (transparency) based on ROI_opacity
+                    a = a * (1.0f - ROI_opacity) + ROI_opacity;
+                }
+            }
+
             // Set the final color with alpha blending
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (x * pixDimX_T1) - (imgWidth / 2.0f);
-            float y0 = (z * pixDimZ_T1) - (imgHeight / 2.0f);
+            float x0 = (x * pixDimX_T1) - (imgWidth_coronal / 2.0f);
+            float y0 = (z * pixDimZ_T1) - (imgHeight_coronal / 2.0f);
             float x1 = x0 + pixDimX_T1;
             float y1 = y0 + pixDimZ_T1;
 
@@ -416,22 +465,22 @@ void MainGlWidget::paintGL()
     if (T1_orientation[0] == "R") xCrosshair = dimX - 1 - i;
     
     // Compute lineX in physical coordinates
-    lineX = (xCrosshair * pixDimX_T1) - (imgWidth / 2.0f) + (pixDimX_T1 / 2.0f);
+    lineX = (xCrosshair * pixDimX_T1) - (imgWidth_coronal / 2.0f) + (pixDimX_T1 / 2.0f);
     
     // Adjust z index for orientation
     yCrosshair = k;
     if (T1_orientation[2] == "I") yCrosshair = dimZ - 1 - k;
     
     // Compute lineY in physical coordinates
-    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight / 2.0f) + (pixDimZ_T1 / 2.0f);
+    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight_coronal / 2.0f) + (pixDimZ_T1 / 2.0f);
     
     // Vertical line at x = lineX
-    glVertex2f(lineX, -imgHeight / 2.0f);
-    glVertex2f(lineX, imgHeight / 2.0f);
+    glVertex2f(lineX, -imgHeight_coronal / 2.0f);
+    glVertex2f(lineX, imgHeight_coronal / 2.0f);
     
     // Horizontal line at z = lineY
-    glVertex2f(-imgWidth / 2.0f, lineY);
-    glVertex2f(imgWidth / 2.0f, lineY);
+    glVertex2f(-imgWidth_coronal / 2.0f, lineY);
+    glVertex2f(imgWidth_coronal / 2.0f, lineY);
     
     glEnd();
 
@@ -441,11 +490,13 @@ void MainGlWidget::paintGL()
     glViewport(sagittalViewport.x, sagittalViewport.y, sagittalViewport.width, widgetHeight);
 
     // Calculate the physical dimensions of the image in the sagittal plane
-    imgWidth = dimY * pixDimY_T1;
-    imgHeight = dimZ * pixDimZ_T1;
+    imgWidth_sagittal = dimY * pixDimY_T1;
+    imgHeight_sagittal = dimZ * pixDimZ_T1;
     
     // Use the panOffset and zoomFactor
-    setupOrtho(imgWidth, imgHeight, -panOffset.y(), panOffset.z(), sagittalViewport.width, sagittalViewport.height);
+    setupOrtho(imgWidth_sagittal, imgHeight_sagittal, -panOffset.y(), panOffset.z(),
+               sagittalViewport.width, sagittalViewport.height,
+               leftSagittal, rightSagittal, bottomSagittal, topSagittal);
 
     int x = std::clamp(i, 0, dimX - 1);
 
@@ -492,12 +543,34 @@ void MainGlWidget::paintGL()
             // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
+            for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                if(!ROI_visibility[ROI_num]) continue;
+
+                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                QColor ROI_color = ROI_colors[ROI_num];
+                float ROI_opacity = ROI_opacities[ROI_num];
+                if (ROI_image.data[idx]) {
+                    // Extract RGB components from the ROI color
+                    float roi_r = ROI_color.redF();   // Normalize to range [0, 1]
+                    float roi_g = ROI_color.greenF(); // Normalize to range [0, 1]
+                    float roi_b = ROI_color.blueF();  // Normalize to range [0, 1]
+            
+                    // Blend the current color with the ROI color using alpha blending (ROI_opacity)
+                    r = r * (1.0f - ROI_opacity) + roi_r * ROI_opacity;
+                    g = g * (1.0f - ROI_opacity) + roi_g * ROI_opacity;
+                    b = b * (1.0f - ROI_opacity) + roi_b * ROI_opacity;
+            
+                    // Adjust the alpha value (transparency) based on ROI_opacity
+                    a = a * (1.0f - ROI_opacity) + ROI_opacity;
+                }
+            }
+
             // Set the final color with alpha blending
             glColor4f(r, g, b, a);
 
             // Adjust coordinates to center around (0,0)
-            float x0 = (y * pixDimY_T1) - (imgWidth / 2.0f);
-            float y0 = (z * pixDimZ_T1) - (imgHeight / 2.0f);
+            float x0 = (y * pixDimY_T1) - (imgWidth_sagittal / 2.0f);
+            float y0 = (z * pixDimZ_T1) - (imgHeight_sagittal / 2.0f);
             float x1 = x0 + pixDimY_T1;
             float y1 = y0 + pixDimZ_T1;
 
@@ -520,22 +593,22 @@ void MainGlWidget::paintGL()
     if (T1_orientation[1] == "A") xCrosshair = dimY - 1 - j;
     
     // Compute lineX in physical coordinates
-    lineX = (xCrosshair * pixDimY_T1) - (imgWidth / 2.0f) + (pixDimY_T1 / 2.0f);
+    lineX = (xCrosshair * pixDimY_T1) - (imgWidth_sagittal / 2.0f) + (pixDimY_T1 / 2.0f);
     
     // Adjust z index for orientation
     yCrosshair = k;
     if (T1_orientation[2] == "I") yCrosshair = dimZ - 1 - k;
     
     // Compute lineY in physical coordinates
-    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight / 2.0f) + (pixDimZ_T1 / 2.0f);
+    lineY = (yCrosshair * pixDimZ_T1) - (imgHeight_sagittal / 2.0f) + (pixDimZ_T1 / 2.0f);
     
     // Vertical line at x = lineX
-    glVertex2f(lineX, -imgHeight / 2.0f);
-    glVertex2f(lineX, imgHeight / 2.0f);
+    glVertex2f(lineX, -imgHeight_sagittal / 2.0f);
+    glVertex2f(lineX, imgHeight_sagittal / 2.0f);
     
     // Horizontal line at z = lineY
-    glVertex2f(-imgWidth / 2.0f, lineY);
-    glVertex2f(imgWidth / 2.0f, lineY);
+    glVertex2f(-imgWidth_sagittal / 2.0f, lineY);
+    glVertex2f(imgWidth_sagittal / 2.0f, lineY);
     
     glEnd();
     
@@ -592,40 +665,43 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
     int dimY = T1_image.imgDims[1];
 
     // Calculate the position within the axial viewport
-    int xInViewport = viewportWidth - mousePos.x();
-    int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    int xInViewport = mousePos.x(); // Since axialViewport.x = 0
+    int yInViewport = mousePos.y();
+
+    // Flip y-coordinate because Qt's y=0 is at the top, OpenGL's y=0 is at the bottom
+    int yInViewportFlipped = viewportHeight - yInViewport;
 
     // Convert viewport coordinates to Normalized Device Coordinates (NDC)
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewport) / viewportHeight) * 2.0f - 1.0f;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
 
-    // Undo the projection transformation (glOrtho)
-    float halfWidth = dimX / 2.0f;
-    float halfHeight = dimY / 2.0f;
-
-    float panX = panOffset.x();
-    if (T1_orientation[0] == "R") panX = -panOffset.x();
-    panX = panX / T1_pixDims[0];
-    float panY = panOffset.y();
-    if (T1_orientation[1] == "P") panY = -panOffset.y();
-    panY = panY / T1_pixDims[1];
-
-    float left = (-halfWidth - panX) / zoomFactor;
-    float right = (halfWidth - panX) / zoomFactor;
-    float bottom = (-halfHeight - panY) / zoomFactor;
-    float top = (halfHeight - panY) / zoomFactor;
-
-    // Map NDC to world coordinates
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (right - left) + left;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
+    // Map NDC to world coordinates using stored projection parameters
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightAxial - leftAxial) + leftAxial;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topAxial - bottomAxial) + bottomAxial;
 
     // Convert world coordinates to image coordinates
-    int imgX = static_cast<int>(worldX + dimX / 2.0f);
-    int imgY = static_cast<int>(worldY + dimY / 2.0f);
+    float imgXf = (worldX + imgWidth_axial / 2.0f) / T1_pixDims[0];
+    float imgYf = (worldY + imgHeight_axial / 2.0f) / T1_pixDims[1];
+
+    int imgX = static_cast<int>(imgXf);
+    int imgY = static_cast<int>(imgYf);
+
+    // Adjust for image orientation
+    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
+    if (T1_orientation[1] == "P") imgY = dimY - 1 - imgY;
 
     // Clamp the indices to valid ranges
     i = std::clamp(imgX, 0, dimX - 1);
     j = std::clamp(imgY, 0, dimY - 1);
+    
+    if (editMode) {
+        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+            if (!ROI_toggle_states[ROI_num]) continue;
+            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+            int64_t target_index = ROI_image.sub2ind(i, j, k);
+            ROI_image.data[target_index] = 1;
+        }
+    }
 
     update(); // Trigger a repaint
 }
@@ -636,86 +712,92 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
     int dimX = T1_image.imgDims[0];
     int dimZ = T1_image.imgDims[2];
 
-    // Adjust mouse position for the coronal viewport
-    int xInViewport = (viewportWidth - mousePos.x()) + viewportWidth; // Subtract viewport offset
-    int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    // Calculate the position within the coronal viewport
+    int xInViewport = mousePos.x() - viewportWidth; // Since coronal viewport starts at viewportWidth
+    int yInViewport = mousePos.y();
+
+    // Flip y-coordinate
+    int yInViewportFlipped = viewportHeight - yInViewport;
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewport) / viewportHeight) * 2.0f - 1.0f;
-
-    // Undo the projection transformation
-    float halfWidth = dimX / 2.0f;
-    float halfHeight = dimZ / 2.0f;
-
-    float panX = panOffset.x();
-    if (T1_orientation[0] == "R") panX = -panOffset.x();
-    panX = panX / T1_pixDims[0];
-    float panZ = panOffset.z();
-    if (T1_orientation[2] == "I") panZ = -panOffset.z();
-    panZ = panZ / T1_pixDims[2];
-
-    float left = (-halfWidth - panX) / zoomFactor;
-    float right = (halfWidth - panX) / zoomFactor;
-    float bottom = (-halfHeight - panZ) / zoomFactor;
-    float top = (halfHeight - panZ) / zoomFactor;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
 
     // Map NDC to world coordinates
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (right - left) + left;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightCoronal - leftCoronal) + leftCoronal;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topCoronal - bottomCoronal) + bottomCoronal;
 
     // Convert world coordinates to image coordinates
-    int imgX = static_cast<int>(worldX + dimX / 2.0f);
-    int imgZ = static_cast<int>(worldY + dimZ / 2.0f);
+    float imgXf = (worldX + imgWidth_coronal / 2.0f) / T1_pixDims[0];
+    float imgZf = (worldY + imgHeight_coronal / 2.0f) / T1_pixDims[2];
 
-    // Clamp the indices to valid ranges
+    int imgX = static_cast<int>(imgXf);
+    int imgZ = static_cast<int>(imgZf);
+
+    // Adjust for image orientation
+    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
+    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
+
+    // Clamp the indices
     i = std::clamp(imgX, 0, dimX - 1);
     k = std::clamp(imgZ, 0, dimZ - 1);
+
+    if (editMode) {
+        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+            if (!ROI_toggle_states[ROI_num]) continue;
+            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+            int64_t target_index = ROI_image.sub2ind(i, j, k);
+            ROI_image.data[target_index] = 1;
+        }
+    }
 
     update(); // Trigger a repaint
 }
 
 void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
-    // Dimensions of the Sagittal slice
+    // Dimensions of the Coronal slice
     int dimY = T1_image.imgDims[1];
     int dimZ = T1_image.imgDims[2];
 
-    // Adjust mouse position for the sagittal viewport
-    int xInViewport = (viewportWidth - mousePos.x()) + 2 * viewportWidth; // Subtract viewport offset
-    int yInViewport = viewportHeight - mousePos.y(); // Flip y-coordinate
+    // Calculate the position within the coronal viewport
+    int xInViewport = mousePos.x() - 2 * viewportWidth;
+    int yInViewport = mousePos.y();
+
+    // Flip y-coordinate
+    int yInViewportFlipped = viewportHeight - yInViewport;
 
     // Convert viewport coordinates to NDC
     float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewport) / viewportHeight) * 2.0f - 1.0f;
-
-    // Undo the projection transformation
-    float halfWidth = dimY / 2.0f;
-    float halfHeight = dimZ / 2.0f;
-
-    float panY = -panOffset.y();
-    if (T1_orientation[1] == "A") panY = panOffset.y();
-    panY = panY / T1_pixDims[1];
-    float panZ = panOffset.z();
-    if (T1_orientation[2] == "I") panZ = -panOffset.z();
-    panZ = panZ / T1_pixDims[2];
-
-    float left = (-halfWidth - panY) / zoomFactor;
-    float right = (halfWidth - panY) / zoomFactor;
-    float bottom = (-halfHeight - panZ) / zoomFactor;
-    float top = (halfHeight - panZ) / zoomFactor;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
 
     // Map NDC to world coordinates
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (right - left) + left;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (top - bottom) + bottom;
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightSagittal - leftSagittal) + leftSagittal;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topSagittal - bottomSagittal) + bottomSagittal;
 
     // Convert world coordinates to image coordinates
-    int imgY = static_cast<int>(worldX + dimY / 2.0f);
-    int imgZ = static_cast<int>(worldY + dimZ / 2.0f);
+    float imgYf = (worldX + imgWidth_sagittal / 2.0f) / T1_pixDims[1];
+    float imgZf = (worldY + imgHeight_sagittal / 2.0f) / T1_pixDims[2];
 
-    // Clamp the indices to valid ranges
+    int imgY = static_cast<int>(imgYf);
+    int imgZ = static_cast<int>(imgZf);
+
+    // Adjust for image orientation
+    if (T1_orientation[1] == "A") imgY = dimY - 1 - imgY;
+    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
+
+    // Clamp the indices
     j = std::clamp(imgY, 0, dimY - 1);
     k = std::clamp(imgZ, 0, dimZ - 1);
+
+    if (editMode) {
+        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+            if (!ROI_toggle_states[ROI_num]) continue;
+            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+            int64_t target_index = ROI_image.sub2ind(i, j, k);
+            ROI_image.data[target_index] = 1;
+        }
+    }
 
     update(); // Trigger a repaint
 }
@@ -1001,9 +1083,13 @@ void MainGlWidget::addButton_clicked()
     std::string newName = "ROI" + std::to_string(maxNumber + 1);
     ROI_names.push_back(newName); // Add the new name
     ROI_vector.push_back(newImage);
+    ROI_toggle_states.push_back(false);
     ROI_visibility.push_back(true);
-
-    emit ROI_update(ROI_names, ROI_visibility);
+    ROI_colors.push_back(QColor(0, 255, 0));
+    ROI_opacities.push_back(0.5f);
+    
+    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    update();
 }
 
 
@@ -1020,38 +1106,73 @@ void MainGlWidget::loadButton_clicked(const QString& filePath)
     std::string fileName = filePath_std.substr(lastSlash + 1, lastDot - lastSlash - 1);
 
     ROI_names.push_back(fileName);
+    ROI_toggle_states.push_back(false);
     ROI_visibility.push_back(true);
+    ROI_colors.push_back(QColor(0, 255, 0));
+    ROI_opacities.push_back(0.5f);
 
-    emit ROI_update(ROI_names, ROI_visibility);
+    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    update();
 }
 
-void MainGlWidget::saveButton_clicked(const std::vector<bool>& states) 
+void MainGlWidget::saveButton_clicked() 
 {
-    for (int i = 0; i < states.size(); i++) {
-        if (states[i]) {
+    for (int i = 0; i < ROI_toggle_states.size(); i++) {
+        if (ROI_toggle_states[i]) {
             ROI_vector[i].write(ROI_names[i] + ".nii.gz");
         }
     }
 }
 
-void MainGlWidget::deleteButton_clicked(const std::vector<bool>& states) 
+void MainGlWidget::deleteButton_clicked() 
 {
-    for (int i = 0; i < states.size(); i++) {
-        if (states[i]) {
+    for (int i = 0; i < ROI_toggle_states.size(); i++) {
+        if (ROI_toggle_states[i]) {
             ROI_names.erase(ROI_names.begin() + i);
             ROI_vector.erase(ROI_vector.begin() + i);
+            ROI_toggle_states.erase(ROI_toggle_states.begin() + i);
             ROI_visibility.erase(ROI_visibility.begin() + i);
+            ROI_colors.erase(ROI_colors.begin() + i);
+            ROI_opacities.erase(ROI_opacities.begin() + i);
+            i--;
         }
     }
-    emit ROI_update(ROI_names, ROI_visibility);
+    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    update();
 }
 
-void MainGlWidget::visibleButton_clicked(const std::vector<bool>& states) 
+void MainGlWidget::visibleButton_clicked() 
 {
-    for (int i = 0; i < states.size(); i++) {
-        if (states[i]) {
+    for (int i = 0; i < ROI_toggle_states.size(); i++) {
+        if (ROI_toggle_states[i]) {
             ROI_visibility[i] = !ROI_visibility[i];
         }
     }
-    emit ROI_update(ROI_names, ROI_visibility);
+    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    update();
+}
+
+void MainGlWidget::onSliderValueChanged(int value) 
+{
+    for (int i = 0; i < ROI_toggle_states.size(); i++) {
+        if (ROI_toggle_states[i]) {
+            ROI_opacities[i] = value / 100.0f;
+        }
+    }
+    update();
+}
+
+void MainGlWidget::editButton_toggled(bool checked)
+{
+    editMode = checked;
+}
+
+void MainGlWidget::undoButton_clicked()
+{
+
+}
+
+void MainGlWidget::redoButton_clicked()
+{
+
 }

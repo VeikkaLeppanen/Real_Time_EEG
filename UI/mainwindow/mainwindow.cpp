@@ -72,9 +72,9 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     // Connect buttons to slots
     connect(addButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::addButton_clicked);
     connect(loadButton, &QPushButton::clicked, this, &MainWindow::loadButton_clicked);
-    connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveButton_clicked);
-    connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteButton_clicked);
-    connect(visibleButton, &QPushButton::clicked, this, &MainWindow::visibleButton_clicked);
+    connect(saveButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::saveButton_clicked);
+    connect(deleteButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::deleteButton_clicked);
+    connect(visibleButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::visibleButton_clicked);
 
     connect(mainglWidget, &MainGlWidget::ROI_update, this, &MainWindow::ROI_update);
 
@@ -98,9 +98,15 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     toggleList = new QListWidget(controlWidget);
     mainLayout->addWidget(toggleList);
 
+    connect(toggleList, &QListWidget::itemChanged, this, &MainWindow::updateToggleStatus);
+
     QSlider *slider = new QSlider(Qt::Horizontal, controlWidget);
+    slider->setRange(0, 100);
+    slider->setValue(50);
     mainLayout->addWidget(slider);
 
+    connect(slider, &QSlider::valueChanged, mainglWidget, &MainGlWidget::onSliderValueChanged);
+    
     // ----------------------------
     // Add Edit, Undo, and Redo buttons
     // ----------------------------
@@ -108,6 +114,19 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     QPushButton *editButton = new QPushButton("Edit", controlWidget);
     QPushButton *undoButton = new QPushButton("Undo", controlWidget);
     QPushButton *redoButton = new QPushButton("Redo", controlWidget);
+    
+    // Make the edit button toggleable
+    editButton->setCheckable(true);
+
+    connect(editButton, &QPushButton::toggled, mainglWidget, &MainGlWidget::editButton_toggled);
+    connect(undoButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::undoButton_clicked);
+    connect(redoButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::redoButton_clicked);
+
+    connect(editButton, &QPushButton::toggled, [editButton](bool checked) {
+        if (checked) { editButton->setStyleSheet("background-color: darkgreen;"); } 
+        else         { editButton->setStyleSheet(""); }
+    });
+
     actionButtonsLayout->addWidget(editButton);
     actionButtonsLayout->addWidget(undoButton);
     actionButtonsLayout->addWidget(redoButton);
@@ -455,15 +474,15 @@ void MainWindow::resetTMSwinPointer() {
     TMSwin = nullptr;  // Reset the pointer after the window is destroyed
 }
 
-std::vector<bool> MainWindow::getToggleStatus() {
-    std::vector<bool> status;
+void MainWindow::updateToggleStatus() {
+    std::vector<bool> states;
     for (int i = 0; i < toggleList->count(); ++i) {
         QListWidgetItem *item = toggleList->item(i);
         QString name = item->text();
         bool isChecked = (item->checkState() == Qt::Checked);
-        status.push_back(isChecked);
+        states.push_back(isChecked);
     }
-    return status;
+    mainglWidget->updateToggleStates(states);
 }
 
 void MainWindow::loadButton_clicked() {
@@ -471,19 +490,4 @@ void MainWindow::loadButton_clicked() {
     if (!filePath.isEmpty()) {
         mainglWidget->loadButton_clicked(filePath);
     }
-}
-
-void MainWindow::saveButton_clicked() {
-    std::vector<bool> states = getToggleStatus();
-    mainglWidget->saveButton_clicked(states);
-}
-
-void MainWindow::deleteButton_clicked() {
-    std::vector<bool> states = getToggleStatus();
-    mainglWidget->deleteButton_clicked(states);
-}
-
-void MainWindow::visibleButton_clicked() {
-    std::vector<bool> states = getToggleStatus();
-    mainglWidget->visibleButton_clicked(states);
 }
