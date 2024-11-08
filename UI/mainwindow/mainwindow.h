@@ -11,6 +11,7 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QSlider>
+#include <QColorDialog>
 #include <QLabel>
 #include <QMessageBox>
 #include <QLineEdit>
@@ -147,6 +148,7 @@ private slots:
 
     void updateToggleStatus();
     void loadButton_clicked();
+    void colorButton_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -159,6 +161,7 @@ private:
     QLabel *TMSLabel;
 
     QListWidget *toggleList;
+    QPushButton *colorPickerButton;
 
     // eeg_bridge parameters
     EegBridge bridge;

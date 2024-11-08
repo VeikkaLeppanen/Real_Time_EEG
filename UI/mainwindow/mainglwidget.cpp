@@ -1162,6 +1162,16 @@ void MainGlWidget::onSliderValueChanged(int value)
     update();
 }
 
+void MainGlWidget::colorButton_clicked(QColor color) 
+{
+    for (int i = 0; i < ROI_toggle_states.size(); i++) {
+        if (ROI_toggle_states[i]) {
+            ROI_colors[i] = color;
+        }
+    }
+    update();
+}
+
 void MainGlWidget::editButton_toggled(bool checked)
 {
     editMode = checked;

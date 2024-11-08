@@ -66,6 +66,7 @@ public slots:
     void updateToggleStates(std::vector<bool> states) { ROI_toggle_states = states; };
 
     void onSliderValueChanged(int value);
+    void colorButton_clicked(QColor color);
     
     void editButton_toggled(bool checked);
     void undoButton_clicked();

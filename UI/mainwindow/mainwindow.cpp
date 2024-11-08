@@ -100,12 +100,23 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
 
     connect(toggleList, &QListWidget::itemChanged, this, &MainWindow::updateToggleStatus);
 
+    // Create a color picker button
+    colorPickerButton = new QPushButton("Color", controlWidget);
+
     QSlider *slider = new QSlider(Qt::Horizontal, controlWidget);
     slider->setRange(0, 100);
     slider->setValue(50);
-    mainLayout->addWidget(slider);
+
+    // Create a horizontal layout to place the color picker button and slider side by side
+    QHBoxLayout *colorAndSliderLayout = new QHBoxLayout();
+    colorAndSliderLayout->addWidget(colorPickerButton); // Add the color picker button
+    colorAndSliderLayout->addWidget(slider);            // Add the slider
+
+    // Add the horizontal layout to the main layout
+    mainLayout->addLayout(colorAndSliderLayout);
 
     connect(slider, &QSlider::valueChanged, mainglWidget, &MainGlWidget::onSliderValueChanged);
+    connect(colorPickerButton, &QPushButton::clicked, this, &MainWindow::colorButton_clicked);
     
     // ----------------------------
     // Add Edit, Undo, and Redo buttons
@@ -489,5 +500,16 @@ void MainWindow::loadButton_clicked() {
     QString filePath = QFileDialog::getOpenFileName(this, "Open MRI Image", "", "NIFTI Images (*.nii *.nii.gz)");
     if (!filePath.isEmpty()) {
         mainglWidget->loadButton_clicked(filePath);
+    }
+}
+void MainWindow::colorButton_clicked() {
+
+    QColor color = QColorDialog::getColor(Qt::white, this, "Select Color");
+    if (color.isValid()) {
+        // Change the button's background to the selected color as feedback
+        QString style = QString("background-color: %1").arg(color.name());
+        colorPickerButton->setStyleSheet(style);
+
+        mainglWidget->colorButton_clicked(color);
     }
 }
