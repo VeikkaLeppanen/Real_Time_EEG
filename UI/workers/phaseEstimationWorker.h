@@ -93,6 +93,9 @@ signals:
     void sendSNRmax(double value);
     void sendSNRmax_list(const std::vector<double>& list);
 
+    void polarHistogramAddSample_1(double angle);
+    void polarHistogramAddSample_2(double angle);
+
 public slots:
     void process_start() {
         process_future = QtConcurrent::run([this]() { process(); });
@@ -194,14 +197,19 @@ private:
     int delay;
     
     // SNR check variables
-    int n_SNR = 500;
-    int n_SNR_max = 10;
+    int n_SNR = 1000;
+    int n_SNR_max = 20;
     std::vector<double> SNR_list;
     std::vector<double> SNR_max_list;
     double SNR_max_temp = 0.0;
     double SNR_max_final = 0.0;
     bool SNR_max_set = false;
     double SNR_threshold;
+
+    // Polar histogram
+    int PostInitializationCounter = 0;
+    int PostInitSamples_n = 500;
+    bool last_SNR_passed = false;
 
     size_t edge;
     int filter2_length;

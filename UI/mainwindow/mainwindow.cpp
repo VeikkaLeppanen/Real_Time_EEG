@@ -197,13 +197,17 @@ void MainWindow::connect_processing_worker()
     QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
 
-    //SNR
+    // SNR
     QObject::connect(phaseEstwin, &phaseEstwindow::sendSNRmax, phaseEstworker, &phaseEstimationWorker::setSNRmax);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax, phaseEstwin, &phaseEstwindow::newSNRmax);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax_list, phaseEstwin, &phaseEstwindow::newSNRmax_list);
     
     QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
     QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
+    
+    // Polar histogram
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_1, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToFirstCircle);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_2, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToSecondCircle);
 }
 
 void MainWindow::connect_EEG_Prepworker()

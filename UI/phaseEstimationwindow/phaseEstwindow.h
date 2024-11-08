@@ -5,8 +5,10 @@
 #include <QMessageBox>
 #include <QStandardItemModel>
 #include <QStandardItem>
+#include <QDockWidget>
 
 #include "processingglwidget.h"
+#include "polarHistogramOpenGLWidget.h"
 #include "workers/phaseEstimationWorker.h"
 #include "../dataHandler/dataHandler.h"
 
@@ -26,6 +28,8 @@ public:
     ~phaseEstwindow();
 
     ProcessingGlWidget* getProcessingGlWidget() { return processingglWidget; }
+    PolarHistogramOpenGLWidget* getHistogramWidget() { return HistogramWidget; }
+    void showOpenGLDock() { dockWidget->show(); }
 
 signals:
     void setCustomScaleStatus(bool status);
@@ -105,6 +109,8 @@ private slots:
 private:
     Ui::phaseEstwindow *ui;
     ProcessingGlWidget *processingglWidget;
+    QDockWidget *dockWidget;
+    PolarHistogramOpenGLWidget *HistogramWidget;
 
     dataHandler &handler;
 

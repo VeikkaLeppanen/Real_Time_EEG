@@ -205,6 +205,7 @@ void phaseEstimationWorker::process()
                         SNR_max_set = false;
                         emit sendSNRmax_list(SNR_max_list);
 
+                        std::this_thread::sleep_for(std::chrono::milliseconds(200));
                     }
 
                     SNR_passed = false;
@@ -263,6 +264,34 @@ void phaseEstimationWorker::process()
                 }
             }
 
+            // Phase histogram
+            if (phaseEstStates.performSNRcheck && SNR_max_list.size() < n_SNR_max) {
+                int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;
+                if (last_phase_seqnum == -1) {
+                    last_phase = phaseAngles(edge);
+                    last_phase_seqnum = sequence_number;
+                } else if (numSkippedSamples > 35) {
+                    phase_diff_hilbert = hilbertTransform(EEG_filter2);
+                    double difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+                    emit polarHistogramAddSample_1(difference);
+
+                    last_phase_seqnum = -1;
+                }
+            } else if (phaseEstStates.performSNRcheck && PostInitializationCounter < PostInitSamples_n) {
+                int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;
+                if (last_phase_seqnum == -1 && SNR_passed) {
+                    last_phase = phaseAngles(edge);
+                    last_phase_seqnum = sequence_number;
+                } else if (last_phase_seqnum != -1 && numSkippedSamples > 35) {
+                    phase_diff_hilbert = hilbertTransform(EEG_filter2);
+                    double difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+                    
+                    emit polarHistogramAddSample_2(difference);
+                    PostInitializationCounter++;
+                    last_phase_seqnum = -1;
+                }
+            }
+
             Data_to_display.topLeftCorner(5, downsampled_cols) = EEG_corrected;
             
             Data_to_display.row(5).head(downsampled_cols) = EEG_spatial;
@@ -280,7 +309,7 @@ void phaseEstimationWorker::process()
             // Phase difference
             print_debug("Phase difference");
             if (phaseEstStates.performPhaseDifference) {
-                int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;              // FIGURE OUT A BETTER WAY TO HANDLE DOWNSAMPLING
+                int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;
                 if (last_phase_seqnum == -1) {
                     last_phase = phaseAngles(edge);
                     last_phase_seqnum = sequence_number;
@@ -290,7 +319,6 @@ void phaseEstimationWorker::process()
                         case 0:
                             phase_diff_hilbert = hilbertTransform(EEG_filter2);
                             difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
-
                             if (save_angle) {
                                 trigger_seqNum_list.push_back(trigger_seqNum);
                                 angle_seqNum_list.push_back(sequence_number - 350);

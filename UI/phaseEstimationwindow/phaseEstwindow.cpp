@@ -1,6 +1,7 @@
 #include "phaseEstwindow.h"
 #include "../ui_phaseEstwindow.h"
 #include <QThread>
+// #include "phaseEstwindow.moc"
 
 phaseEstwindow::phaseEstwindow(dataHandler &handler, 
                     volatile std::sig_atomic_t &processingWorkerRunning, 
@@ -66,6 +67,24 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
     }
+
+    // Create the dock widget
+    dockWidget = new QDockWidget("Phase error", this);
+    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+
+    // Create the OpenGL widget
+    HistogramWidget = new PolarHistogramOpenGLWidget(dockWidget);
+    HistogramWidget->setMinimumWidth(200);
+    HistogramWidget->setMaximumWidth(300);
+
+    HistogramWidget->setMaximumHeight(700);
+
+    // Set the OpenGL widget as the central widget of the dock
+    dockWidget->setWidget(HistogramWidget);
+
+    // Add the dock widget to the main window, but hide it by default
+    addDockWidget(Qt::RightDockWidgetArea, dockWidget);
+    // dockWidget->hide();
 }
 
 void phaseEstwindow::newEstStates(phaseEstimateStates states) {
