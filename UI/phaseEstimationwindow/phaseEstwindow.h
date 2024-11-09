@@ -29,7 +29,6 @@ public:
 
     ProcessingGlWidget* getProcessingGlWidget() { return processingglWidget; }
     PolarHistogramOpenGLWidget* getHistogramWidget() { return HistogramWidget; }
-    void showOpenGLDock() { dockWidget->show(); }
 
 signals:
     void setCustomScaleStatus(bool status);
@@ -72,6 +71,7 @@ public slots:
     void newEstStates(phaseEstimateStates states);
     void newSNRmax(double value);
     void newSNRmax_list(const std::vector<double>& list);
+    void showOpenGLDock() { dockWidget->show(); }
 
 private slots:
     void on_edge_editingFinished();

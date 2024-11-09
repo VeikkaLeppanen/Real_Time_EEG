@@ -205,7 +205,7 @@ void phaseEstimationWorker::process()
                         SNR_max_set = false;
                         emit sendSNRmax_list(SNR_max_list);
 
-                        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                        // std::this_thread::sleep_for(std::chrono::milliseconds(200));
                     }
 
                     SNR_passed = false;
@@ -273,8 +273,8 @@ void phaseEstimationWorker::process()
                 } else if (numSkippedSamples > 35) {
                     phase_diff_hilbert = hilbertTransform(EEG_filter2);
                     double difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+                    
                     emit polarHistogramAddSample_1(difference);
-
                     last_phase_seqnum = -1;
                 }
             } else if (phaseEstStates.performSNRcheck && PostInitializationCounter < PostInitSamples_n) {

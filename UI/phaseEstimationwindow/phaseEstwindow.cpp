@@ -74,8 +74,7 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
 
     // Create the OpenGL widget
     HistogramWidget = new PolarHistogramOpenGLWidget(dockWidget);
-    HistogramWidget->setMinimumWidth(200);
-    HistogramWidget->setMaximumWidth(300);
+    HistogramWidget->setFixedWidth(300);
 
     HistogramWidget->setMaximumHeight(700);
 
@@ -84,7 +83,7 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
 
     // Add the dock widget to the main window, but hide it by default
     addDockWidget(Qt::RightDockWidgetArea, dockWidget);
-    // dockWidget->hide();
+    dockWidget->hide();
 }
 
 void phaseEstwindow::newEstStates(phaseEstimateStates states) {
@@ -357,6 +356,8 @@ void phaseEstwindow::on_checkBox_SNRcheck_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setSNRcheck(isChecked);
+    HistogramWidget->clearSamples();
+    showOpenGLDock();
 }
 
 
