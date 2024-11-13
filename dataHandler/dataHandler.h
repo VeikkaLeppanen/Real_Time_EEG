@@ -157,13 +157,6 @@ public:
     void insertTrigger(int seqNum) {
         std::lock_guard<std::mutex> lock(triggerMutex);
         triggerSet.insert(seqNum);
-
-        // if (seqNum > 300000 && seqNum > 200 + last_save_index) {
-        //     seqNum_list.push_back(seqNum);
-        //     // std::cout << "Trigger inserted: " << seqNum << std::endl;
-        // }
-        
-        // last_save_index = seqNum;
     }
 
     bool shouldTrigger(int seqNum) {
@@ -189,6 +182,11 @@ public:
     void magPro_request_mode_info();
 
     void get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled);
+
+    void save_seqnum_list() { 
+        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list)); 
+        std::cout << "Trigger list size: " << seqNum_list.size() << std::endl;
+    }
 
 private:
     HandlerState handler_state = WAITING_FOR_START;

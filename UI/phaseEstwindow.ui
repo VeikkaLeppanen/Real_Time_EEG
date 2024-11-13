@@ -81,6 +81,21 @@
           <enum>QFrame::Raised</enum>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>3</number>
+          </property>
           <item row="0" column="0" colspan="4">
            <widget class="QTabWidget" name="tabWidget">
             <property name="currentIndex">
@@ -91,6 +106,21 @@
               <string>Tab 1</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout">
+              <property name="spacing">
+               <number>3</number>
+              </property>
+              <property name="leftMargin">
+               <number>2</number>
+              </property>
+              <property name="topMargin">
+               <number>2</number>
+              </property>
+              <property name="rightMargin">
+               <number>2</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
               <item>
                <widget class="QFrame" name="frame_2">
                 <property name="maximumSize">
@@ -171,7 +201,7 @@
                  <item row="7" column="0">
                   <widget class="QLabel" name="label_11">
                    <property name="text">
-                    <string>SNR threshold</string>
+                    <string>Alpha threshold</string>
                    </property>
                   </widget>
                  </item>
@@ -182,13 +212,6 @@
                      <width>100</width>
                      <height>16777215</height>
                     </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QCheckBox" name="checkBox_SNRcheck">
-                   <property name="text">
-                    <string>SNR check</string>
                    </property>
                   </widget>
                  </item>
@@ -259,7 +282,7 @@
                  <item row="5" column="0">
                   <widget class="QLabel" name="label_12">
                    <property name="text">
-                    <string>SNR max</string>
+                    <string>Mean peak alpha</string>
                    </property>
                   </widget>
                  </item>
@@ -296,6 +319,13 @@
                  </item>
                  <item row="7" column="2">
                   <widget class="QLineEdit" name="SNRtreshold"/>
+                 </item>
+                 <item row="4" column="0" colspan="3">
+                  <widget class="QCheckBox" name="checkBox_SNRcheck">
+                   <property name="text">
+                    <string>Alpha (8-12 Hz) check</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>

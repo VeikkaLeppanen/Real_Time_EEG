@@ -26,7 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
-    double SNR_threshold = 0.3;
+    double SNR_threshold = 0.1;
 
     // phase estimate
     size_t edge = 35;
@@ -123,6 +123,7 @@ public slots:
         SNR_max_set = false;
         SNR_list.clear();
         SNR_max_list.clear();
+        PostInitializationCounter = 0;
         phaseEstStates.performSNRcheck = isChecked; 
     }
     
@@ -197,14 +198,17 @@ private:
     int delay;
     
     // SNR check variables
-    int n_SNR = 1000;
-    int n_SNR_max = 20;
+    int n_SNR = 10;
+    int n_SNR_max = 10;
     std::vector<double> SNR_list;
     std::vector<double> SNR_max_list;
     double SNR_max_temp = 0.0;
     double SNR_max_final = 0.0;
     bool SNR_max_set = false;
     double SNR_threshold;
+
+    int last_SNR_seqnum = -1;
+    double SNR_window_overlap = 0.5;
 
     // Polar histogram
     int PostInitializationCounter = 0;

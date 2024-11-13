@@ -83,7 +83,7 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
 
     // Add the dock widget to the main window, but hide it by default
     addDockWidget(Qt::RightDockWidgetArea, dockWidget);
-    dockWidget->hide();
+    // dockWidget->hide();
 }
 
 void phaseEstwindow::newEstStates(phaseEstimateStates states) {

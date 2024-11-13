@@ -104,8 +104,14 @@ void phaseEstimationWorker::process()
         std::vector<int> trigger_seqNum_list;
         std::vector<int> angle_seqNum_list;
         std::vector<double> angle_list;
+        
+        int last_trig_sNum = -1;
 
-        int last_SNR_pass = 0;
+        // std::vector<int> save_index_list;
+        // int EEG_spatial_row_counter = 0;
+        // int row_counter_gap_tracker = -1;
+        // Eigen::MatrixXd EEG_spatial_save = Eigen::MatrixXd::Zero(400, downsampled_cols);
+
         int seq_num_tracker = 0;
         while(processingWorkerRunning) {
             if (processing_pause) {
@@ -174,6 +180,18 @@ void phaseEstimationWorker::process()
                 std::cerr << "Error: Row index is out of bounds." << std::endl;
             }
 
+            // if(sequence_number - row_counter_gap_tracker > 10000) {
+            //     if(EEG_spatial_row_counter < 100) {
+            //         EEG_spatial_save.row(EEG_spatial_row_counter) = EEG_spatial;
+            //         save_index_list.push_back(sequence_number);
+            //         EEG_spatial_row_counter++;
+            //         row_counter_gap_tracker = sequence_number;
+            //     } else {
+            //         writeMatrixiToCSV("window_seqnums.csv", vectorToColumnMatrixi(save_index_list));
+            //         writeMatrixdToCSV("spatial_windows.csv", EEG_spatial_save);
+            //     }
+            // }
+
             bool SNR_passed = true;
             // SNR check
             if (phaseEstStates.performSNRcheck) {
@@ -185,11 +203,17 @@ void phaseEstimationWorker::process()
 
                     if (!SNR_max_set) {
 
-                        if (SNR_list.size() < n_SNR) {
-                            SNR_list.push_back(SNR);
-                        } else {
+                        if (SNR_list.size() >= n_SNR) {
                             SNR_max_temp = *std::max_element(SNR_list.begin(), SNR_list.end());
                             SNR_max_set = true;
+                            // std::cout << "SNR max saved" << std::endl;
+                        // } else {
+                        //     SNR_list.push_back(SNR);
+                        // }
+                        } else if (sequence_number > (last_SNR_seqnum + samples_to_process * (1-SNR_window_overlap))) {
+                            SNR_list.push_back(SNR);
+                            last_SNR_seqnum = sequence_number;
+                            // std::cout << "SNR saved" << std::endl;
                         }
 
                     } else {
@@ -218,11 +242,7 @@ void phaseEstimationWorker::process()
 
                 }
 
-                // Extra check that ensures the last 200 samples did not pass the SNR check ensuring that we are at the beginning of a clean epoch
-                // if (sequence_number < 200 + last_SNR_pass) SNR_passed = false;
             }
-
-            // if (SNR_passed) last_SNR_pass = sequence_number;
 
             // Filter2
             print_debug("Second filtering");
@@ -246,25 +266,40 @@ void phaseEstimationWorker::process()
                 EEG_hilbert = hilbertTransform(EEG_predicted);
             }
 
-            bool save_angle = false;            //Remove later
             int trigger_seqNum = 0;
+            std::pair<int, double> result;
             // Trigger phase targeting
             print_debug("Phase targeting");
             if (phaseEstStates.performPhaseTargeting) {
-                trigger_seqNum = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, phase_shift, stimulation_target);
+                result = findTargetPhase(EEG_hilbert, phaseAngles, sequence_number, downsampling_factor, edge, edge + 16, phase_shift, stimulation_target);
+                trigger_seqNum = result.first;
                 if (trigger_seqNum && SNR_passed) { 
 
-                    if (sequence_number > 40000 && trigger_seqNum > 200 + last_save_index) {
-                        last_save_index = trigger_seqNum;
-                        save_angle = true;
-                    }
-                    // if (sequence_number > 40000) trigger_seqNum_list.push_back(trigger_seqNum);
-
+                    // if (sequence_number > 40000 && trigger_seqNum > 200 + last_save_index) {
+                    //     last_save_index = trigger_seqNum;
+                    //     trigger_seqNum_list.push_back(trigger_seqNum);
+                    // }
+                    // trigger_seqNum_list.push_back(trigger_seqNum);
+                    
                     handler.insertTrigger(trigger_seqNum);
                 }
             }
 
-            // Phase histogram
+            // int numSkippedSamples = (sequence_number - last_trig_sNum) / downsampling_factor;
+            // if (last_trig_sNum == -1 && trigger_seqNum && SNR_passed) {
+            //     // std::cout << "if -----------------------------" << std::endl;
+            //     last_phase = result.second;
+            //     last_trig_sNum = trigger_seqNum;
+            //     trigger_seqNum_list.push_back(trigger_seqNum);
+            // } else if (last_trig_sNum != -1 && numSkippedSamples > 35) {
+            //     // std::cout << "else -----------------------------" << std::endl;
+            //     phase_diff_hilbert = hilbertTransform(EEG_filter2);
+            //     emit polarHistogramAddSample_1(last_phase);
+            //     emit polarHistogramAddSample_2(std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
+            //     last_trig_sNum = -1;
+            // }
+
+            Phase histogram
             if (phaseEstStates.performSNRcheck && SNR_max_list.size() < n_SNR_max) {
                 int numSkippedSamples = (sequence_number - last_phase_seqnum) / downsampling_factor;
                 if (last_phase_seqnum == -1) {
@@ -274,6 +309,10 @@ void phaseEstimationWorker::process()
                     phase_diff_hilbert = hilbertTransform(EEG_filter2);
                     double difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
                     
+                    // if(trigger_seqNum) { 
+                    //     std::cout << "result.second: " << result.second << std::endl;
+                    //     emit polarHistogramAddSample_1(result.second);
+                    // }
                     emit polarHistogramAddSample_1(difference);
                     last_phase_seqnum = -1;
                 }
@@ -319,11 +358,6 @@ void phaseEstimationWorker::process()
                         case 0:
                             phase_diff_hilbert = hilbertTransform(EEG_filter2);
                             difference = ang_diff(last_phase, std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
-                            if (save_angle) {
-                                trigger_seqNum_list.push_back(trigger_seqNum);
-                                angle_seqNum_list.push_back(sequence_number - 350);
-                                angle_list.push_back(std::arg(phase_diff_hilbert[filter2_length - numSkippedSamples]));
-                            }
 
                             // Update the phase difference
                             phaseDifference(phaseDifference_current_index) = difference;
@@ -391,9 +425,9 @@ void phaseEstimationWorker::process()
         }
         std::cout << "SNR max: " << SNR_max_final << std::endl;
         std::cout << "Phase estimation finished. Saving data..." << trigger_seqNum_list.size() << std::endl;
-        writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(trigger_seqNum_list));
-        writeMatrixiToCSV("angle_seqNum_list.csv", vectorToColumnMatrixi(angle_seqNum_list));
-        writeMatrixdToCSV("angle_list.csv", vectorToColumnMatrixd(angle_list));
+        writeMatrixiToCSV("trigger_seqNum_list_worker.csv", vectorToColumnMatrixi(trigger_seqNum_list));
+        // writeMatrixiToCSV("angle_seqNum_list.csv", vectorToColumnMatrixi(angle_seqNum_list));
+        // writeMatrixdToCSV("angle_list.csv", vectorToColumnMatrixd(angle_list));
         
         emit finished();
     } catch (std::exception& e) {

@@ -59,6 +59,7 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
         connect(thread, &QThread::finished, this, [=]() {
+            handler.save_seqnum_list();
             qDebug("EEG_bridge Thread and EEGSpinWorker cleaned up properly");
         });
         
