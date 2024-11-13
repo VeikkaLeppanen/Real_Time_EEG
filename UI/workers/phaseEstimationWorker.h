@@ -26,7 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
-    double SNR_threshold = 0.1;
+    double SNR_threshold = 0.3;
 
     // phase estimate
     size_t edge = 35;
@@ -34,8 +34,8 @@ struct phaseEstimateParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = 0;          //M_PI * 0.5;    [0, 2*pi]
-    int phase_shift = -40;                    // for 5000Hz
+    double stimulation_target = M_PI * 1.5;          //M_PI * 0.5;    [0, 2*pi]
+    int phase_shift = -55;                    // for 5000Hz
 };
 
 struct phaseEstimateStates {
