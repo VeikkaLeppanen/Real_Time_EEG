@@ -59,6 +59,7 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
         connect(thread, &QThread::finished, this, [=]() {
+            handler.save_seqnum_list();
             qDebug("EEG_bridge Thread and EEGSpinWorker cleaned up properly");
         });
         
@@ -110,7 +111,7 @@ void MainWindow::on_EEG_clicked()
 
     if (preProcessingworker) {
         connect_EEG_Prepworker();
-        emit eegwindow->requestBCGState();
+        // emit eegwindow->requestBCGState();
     }
 }
 
@@ -196,15 +197,25 @@ void MainWindow::connect_processing_worker()
     QObject::connect(phaseEstwin, &phaseEstwindow::setSNRthreshold, phaseEstworker, &phaseEstimationWorker::setSNRthreshold);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
     QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
+
+    // SNR
+    QObject::connect(phaseEstwin, &phaseEstwindow::sendSNRmax, phaseEstworker, &phaseEstimationWorker::setSNRmax);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax, phaseEstwin, &phaseEstwindow::newSNRmax);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax_list, phaseEstwin, &phaseEstwindow::newSNRmax_list);
+    
     QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
     QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
+    
+    // Polar histogram
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_1, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToFirstCircle);
+    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_2, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToSecondCircle);
 }
 
 void MainWindow::connect_EEG_Prepworker()
 {
     QObject::connect(preProcessingworker, &preProcessingWorker::updateEEGDisplayedData, eegwindow->getGlWidget(), &Glwidget::updateMatrix);
     QObject::connect(preProcessingworker, &preProcessingWorker::newBCGState, eegwindow, &eegWindow::newBCGState);
-    QObject::connect(eegwindow, &eegWindow::requestBCGState, preProcessingworker, &preProcessingWorker::sendBCGState);
+    // QObject::connect(eegwindow, &eegWindow::requestBCGState, preProcessingworker, &preProcessingWorker::sendBCGState);
     QObject::connect(eegwindow, &eegWindow::sendPrepStates, preProcessingworker, &preProcessingWorker::setPreprocessingParameters);
     QObject::connect(eegwindow, &eegWindow::setRemoveBCG, preProcessingworker, &preProcessingWorker::setRemoveBCG);
     QObject::connect(eegwindow, &eegWindow::set_processing_pause, preProcessingworker, &preProcessingWorker::set_processing_pause);

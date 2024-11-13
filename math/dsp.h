@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <complex>
+#include <iostream>
 
 #include <fftw3.h>
 

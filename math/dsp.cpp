@@ -298,7 +298,7 @@ double calculateSNR_max(const Eigen::VectorXd& data, int overlap, int nfft, doub
     // Compute the PSD estimate
     auto [Pxx, freq] = computePSD(arParams, noiseVariance, nfft, fs);
 
-    double df = fs / nfft; // Frequency resolution
+    double df = fs / (nfft * 2); // Frequency resolution
     int target_index = static_cast<int>(target_freq / df);
     int half_bandwidth = static_cast<int>(bandwidth / (2 * df));
 

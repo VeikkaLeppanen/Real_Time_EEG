@@ -26,7 +26,7 @@ struct phaseEstimateParameters {
 
     // Filter 9-13Hz
     int filter2_length = 250;
-    double SNR_threshold = 0.5;
+    double SNR_threshold = 0.1;
 
     // phase estimate
     size_t edge = 35;
@@ -42,7 +42,7 @@ struct phaseEstimateStates {
     bool performPreprocessing = true;
     bool performPhaseEstimation = false;
     bool performSNRcheck = false;
-    bool performRemoveBCG = true;
+    bool performRemoveBCG = false;
     bool performFiltering = false;
     bool performEstimation = true;
     bool performHilbertTransform = true;
@@ -89,6 +89,12 @@ signals:
     void updateSpatialChannelNames(std::vector<std::string> processing_channel_names);
     void sendNumSamples(int numSamples);
     void newEstStates(phaseEstimateStates states);
+    
+    void sendSNRmax(double value);
+    void sendSNRmax_list(const std::vector<double>& list);
+
+    void polarHistogramAddSample_1(double angle);
+    void polarHistogramAddSample_2(double angle);
 
 public slots:
     void process_start() {
@@ -114,12 +120,19 @@ public slots:
     void setSpatilaTargetChannel(int index) { spatial_channel_index = index; }
 
     void setSNRcheck(bool isChecked) { 
+        SNR_max_set = false;
         SNR_list.clear();
+        SNR_max_list.clear();
+        PostInitializationCounter = 0;
         phaseEstStates.performSNRcheck = isChecked; 
     }
     
+    void setSNRmax(double value) { SNR_max_final = value; }
     void setSNRthreshold(double value) { SNR_threshold = value; }
-    void resetSNRlist() { SNR_list.clear(); }
+    // void resetSNRlist() { 
+    //     SNR_max_set = false;
+    //     SNR_list.clear(); 
+    // }
 
     void outerElectrodesStateChanged(std::vector<bool> outerElectrodeCheckStates) { outerElectrodeCheckStates_ = outerElectrodeCheckStates; };
 
@@ -184,9 +197,23 @@ private:
     int downsampling_factor;
     int delay;
     
+    // SNR check variables
     int n_SNR = 10;
+    int n_SNR_max = 10;
     std::vector<double> SNR_list;
+    std::vector<double> SNR_max_list;
+    double SNR_max_temp = 0.0;
+    double SNR_max_final = 0.0;
+    bool SNR_max_set = false;
     double SNR_threshold;
+
+    int last_SNR_seqnum = -1;
+    double SNR_window_overlap = 0.5;
+
+    // Polar histogram
+    int PostInitializationCounter = 0;
+    int PostInitSamples_n = 500;
+    bool last_SNR_passed = false;
 
     size_t edge;
     int filter2_length;

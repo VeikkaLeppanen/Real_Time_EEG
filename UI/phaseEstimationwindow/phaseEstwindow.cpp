@@ -1,6 +1,7 @@
 #include "phaseEstwindow.h"
 #include "../ui_phaseEstwindow.h"
 #include <QThread>
+// #include "phaseEstwindow.moc"
 
 phaseEstwindow::phaseEstwindow(dataHandler &handler, 
                     volatile std::sig_atomic_t &processingWorkerRunning, 
@@ -15,6 +16,11 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
     ui->setupUi(this);
 
     // Initialize values for lineEdits
+    ui->SNRmax->setText(QString::number(0.0f));
+    ui->SNRmax->setAttribute(Qt::WA_Hover);         // Enable hover events
+    ui->SNRmax->setMouseTracking(true);             // Enable mouse tracking
+    ui->SNRmax->setAttribute(Qt::WA_AlwaysShowToolTips);  // Always show tooltips, even if the widget is disabled
+
     ui->SNRtreshold->setText(QString::number(phaseEstParams.SNR_threshold));
     ui->edge->setText(QString::number(phaseEstParams.edge));
     ui->modelOrder->setText(QString::number(phaseEstParams.modelOrder));
@@ -24,6 +30,8 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
     ui->lineEdit_XaxisSpacing->setText(QString::number(500));
     ui->checkBox_Stimulation->setChecked(handler.getTriggerEnableStatus());
 
+    ui->tabWidget->setTabText(0, "Phase Estimation");
+    ui->tabWidget->setTabText(1, "View");
     ui->checkBox_triggers_A->setStyleSheet("QCheckBox { color : blue; }");
     ui->checkBox_triggers_B->setStyleSheet("QCheckBox { color : green; }");
     ui->checkBox_triggers_out->setStyleSheet("QCheckBox { color : cyan; }");
@@ -59,6 +67,23 @@ phaseEstwindow::phaseEstwindow(dataHandler &handler,
         // Error handling if glWidget is not found
         qWarning("Glwidget not found in UI!");
     }
+
+    // Create the dock widget
+    dockWidget = new QDockWidget("Phase error", this);
+    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+
+    // Create the OpenGL widget
+    HistogramWidget = new PolarHistogramOpenGLWidget(dockWidget);
+    HistogramWidget->setFixedWidth(300);
+
+    HistogramWidget->setMaximumHeight(700);
+
+    // Set the OpenGL widget as the central widget of the dock
+    dockWidget->setWidget(HistogramWidget);
+
+    // Add the dock widget to the main window, but hide it by default
+    addDockWidget(Qt::RightDockWidgetArea, dockWidget);
+    // dockWidget->hide();
 }
 
 void phaseEstwindow::newEstStates(phaseEstimateStates states) {
@@ -331,6 +356,8 @@ void phaseEstwindow::on_checkBox_SNRcheck_stateChanged(int arg1)
 {
     bool isChecked = (arg1 == Qt::Checked);
     emit setSNRcheck(isChecked);
+    HistogramWidget->clearSamples();
+    showOpenGLDock();
 }
 
 
@@ -340,6 +367,49 @@ void phaseEstwindow::on_SNRtreshold_editingFinished()
     double value = ui->SNRtreshold->text().toDouble(&ok);
     if (ok) {
         emit setSNRthreshold(value);
+    } else {
+        QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
+    }
+}
+
+void phaseEstwindow::newSNRmax_list(const std::vector<double>& list)
+{
+    // Initialize an empty QString to hold the tooltip text
+    QString tooltipText;
+
+    // Loop through the list and append each value to the tooltip text
+    for (size_t i = 0; i < list.size(); ++i) {
+        // Format each value with a label or index if desired
+        tooltipText += QString("SNR max %1: %2").arg(i + 1).arg(list[i], 0, 'f', 2);
+
+        // Add a newline character after each value except the last one
+        if (i < list.size() - 1) {
+            tooltipText += "\n";
+        }
+    }
+
+    double Total_max = *std::max_element(list.begin(), list.end());
+
+    tooltipText += "\n";
+    tooltipText += QString("Max: %2").arg(Total_max, 0, 'f', 2);
+    tooltipText += "\n";
+    tooltipText += QString("Mean: %2").arg(std::accumulate(list.begin(), list.end(), 0.0) / list.size(), 0, 'f', 2);
+    
+    ui->SNRmax->setToolTip(tooltipText);
+}
+
+
+void phaseEstwindow::newSNRmax(double value) 
+{
+    ui->SNRmax->setText(QString::number(value));
+}
+
+void phaseEstwindow::on_SNRmax_editingFinished()
+{
+    bool ok;
+    double value = ui->SNRmax->text().toDouble(&ok);
+    if (ok) {
+        emit sendSNRmax(value);
     } else {
         QMessageBox::warning(this, "Input Error", "Please enter a valid number.");
     }
