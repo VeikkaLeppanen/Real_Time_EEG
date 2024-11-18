@@ -275,10 +275,10 @@ void phaseEstimationWorker::process()
                 trigger_seqNum = result.first;
                 if (trigger_seqNum && SNR_passed) { 
 
-                    if (trigger_seqNum > 1000 + last_save_index) {
-                        last_save_index = trigger_seqNum;
-                        trigger_seqNum_list.push_back(trigger_seqNum);
-                    }
+                    // if (trigger_seqNum > 500 + last_save_index) {
+                    //     last_save_index = trigger_seqNum;
+                    //     trigger_seqNum_list.push_back(trigger_seqNum);
+                    // }
                     // trigger_seqNum_list.push_back(trigger_seqNum);
                     
                     handler.insertTrigger(trigger_seqNum);

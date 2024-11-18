@@ -413,11 +413,6 @@ std::tuple<Eigen::VectorXd, double, Eigen::VectorXd> aryule_levinson(const Eigen
     return std::make_tuple(arParams, sigma2, k);
 }
 
-
-
-
-
-
 std::pair<int, double> findTargetPhase(
     const std::vector<std::complex<double>>& hilbert_signal,
     Eigen::VectorXd& phaseAngles,
@@ -430,35 +425,42 @@ std::pair<int, double> findTargetPhase(
 {
     int target_seqNum = 0;
     double target_phase = 0.0;
-    double adjusted_stimulation_target = stimulation_target;
 
-    // Compute the phase angles using std::arg
-    for (size_t i = 0; i < hilbert_signal.size(); ++i) {
+    size_t N = hilbert_signal.size();
+
+    // Ensure phaseAngles is appropriately sized
+    if (phaseAngles.size() != N)
+        phaseAngles.resize(N);
+
+    // Compute the wrapped phase angles using std::arg
+    for (size_t i = 0; i < N; ++i) {
         phaseAngles(i) = std::arg(hilbert_signal[i]);
     }
 
-    Eigen::VectorXd phaseAngles_temp = phaseAngles;
-
     // Unwrap phase angles to avoid discontinuities
-    for (size_t i = 1; i < phaseAngles.size(); ++i) {
-        double delta = phaseAngles_temp(i) - phaseAngles_temp(i - 1);
-        if (delta > M_PI)
-            phaseAngles_temp(i) -= 2 * M_PI;
-        else if (delta < -M_PI)
-            phaseAngles_temp(i) += 2 * M_PI;
+    Eigen::VectorXd phaseAngles_temp(N);
+    phaseAngles_temp(0) = phaseAngles(0);
+    for (size_t i = 1; i < N; ++i) {
+        double delta = phaseAngles(i) - phaseAngles(i - 1);
+        // Adjust delta to be within [-π, π]
+        delta -= 2 * M_PI * std::round(delta / (2 * M_PI));
+        // Cumulatively unwrap the phase
+        phaseAngles_temp(i) = phaseAngles_temp(i - 1) + delta;
     }
 
-    // Adjust adjusted_stimulation_target to be in the same range as phaseAngles_temp(0)
-    while (adjusted_stimulation_target - phaseAngles_temp(0) > M_PI)
-        adjusted_stimulation_target -= 2 * M_PI;
-    while (adjusted_stimulation_target - phaseAngles_temp(0) < -M_PI)
-        adjusted_stimulation_target += 2 * M_PI;
+    // Adjust stimulation_target to be close to phaseAngles_temp[edge]
+    double phase_diff = phaseAngles_temp(edge) - stimulation_target;
+    double n = std::round(phase_diff / (2 * M_PI));
+    double unwrapped_stimulation_target = stimulation_target + n * 2 * M_PI;
 
-    // Adjust phase angles relative to the stimulation target
-    Eigen::VectorXd delta_phase = phaseAngles_temp.array() - adjusted_stimulation_target;
+    // Compute delta_phase
+    Eigen::VectorXd delta_phase = phaseAngles_temp.array() - unwrapped_stimulation_target;
+
+    // Ensure prediction_limit does not exceed N
+    size_t limit = std::min(static_cast<size_t>(prediction_limit), N);
 
     // Find the first crossing point
-    for (size_t i = edge; i < prediction_limit; ++i) {
+    for (size_t i = edge + 1; i < limit; ++i) {
         if ((delta_phase(i - 1) < 0 && delta_phase(i) >= 0) ||
             (delta_phase(i - 1) > 0 && delta_phase(i) <= 0)) {
 
@@ -466,10 +468,10 @@ std::pair<int, double> findTargetPhase(
             double abs_diff_i_minus_1 = std::abs(delta_phase(i - 1));
             double abs_diff_i = std::abs(delta_phase(i));
 
-            int closest_index = (abs_diff_i_minus_1 < abs_diff_i) ? (i - 1) : i;
+            size_t closest_index = (abs_diff_i_minus_1 < abs_diff_i) ? (i - 1) : i;
 
             // Calculate the target sequence number
-            target_seqNum = sequence_number + ((closest_index - edge) * downsampling_factor) + phase_shift;
+            target_seqNum = sequence_number + static_cast<int>((closest_index - edge) * downsampling_factor) + phase_shift;
 
             // Get the target phase angle from phaseAngles_temp
             target_phase = phaseAngles_temp(closest_index);
@@ -478,9 +480,73 @@ std::pair<int, double> findTargetPhase(
         }
     }
 
-    // If no crossing is found, return -1 and 0.0 for phase
+    // If no crossing is found, return 0 and 0.0 for phase
     return std::make_pair(target_seqNum, target_phase);
 }
+
+// std::pair<int, double> findTargetPhase(
+//     const std::vector<std::complex<double>>& hilbert_signal,
+//     Eigen::VectorXd& phaseAngles,
+//     int sequence_number,
+//     int downsampling_factor,
+//     int edge,
+//     int prediction_limit,
+//     int phase_shift,
+//     double stimulation_target)
+// {
+//     int target_seqNum = 0;
+//     double target_phase = 0.0;
+//     double adjusted_stimulation_target = stimulation_target;
+
+//     // Compute the phase angles using std::arg
+//     for (size_t i = 0; i < hilbert_signal.size(); ++i) {
+//         phaseAngles(i) = std::arg(hilbert_signal[i]);
+//     }
+
+//     Eigen::VectorXd phaseAngles_temp = phaseAngles;
+
+//     // Unwrap phase angles to avoid discontinuities
+//     for (size_t i = 1; i < phaseAngles.size(); ++i) {
+//         double delta = phaseAngles_temp(i) - phaseAngles_temp(i - 1);
+//         if (delta > M_PI)
+//             phaseAngles_temp(i) -= 2 * M_PI;
+//         else if (delta < -M_PI)
+//             phaseAngles_temp(i) += 2 * M_PI;
+//     }
+
+//     // Adjust adjusted_stimulation_target to be in the same range as phaseAngles_temp(0)
+//     while (adjusted_stimulation_target - phaseAngles_temp(0) > M_PI)
+//         adjusted_stimulation_target -= 2 * M_PI;
+//     while (adjusted_stimulation_target - phaseAngles_temp(0) < -M_PI)
+//         adjusted_stimulation_target += 2 * M_PI;
+
+//     // Adjust phase angles relative to the stimulation target
+//     Eigen::VectorXd delta_phase = phaseAngles_temp.array() - adjusted_stimulation_target;
+
+//     // Find the first crossing point
+//     for (size_t i = edge; i < prediction_limit; ++i) {
+//         if ((delta_phase(i - 1) < 0 && delta_phase(i) >= 0) ||
+//             (delta_phase(i - 1) > 0 && delta_phase(i) <= 0)) {
+
+//             // Compare absolute differences to find the closer index
+//             double abs_diff_i_minus_1 = std::abs(delta_phase(i - 1));
+//             double abs_diff_i = std::abs(delta_phase(i));
+
+//             int closest_index = (abs_diff_i_minus_1 < abs_diff_i) ? (i - 1) : i;
+
+//             // Calculate the target sequence number
+//             target_seqNum = sequence_number + ((closest_index - edge) * downsampling_factor) + phase_shift;
+
+//             // Get the target phase angle from phaseAngles_temp
+//             target_phase = phaseAngles_temp(closest_index);
+
+//             return std::make_pair(target_seqNum, target_phase);
+//         }
+//     }
+
+//     // If no crossing is found, return -1 and 0.0 for phase
+//     return std::make_pair(target_seqNum, target_phase);
+// }
 
 
 
