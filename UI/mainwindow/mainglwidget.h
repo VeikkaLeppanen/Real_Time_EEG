@@ -15,6 +15,18 @@
 #include <image/orientation.h>
 #include <Eigen/Dense>
 
+enum EditorMode {
+  BRUSH,
+  ERASE,
+  RECTANGLE
+};
+
+enum SliceType {
+    AXIAL,
+    CORONAL,
+    SAGITTAL
+};
+
 class MainGlWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
@@ -35,24 +47,6 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
-    // void resizeEvent(QResizeEvent *event) override {
-    //     int newWidth = event->size().width();
-    //     int newHeight = event->size().height();
-
-    //     // Calculate the maximum size that fits within the new dimensions
-    //     if (newWidth > newHeight * aspectRatio) {
-    //         // Height is the limiting dimension
-    //         newWidth = static_cast<int>(newHeight * aspectRatio);
-    //     } else {
-    //         // Width is the limiting dimension
-    //         newHeight = static_cast<int>(newWidth / aspectRatio);
-    //     }
-
-    //     // Set the viewport and resize the widget
-    //     setGeometry((width() - newWidth) / 2, (height() - newHeight) / 2, newWidth, newHeight);
-    //     QOpenGLWidget::resizeEvent(event);
-    // }
-
 signals:
     void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility);
 
@@ -71,6 +65,10 @@ public slots:
     void editButton_toggled(bool checked);
     void undoButton_clicked();
     void redoButton_clicked();
+
+    void brushButton_clicked() { editorMode = BRUSH; }
+    void eraseButton_clicked() { editorMode = ERASE; }
+    void rectangleButton_clicked() { editorMode = RECTANGLE; }
 
 private slots:
     void updateGraph();
@@ -100,7 +98,6 @@ private:
     std::vector<std::string> T1_orientation = {"R", "A", "S"};
     // std::vector<std::string> T1_orientation = {"L", "P", "I"};
     std::vector<float> T1_pixDims = {1.0, 1.0, 1.0};
-    // std::vector<float> T1_pixDims = {2.0, 1.5, 0.5};
 
     // Member variables to store projection parameters
     float leftAxial, rightAxial, bottomAxial, topAxial;
@@ -115,7 +112,6 @@ private:
     float imgHeight_sagittal;
 
     Eigen::Matrix4f constructMatrix(float ijk2xyz[3][4]);
-    float getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ);
 
     // Zoom and Pan
     float zoomFactor;
@@ -140,6 +136,18 @@ private:
 
     // ROI parameters
     bool editMode = false;
+    EditorMode editorMode = BRUSH;
+    QPoint rectStartPoint;   // Starting point of the rectangle
+    QPoint rectCurrentPoint; // Current point as the mouse moves
+    QPoint rectStartImageCoords;
+    QPoint rectEndImageCoords;
+    SliceType currentSliceType;
+    bool isDrawingRect = false; // Flag to indicate if rectangle drawing is in progress
+    void applyRectangleToROI(const QPoint& startImageCoords, const QPoint& endImageCoords);
+    QPoint screenToImageCoordinates(const QPoint& screenPoint);
+    void convertAxialScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgi, int& imgj);
+    void convertCoronalScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgi, int& imgk);
+    void convertSagittalScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgj, int& imgk);
 };
 
 #endif // MAINGLWIDGET_H

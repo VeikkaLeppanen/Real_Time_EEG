@@ -280,7 +280,6 @@ void MainGlWidget::paintGL()
             }
 
             // Combine the T1 and fMRI colors
-            // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
@@ -412,7 +411,6 @@ void MainGlWidget::paintGL()
             }
 
             // Combine the T1 and fMRI colors
-            // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
@@ -540,7 +538,6 @@ void MainGlWidget::paintGL()
             }
 
             // Combine the T1 and fMRI colors
-            // For example, enhance the red channel based on the overlay
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
@@ -660,46 +657,30 @@ void MainGlWidget::paintGL()
 
 void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
-    // Dimensions of the Axial slice
-    int dimX = T1_image.imgDims[0];
-    int dimY = T1_image.imgDims[1];
-
-    // Calculate the position within the axial viewport
-    int xInViewport = mousePos.x(); // Since axialViewport.x = 0
-    int yInViewport = mousePos.y();
-
-    // Flip y-coordinate because Qt's y=0 is at the top, OpenGL's y=0 is at the bottom
-    int yInViewportFlipped = viewportHeight - yInViewport;
-
-    // Convert viewport coordinates to Normalized Device Coordinates (NDC)
-    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
-
-    // Map NDC to world coordinates using stored projection parameters
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightAxial - leftAxial) + leftAxial;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (topAxial - bottomAxial) + bottomAxial;
-
-    // Convert world coordinates to image coordinates
-    float imgXf = (worldX + imgWidth_axial / 2.0f) / T1_pixDims[0];
-    float imgYf = (worldY + imgHeight_axial / 2.0f) / T1_pixDims[1];
-
-    int imgX = static_cast<int>(imgXf);
-    int imgY = static_cast<int>(imgYf);
-
-    // Adjust for image orientation
-    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
-    if (T1_orientation[1] == "P") imgY = dimY - 1 - imgY;
-
-    // Clamp the indices to valid ranges
-    i = std::clamp(imgX, 0, dimX - 1);
-    j = std::clamp(imgY, 0, dimY - 1);
+    convertAxialScreenToImage(mousePos, viewportWidth, viewportHeight, i, j);
     
     if (editMode) {
-        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-            if (!ROI_toggle_states[ROI_num]) continue;
-            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-            int64_t target_index = ROI_image.sub2ind(i, j, k);
-            ROI_image.data[target_index] = 1;
+        switch (editorMode) {
+            case BRUSH:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 1;
+                }
+                break;
+
+            case ERASE:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 0;
+                }
+                break;
+
+            case RECTANGLE:
+                break;
         }
     }
 
@@ -708,46 +689,30 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
 
 void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
-    // Dimensions of the Coronal slice
-    int dimX = T1_image.imgDims[0];
-    int dimZ = T1_image.imgDims[2];
-
-    // Calculate the position within the coronal viewport
-    int xInViewport = mousePos.x() - viewportWidth; // Since coronal viewport starts at viewportWidth
-    int yInViewport = mousePos.y();
-
-    // Flip y-coordinate
-    int yInViewportFlipped = viewportHeight - yInViewport;
-
-    // Convert viewport coordinates to NDC
-    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
-
-    // Map NDC to world coordinates
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightCoronal - leftCoronal) + leftCoronal;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (topCoronal - bottomCoronal) + bottomCoronal;
-
-    // Convert world coordinates to image coordinates
-    float imgXf = (worldX + imgWidth_coronal / 2.0f) / T1_pixDims[0];
-    float imgZf = (worldY + imgHeight_coronal / 2.0f) / T1_pixDims[2];
-
-    int imgX = static_cast<int>(imgXf);
-    int imgZ = static_cast<int>(imgZf);
-
-    // Adjust for image orientation
-    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
-    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
-
-    // Clamp the indices
-    i = std::clamp(imgX, 0, dimX - 1);
-    k = std::clamp(imgZ, 0, dimZ - 1);
+    convertCoronalScreenToImage(mousePos, viewportWidth, viewportHeight, i, k);
 
     if (editMode) {
-        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-            if (!ROI_toggle_states[ROI_num]) continue;
-            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-            int64_t target_index = ROI_image.sub2ind(i, j, k);
-            ROI_image.data[target_index] = 1;
+        switch (editorMode) {
+            case BRUSH:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 1;
+                }
+                break;
+
+            case ERASE:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 0;
+                }
+                break;
+
+            case RECTANGLE:
+                break;
         }
     }
 
@@ -756,46 +721,30 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
 
 void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
-    // Dimensions of the Coronal slice
-    int dimY = T1_image.imgDims[1];
-    int dimZ = T1_image.imgDims[2];
-
-    // Calculate the position within the coronal viewport
-    int xInViewport = mousePos.x() - 2 * viewportWidth;
-    int yInViewport = mousePos.y();
-
-    // Flip y-coordinate
-    int yInViewportFlipped = viewportHeight - yInViewport;
-
-    // Convert viewport coordinates to NDC
-    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
-    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
-
-    // Map NDC to world coordinates
-    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightSagittal - leftSagittal) + leftSagittal;
-    float worldY = ((ndcY + 1.0f) / 2.0f) * (topSagittal - bottomSagittal) + bottomSagittal;
-
-    // Convert world coordinates to image coordinates
-    float imgYf = (worldX + imgWidth_sagittal / 2.0f) / T1_pixDims[1];
-    float imgZf = (worldY + imgHeight_sagittal / 2.0f) / T1_pixDims[2];
-
-    int imgY = static_cast<int>(imgYf);
-    int imgZ = static_cast<int>(imgZf);
-
-    // Adjust for image orientation
-    if (T1_orientation[1] == "A") imgY = dimY - 1 - imgY;
-    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
-
-    // Clamp the indices
-    j = std::clamp(imgY, 0, dimY - 1);
-    k = std::clamp(imgZ, 0, dimZ - 1);
+    convertSagittalScreenToImage(mousePos, viewportWidth, viewportHeight, j, k);
 
     if (editMode) {
-        for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-            if (!ROI_toggle_states[ROI_num]) continue;
-            NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-            int64_t target_index = ROI_image.sub2ind(i, j, k);
-            ROI_image.data[target_index] = 1;
+        switch (editorMode) {
+            case BRUSH:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 1;
+                }
+                break;
+
+            case ERASE:
+                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+                    if (!ROI_toggle_states[ROI_num]) continue;
+                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+                    ROI_image.data[target_index] = 0;
+                }
+                break;
+
+            case RECTANGLE:
+                break;
         }
     }
 
@@ -819,20 +768,45 @@ void MainGlWidget::mousePressEvent(QMouseEvent *event)
     }
     else if (pressedButton == Qt::LeftButton)
     {
-        // Handle crosshair movement
-        QPoint mousePos = event->pos();
         int widgetWidth = width();
         int viewportWidth = widgetWidth / 3;
+        int viewportIndex = event->pos().x() / viewportWidth;
 
-        if (mousePos.x() < viewportWidth) {
-            handleAxialClick(mousePos, viewportWidth, height());
-        } else if (mousePos.x() < 2 * viewportWidth) {
-            handleCoronalClick(mousePos, viewportWidth, height());
+        if (editMode && editorMode == RECTANGLE) {
+            // Start drawing rectangle
+            rectStartPoint = event->pos();
+            rectStartImageCoords = screenToImageCoordinates(rectStartPoint);
+
+            switch (viewportIndex) {
+                case 0:
+                    currentSliceType = AXIAL;
+                    break;
+                case 1:
+                    currentSliceType = CORONAL;
+                    break;
+                case 2:
+                    currentSliceType = SAGITTAL;
+                    break;
+            }
+
+            isDrawingRect = true;
         } else {
-            handleSagittalClick(mousePos, viewportWidth, height());
+            // Existing code for handling clicks
+            QPoint mousePos = event->pos();
+            int widgetWidth = width();
+            int viewportWidth = widgetWidth / 3;
+
+            if (mousePos.x() < viewportWidth) {
+                handleAxialClick(mousePos, viewportWidth, height());
+            } else if (mousePos.x() < 2 * viewportWidth) {
+                handleCoronalClick(mousePos, viewportWidth, height());
+            } else {
+                handleSagittalClick(mousePos, viewportWidth, height());
+            }
         }
     }
 }
+
 
 void MainGlWidget::mouseMoveEvent(QMouseEvent *event)
 {
@@ -913,7 +887,23 @@ void MainGlWidget::mouseReleaseEvent(QMouseEvent *event)
     }
 
     Q_UNUSED(event);
-    // Reset the mouse pressed flag
+    
+    if (pressedButton == Qt::LeftButton && editMode && editorMode == RECTANGLE && isDrawingRect) {
+        // Finish drawing rectangle
+        rectCurrentPoint = event->pos();
+
+        // Convert the mouse position to image coordinates
+        QPoint imageCoords = screenToImageCoordinates(rectCurrentPoint);
+        rectEndImageCoords = imageCoords;
+
+        isDrawingRect = false;
+
+        // Update the ROI between the two points
+        applyRectangleToROI(rectStartImageCoords, rectEndImageCoords);
+
+        update(); // Trigger a repaint
+    }
+
     mousePressed = false;
 }
 
@@ -985,60 +975,202 @@ void MainGlWidget::keyPressEvent(QKeyEvent *event)
     }
 }
 
-// Add this function to perform trilinear interpolation
-float MainGlWidget::getInterpolatedVoxelValue(float* data, float x, float y, float z, int dimX, int dimY, int dimZ) {
-    int x0 = static_cast<int>(floor(x));
-    int y0 = static_cast<int>(floor(y));
-    int z0 = static_cast<int>(floor(z));
+void MainGlWidget::applyRectangleToROI(const QPoint& startImageCoords, const QPoint& endImageCoords)
+{
+    int imgXStart = startImageCoords.x();
+    int imgYStart = startImageCoords.y();
+    int imgXEnd = endImageCoords.x();
+    int imgYEnd = endImageCoords.y();
 
-    int x1 = x0 + 1;
-    int y1 = y0 + 1;
-    int z1 = z0 + 1;
+    // Ensure start indices are less than end indices
+    int imgXMin = std::min(imgXStart, imgXEnd);
+    int imgXMax = std::max(imgXStart, imgXEnd);
+    int imgYMin = std::min(imgYStart, imgYEnd);
+    int imgYMax = std::max(imgYStart, imgYEnd);
 
-    float xd = x - x0;
-    float yd = y - y0;
-    float zd = z - z0;
+    // Get the current slice index (k) for axial, (j) for coronal, (i) for sagittal
+    int fixedIndex;
+    switch (currentSliceType) {
+        case AXIAL:
+            fixedIndex = k; // Current axial slice index
+            break;
+        case CORONAL:
+            fixedIndex = j; // Current coronal slice index
+            break;
+        case SAGITTAL:
+            fixedIndex = i; // Current sagittal slice index
+            break;
+    }
 
-    // Clamp indices to image dimensions
-    x0 = std::clamp(x0, 0, dimX - 1);
-    x1 = std::clamp(x1, 0, dimX - 1);
-    y0 = std::clamp(y0, 0, dimY - 1);
-    y1 = std::clamp(y1, 0, dimY - 1);
-    z0 = std::clamp(z0, 0, dimZ - 1);
-    z1 = std::clamp(z1, 0, dimZ - 1);
+    // Update the ROI
+    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+        if (!ROI_toggle_states[ROI_num]) continue;
+        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
 
-    // Calculate voxel indices directly
-    int idx000 = x0 + y0 * dimX + z0 * dimX * dimY;
-    int idx100 = x1 + y0 * dimX + z0 * dimX * dimY;
-    int idx010 = x0 + y1 * dimX + z0 * dimX * dimY;
-    int idx110 = x1 + y1 * dimX + z0 * dimX * dimY;
-    int idx001 = x0 + y0 * dimX + z1 * dimX * dimY;
-    int idx101 = x1 + y0 * dimX + z1 * dimX * dimY;
-    int idx011 = x0 + y1 * dimX + z1 * dimX * dimY;
-    int idx111 = x1 + y1 * dimX + z1 * dimX * dimY;
+        for (int x = imgXMin; x <= imgXMax; x++) {
+            for (int y = imgYMin; y <= imgYMax; y++) {
+                int idxi, idxj, idxk;
 
-    // Retrieve voxel values at the eight corners
-    float c000 = data[idx000];
-    float c100 = data[idx100];
-    float c010 = data[idx010];
-    float c110 = data[idx110];
-    float c001 = data[idx001];
-    float c101 = data[idx101];
-    float c011 = data[idx011];
-    float c111 = data[idx111];
+                switch (currentSliceType) {
+                    case AXIAL:
+                        idxi = x;
+                        idxj = y;
+                        idxk = fixedIndex;
+                        break;
+                    case CORONAL:
+                        idxi = x;
+                        idxj = fixedIndex;
+                        idxk = y;
+                        break;
+                    case SAGITTAL:
+                        idxi = fixedIndex;
+                        idxj = x;
+                        idxk = y;
+                        break;
+                }
 
-    // Perform trilinear interpolation
-    float c00 = c000 * (1 - xd) + c100 * xd;
-    float c01 = c001 * (1 - xd) + c101 * xd;
-    float c10 = c010 * (1 - xd) + c110 * xd;
-    float c11 = c011 * (1 - xd) + c111 * xd;
+                int64_t target_index = ROI_image.sub2ind(idxi, idxj, idxk);
+                ROI_image.data[target_index] = 1; // Set ROI to 1
+            }
+        }
+    }
+}
 
-    float c0 = c00 * (1 - yd) + c10 * yd;
-    float c1 = c01 * (1 - yd) + c11 * yd;
+QPoint MainGlWidget::screenToImageCoordinates(const QPoint& screenPoint)
+{
+    // Determine which viewport the point is in
+    int widgetWidth = width();
+    int viewportWidth = widgetWidth / 3;
+    int viewportIndex = screenPoint.x() / viewportWidth;
 
-    float c = c0 * (1 - zd) + c1 * zd;
+    int imgX, imgY;
+    switch (viewportIndex) {
+        case 0:
+            // Axial slice
+            convertAxialScreenToImage(screenPoint, viewportWidth, height(), imgX, imgY);
+            return QPoint(imgX, imgY);
+        case 1:
+            // Coronal slice
+            convertCoronalScreenToImage(screenPoint, viewportWidth, height(), imgX, imgY);
+            return QPoint(imgX, imgY);
+        case 2:
+            // Sagittal slice
+            convertSagittalScreenToImage(screenPoint, viewportWidth, height(), imgX, imgY);
+            return QPoint(imgX, imgY);
+        default:
+            return QPoint(0, 0); // Default case
+    }
+}
 
-    return c;
+void MainGlWidget::convertAxialScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgi, int& imgj)
+{
+    // Dimensions of the Axial slice
+    int dimX = T1_image.imgDims[0];
+    int dimY = T1_image.imgDims[1];
+
+    // Calculate the position within the axial viewport
+    int xInViewport = screenPoint.x(); // Since axialViewport.x = 0
+    int yInViewport = screenPoint.y();
+
+    // Flip y-coordinate because Qt's y=0 is at the top, OpenGL's y=0 is at the bottom
+    int yInViewportFlipped = viewportHeight - yInViewport;
+
+    // Convert viewport coordinates to Normalized Device Coordinates (NDC)
+    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
+
+    // Map NDC to world coordinates using stored projection parameters
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightAxial - leftAxial) + leftAxial;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topAxial - bottomAxial) + bottomAxial;
+
+    // Convert world coordinates to image coordinates
+    float imgXf = (worldX + imgWidth_axial / 2.0f) / T1_pixDims[0];
+    float imgYf = (worldY + imgHeight_axial / 2.0f) / T1_pixDims[1];
+
+    int imgX = static_cast<int>(imgXf);
+    int imgY = static_cast<int>(imgYf);
+
+    // Adjust for image orientation
+    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
+    if (T1_orientation[1] == "P") imgY = dimY - 1 - imgY;
+
+    // Clamp the indices to valid ranges
+    imgi = std::clamp(imgX, 0, dimX - 1);
+    imgj = std::clamp(imgY, 0, dimY - 1);
+}
+
+void MainGlWidget::convertCoronalScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgi, int& imgk)
+{
+    // Dimensions of the Coronal slice
+    int dimX = T1_image.imgDims[0];
+    int dimZ = T1_image.imgDims[2];
+
+    // Calculate the position within the coronal viewport
+    int xInViewport = screenPoint.x() - viewportWidth; // Since coronal viewport starts at viewportWidth
+    int yInViewport = screenPoint.y();
+
+    // Flip y-coordinate
+    int yInViewportFlipped = viewportHeight - yInViewport;
+
+    // Convert viewport coordinates to NDC
+    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
+
+    // Map NDC to world coordinates
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightCoronal - leftCoronal) + leftCoronal;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topCoronal - bottomCoronal) + bottomCoronal;
+
+    // Convert world coordinates to image coordinates
+    float imgXf = (worldX + imgWidth_coronal / 2.0f) / T1_pixDims[0];
+    float imgZf = (worldY + imgHeight_coronal / 2.0f) / T1_pixDims[2];
+
+    int imgX = static_cast<int>(imgXf);
+    int imgZ = static_cast<int>(imgZf);
+
+    // Adjust for image orientation
+    if (T1_orientation[0] == "R") imgX = dimX - 1 - imgX;
+    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
+
+    // Clamp the indices
+    imgi = std::clamp(imgX, 0, dimX - 1);
+    imgk = std::clamp(imgZ, 0, dimZ - 1);
+}
+
+void MainGlWidget::convertSagittalScreenToImage(const QPoint& screenPoint, int viewportWidth, int viewportHeight, int& imgj, int& imgk)
+{
+    // Dimensions of the Coronal slice
+    int dimY = T1_image.imgDims[1];
+    int dimZ = T1_image.imgDims[2];
+
+    // Calculate the position within the coronal viewport
+    int xInViewport = screenPoint.x() - 2 * viewportWidth;
+    int yInViewport = screenPoint.y();
+
+    // Flip y-coordinate
+    int yInViewportFlipped = viewportHeight - yInViewport;
+
+    // Convert viewport coordinates to NDC
+    float ndcX = (static_cast<float>(xInViewport) / viewportWidth) * 2.0f - 1.0f;
+    float ndcY = (static_cast<float>(yInViewportFlipped) / viewportHeight) * 2.0f - 1.0f;
+
+    // Map NDC to world coordinates
+    float worldX = ((ndcX + 1.0f) / 2.0f) * (rightSagittal - leftSagittal) + leftSagittal;
+    float worldY = ((ndcY + 1.0f) / 2.0f) * (topSagittal - bottomSagittal) + bottomSagittal;
+
+    // Convert world coordinates to image coordinates
+    float imgYf = (worldX + imgWidth_sagittal / 2.0f) / T1_pixDims[1];
+    float imgZf = (worldY + imgHeight_sagittal / 2.0f) / T1_pixDims[2];
+
+    int imgY = static_cast<int>(imgYf);
+    int imgZ = static_cast<int>(imgZf);
+
+    // Adjust for image orientation
+    if (T1_orientation[1] == "A") imgY = dimY - 1 - imgY;
+    if (T1_orientation[2] == "I") imgZ = dimZ - 1 - imgZ;
+
+    // Clamp the indices
+    imgj = std::clamp(imgY, 0, dimY - 1);
+    imgk = std::clamp(imgZ, 0, dimZ - 1);
 }
 
 void MainGlWidget::updateGraph()

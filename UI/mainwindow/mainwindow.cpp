@@ -153,8 +153,15 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     // Add Brush and Rectangle selection buttons
     QHBoxLayout *toolButtonsLayout = new QHBoxLayout();
     QPushButton *brushButton = new QPushButton("Brush", editFrame);
+    QPushButton *eraseButton = new QPushButton("Erase", editFrame);
     QPushButton *rectangleButton = new QPushButton("Rectangle", editFrame);
+
+    connect(brushButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::brushButton_clicked);
+    connect(eraseButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::eraseButton_clicked);
+    connect(rectangleButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::rectangleButton_clicked);
+    
     toolButtonsLayout->addWidget(brushButton);
+    toolButtonsLayout->addWidget(eraseButton);
     toolButtonsLayout->addWidget(rectangleButton);
     editFrameLayout->addLayout(toolButtonsLayout);
 
