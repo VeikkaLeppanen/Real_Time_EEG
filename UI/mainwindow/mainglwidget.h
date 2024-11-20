@@ -71,6 +71,9 @@ public slots:
     void eraseButton_clicked() { editorMode = ERASE; }
     void rectangleButton_clicked() { editorMode = RECTANGLE; }
 
+    void aboveButton_clicked();
+    void belowButton_clicked();
+
     void edit_ROIs();
 
     void reset_undo_stacks() {
@@ -102,7 +105,8 @@ private:
     std::unordered_set<int64_t> undo_stack_temp;
     std::vector<std::vector<int64_t>> undo_stack;
     std::vector<std::vector<int64_t>> redo_stack;
-    void revert_ROIs(int64_t image_index);
+    void revert_ROI_index(int64_t image_index);
+    void set_ROI_index_true(int64_t image_index);
 
     // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)

@@ -741,22 +741,22 @@ void MainGlWidget::mousePressEvent(QMouseEvent *event)
         int viewportWidth = widgetWidth / 3;
         int viewportIndex = event->pos().x() / viewportWidth;
 
+        switch (viewportIndex) {
+            case 0:
+                currentSliceType = AXIAL;
+                break;
+            case 1:
+                currentSliceType = CORONAL;
+                break;
+            case 2:
+                currentSliceType = SAGITTAL;
+                break;
+        }
+
         if (editMode && editorMode == RECTANGLE) {
             // Start drawing rectangle
             rectStartPoint = event->pos();
             rectStartImageCoords = screenToImageCoordinates(rectStartPoint);
-
-            switch (viewportIndex) {
-                case 0:
-                    currentSliceType = AXIAL;
-                    break;
-                case 1:
-                    currentSliceType = CORONAL;
-                    break;
-                case 2:
-                    currentSliceType = SAGITTAL;
-                    break;
-            }
 
             isDrawingRect = true;
         } else {
@@ -1314,7 +1314,7 @@ void MainGlWidget::undoButton_clicked()
 
         // Revert the changes
         for (int64_t index : last_change) {
-            revert_ROIs(index); // Revert the change at index
+            revert_ROI_index(index); // Revert the change at index
         }
 
         // Push the change onto the redo stack
@@ -1333,7 +1333,7 @@ void MainGlWidget::redoButton_clicked()
 
         // Reapply the changes
         for (int64_t index : last_redo) {
-            revert_ROIs(index); // Reapply the change at index
+            revert_ROI_index(index); // Reapply the change at index
         }
 
         // Push the change back onto the undo stack
@@ -1343,11 +1343,206 @@ void MainGlWidget::redoButton_clicked()
     update();
 }
 
-void MainGlWidget::revert_ROIs(int64_t image_index) {
+void MainGlWidget::revert_ROI_index(int64_t image_index) {
     for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
         if (!ROI_toggle_states[ROI_num]) continue;
         NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
         if (ROI_image.data[image_index] == 1) ROI_image.data[image_index] = 0;
         else ROI_image.data[image_index] = 1;
+    }
+}
+
+void MainGlWidget::set_ROI_index_true(int64_t image_index) {
+    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+        if (!ROI_toggle_states[ROI_num]) continue;
+        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+        ROI_image.data[image_index] = 1;
+    }
+}
+
+void MainGlWidget::aboveButton_clicked() {
+    if (!undo_stack.empty()) {
+        // Get the last modification
+        std::vector<int64_t> last_change = undo_stack.back();
+
+        // Get image dimensions
+        NIBR::Image<bool>& ROI_image = ROI_vector[0]; // Assuming all images have the same dimensions
+        int dimX = ROI_image.imgDims[0];
+        int dimY = ROI_image.imgDims[1];
+        int dimZ = ROI_image.imgDims[2];
+
+        // Determine the incremented index and maximum allowed index
+        int incrementedIndex;
+        int maxIndex;
+
+        // Calculate the incremented index based on the current slice type
+        switch (currentSliceType) {
+            case AXIAL:
+                k = k + 1;
+                incrementedIndex = k;
+                maxIndex = dimZ - 1;
+                break;
+            case CORONAL:
+                j = j + 1;
+                incrementedIndex = j;
+                maxIndex = dimY - 1;
+                break;
+            case SAGITTAL:
+                i = i + 1;
+                incrementedIndex = i;
+                maxIndex = dimX - 1;
+                break;
+            default:
+                std::cout << "Invalid slice type: " << currentSliceType << std::endl;
+                return;
+        }
+
+        // Check if we can move "above"
+        if (incrementedIndex > maxIndex) {
+            std::cout << "Already at the top slice. Cannot copy to above slice." << std::endl;
+            return;
+        }
+
+        // Set to store unique indices for the above slice
+        std::unordered_set<int64_t> above_indices_set;
+
+        // For each modified index, compute the corresponding index in the above slice
+        for (int64_t index : last_change) {
+            int64_t idxi, idxj, idxk;
+
+            // Convert linear index to (idxi, idxj, idxk)
+            ROI_image.ind2sub(index, idxi, idxj, idxk);
+
+            // Adjust the appropriate index
+            switch (currentSliceType) {
+                case AXIAL:
+                    idxk = incrementedIndex;
+                    break;
+                case CORONAL:
+                    idxj = incrementedIndex;
+                    break;
+                case SAGITTAL:
+                    idxi = incrementedIndex;
+                    break;
+            }
+
+            // Check bounds
+            if (idxi < 0 || idxi >= dimX || idxj < 0 || idxj >= dimY || idxk < 0 || idxk >= dimZ)
+                continue;
+
+            // Compute the new linear index
+            int64_t above_index = ROI_image.sub2ind(idxi, idxj, idxk);
+
+            // Insert into the set to ensure uniqueness
+            above_indices_set.insert(above_index);
+
+            // Apply the modification
+            set_ROI_index_true(above_index);
+        }
+
+        // Convert the set to a vector and push onto the undo stack
+        std::vector<int64_t> above_indices(above_indices_set.begin(), above_indices_set.end());
+        undo_stack.push_back(above_indices);
+
+        // Clear the redo stack since we have a new modification
+        redo_stack.clear();
+
+        // Optionally, update the current slice index if needed
+        // currentSlice = incrementedIndex;
+
+        // Refresh the display if necessary
+        update();
+    } else {
+        std::cout << "No modifications to copy from." << std::endl;
+    }
+}
+
+void MainGlWidget::belowButton_clicked() {
+    if (!undo_stack.empty()) {
+        // Get the last modification
+        std::vector<int64_t> last_change = undo_stack.back();
+
+        // Get image dimensions
+        NIBR::Image<bool>& ROI_image = ROI_vector[0]; // Assuming all images have the same dimensions
+        int dimX = ROI_image.imgDims[0];
+        int dimY = ROI_image.imgDims[1];
+        int dimZ = ROI_image.imgDims[2];
+
+        // Determine the incremented index and maximum allowed index
+        int incrementedIndex;
+
+        // Calculate the incremented index based on the current slice type
+        switch (currentSliceType) {
+            case AXIAL:
+                k = k - 1;
+                incrementedIndex = k;
+                break;
+            case CORONAL:
+                j = j - 1;
+                incrementedIndex = j;
+                break;
+            case SAGITTAL:
+                i = i - 1;
+                incrementedIndex = i;
+                break;
+            default:
+                std::cout << "Invalid slice type: " << currentSliceType << std::endl;
+                return;
+        }
+
+        // Check if we can move "above"
+        if (incrementedIndex < 0 ) {
+            std::cout << "Already at the bottom slice. Cannot copy to below slice." << std::endl;
+            return;
+        }
+
+        // Set to store unique indices for the above slice
+        std::unordered_set<int64_t> above_indices_set;
+
+        // For each modified index, compute the corresponding index in the above slice
+        for (int64_t index : last_change) {
+            int64_t idxi, idxj, idxk;
+
+            // Convert linear index to (idxi, idxj, idxk)
+            ROI_image.ind2sub(index, idxi, idxj, idxk);
+
+            // Adjust the appropriate index
+            switch (currentSliceType) {
+                case AXIAL:
+                    idxk = incrementedIndex;
+                    break;
+                case CORONAL:
+                    idxj = incrementedIndex;
+                    break;
+                case SAGITTAL:
+                    idxi = incrementedIndex;
+                    break;
+            }
+
+            // Check bounds
+            if (idxi < 0 || idxi >= dimX || idxj < 0 || idxj >= dimY || idxk < 0 || idxk >= dimZ)
+                continue;
+
+            // Compute the new linear index
+            int64_t above_index = ROI_image.sub2ind(idxi, idxj, idxk);
+
+            // Insert into the set to ensure uniqueness
+            above_indices_set.insert(above_index);
+
+            // Apply the modification
+            set_ROI_index_true(above_index);
+        }
+
+        // Convert the set to a vector and push onto the undo stack
+        std::vector<int64_t> above_indices(above_indices_set.begin(), above_indices_set.end());
+        undo_stack.push_back(above_indices);
+
+        // Clear the redo stack since we have a new modification
+        redo_stack.clear();
+
+        // Refresh the display if necessary
+        update();
+    } else {
+        std::cout << "No modifications to copy from." << std::endl;
     }
 }

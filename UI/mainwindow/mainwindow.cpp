@@ -170,6 +170,10 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     QLabel *copyLabel = new QLabel("Copy from slice:", editFrame);
     QPushButton *aboveButton = new QPushButton("Above", editFrame);
     QPushButton *belowButton = new QPushButton("Below", editFrame);
+
+    connect(aboveButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::aboveButton_clicked);
+    connect(belowButton, &QPushButton::clicked, mainglWidget, &MainGlWidget::belowButton_clicked);
+
     copyLayout->addWidget(copyLabel);
     copyLayout->addWidget(aboveButton);
     copyLayout->addWidget(belowButton);
