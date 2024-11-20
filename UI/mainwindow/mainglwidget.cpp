@@ -659,30 +659,7 @@ void MainGlWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, i
 {
     convertAxialScreenToImage(mousePos, viewportWidth, viewportHeight, i, j);
     
-    if (editMode) {
-        switch (editorMode) {
-            case BRUSH:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 1;
-                }
-                break;
-
-            case ERASE:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 0;
-                }
-                break;
-
-            case RECTANGLE:
-                break;
-        }
-    }
+    edit_ROIs();
 
     update(); // Trigger a repaint
 }
@@ -691,30 +668,7 @@ void MainGlWidget::handleCoronalClick(const QPoint& mousePos, int viewportWidth,
 {
     convertCoronalScreenToImage(mousePos, viewportWidth, viewportHeight, i, k);
 
-    if (editMode) {
-        switch (editorMode) {
-            case BRUSH:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 1;
-                }
-                break;
-
-            case ERASE:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 0;
-                }
-                break;
-
-            case RECTANGLE:
-                break;
-        }
-    }
+    edit_ROIs();
 
     update(); // Trigger a repaint
 }
@@ -723,6 +677,12 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
 {
     convertSagittalScreenToImage(mousePos, viewportWidth, viewportHeight, j, k);
 
+    edit_ROIs();
+
+    update(); // Trigger a repaint
+}
+
+void MainGlWidget::edit_ROIs() {
     if (editMode) {
         switch (editorMode) {
             case BRUSH:
@@ -730,7 +690,12 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
                     if (!ROI_toggle_states[ROI_num]) continue;
                     NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
                     int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 1;
+                    
+                    if (ROI_image.data[target_index] == 1) continue;
+                    else {
+                        ROI_image.data[target_index] = 1;
+                        undo_stack_temp.insert(target_index);
+                    }
                 }
                 break;
 
@@ -739,7 +704,12 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
                     if (!ROI_toggle_states[ROI_num]) continue;
                     NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
                     int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    ROI_image.data[target_index] = 0;
+
+                    if (ROI_image.data[target_index] == 0) continue;
+                    else {
+                        ROI_image.data[target_index] = 0;
+                        undo_stack_temp.insert(target_index);
+                    }
                 }
                 break;
 
@@ -747,8 +717,7 @@ void MainGlWidget::handleSagittalClick(const QPoint& mousePos, int viewportWidth
                 break;
         }
     }
-
-    update(); // Trigger a repaint
+    redo_stack.clear();
 }
 
 void MainGlWidget::mousePressEvent(QMouseEvent *event)
@@ -904,6 +873,12 @@ void MainGlWidget::mouseReleaseEvent(QMouseEvent *event)
         update(); // Trigger a repaint
     }
 
+    if (editMode && undo_stack_temp.size() > 0) {
+        std::vector<int64_t> changes(undo_stack_temp.begin(), undo_stack_temp.end());
+        undo_stack.push_back(changes);
+        undo_stack_temp.clear();
+    }
+
     mousePressed = false;
 }
 
@@ -967,11 +942,23 @@ void MainGlWidget::wheelEvent(QWheelEvent *event)
 
 void MainGlWidget::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_R) {
+    if ((event->key() == Qt::Key_Z) && (event->modifiers() & Qt::ControlModifier)) {
+        // Handle Ctrl+Z (Undo)
+        undoButton_clicked(); // Call your undo function
+    }
+    else if ((event->key() == Qt::Key_Y) && (event->modifiers() & Qt::ControlModifier)) {
+        // Handle Ctrl+Y (Redo)
+        redoButton_clicked(); // Call your redo function
+    }
+    else if (event->key() == Qt::Key_R) {
         // Reset zoom and pan
         zoomFactor = 1.0f;
         panOffset = QVector3D(0.0f, 0.0f, 0.0f);
         update();
+    }
+    else {
+        // Call the base class implementation for unhandled keys
+        QWidget::keyPressEvent(event);
     }
 }
 
@@ -1030,10 +1017,15 @@ void MainGlWidget::applyRectangleToROI(const QPoint& startImageCoords, const QPo
                 }
 
                 int64_t target_index = ROI_image.sub2ind(idxi, idxj, idxk);
-                ROI_image.data[target_index] = 1; // Set ROI to 1
+                if (ROI_image.data[target_index] == 1) continue;
+                else {
+                    ROI_image.data[target_index] = 1;
+                    undo_stack_temp.insert(target_index);
+                }
             }
         }
     }
+    redo_stack.clear();
 }
 
 QPoint MainGlWidget::screenToImageCoordinates(const QPoint& screenPoint)
@@ -1221,6 +1213,7 @@ void MainGlWidget::addButton_clicked()
     ROI_opacities.push_back(0.5f);
     
     emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    reset_undo_stacks();
     update();
 }
 
@@ -1244,6 +1237,7 @@ void MainGlWidget::loadButton_clicked(const QString& filePath)
     ROI_opacities.push_back(0.5f);
 
     emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    reset_undo_stacks();
     update();
 }
 
@@ -1270,6 +1264,7 @@ void MainGlWidget::deleteButton_clicked()
         }
     }
     emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    reset_undo_stacks();
     update();
 }
 
@@ -1281,6 +1276,7 @@ void MainGlWidget::visibleButton_clicked()
         }
     }
     emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    reset_undo_stacks();
     update();
 }
 
@@ -1311,10 +1307,47 @@ void MainGlWidget::editButton_toggled(bool checked)
 
 void MainGlWidget::undoButton_clicked()
 {
+    if (!undo_stack.empty()) {
+        // Get the last change from the undo stack
+        std::vector<int64_t> last_change = undo_stack.back();
+        undo_stack.pop_back(); // Remove it from the undo stack
 
+        // Revert the changes
+        for (int64_t index : last_change) {
+            revert_ROIs(index); // Revert the change at index
+        }
+
+        // Push the change onto the redo stack
+        redo_stack.push_back(last_change);
+    }
+
+    update();
 }
 
 void MainGlWidget::redoButton_clicked()
 {
+    if (!redo_stack.empty()) {
+        // Get the last undone change from the redo stack
+        std::vector<int64_t> last_redo = redo_stack.back();
+        redo_stack.pop_back(); // Remove it from the redo stack
 
+        // Reapply the changes
+        for (int64_t index : last_redo) {
+            revert_ROIs(index); // Reapply the change at index
+        }
+
+        // Push the change back onto the undo stack
+        undo_stack.push_back(last_redo);
+    }
+
+    update();
+}
+
+void MainGlWidget::revert_ROIs(int64_t image_index) {
+    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
+        if (!ROI_toggle_states[ROI_num]) continue;
+        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+        if (ROI_image.data[image_index] == 1) ROI_image.data[image_index] = 0;
+        else ROI_image.data[image_index] = 1;
+    }
 }

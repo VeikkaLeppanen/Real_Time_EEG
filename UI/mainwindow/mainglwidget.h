@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <iostream>
 #include <float.h>
+#include <unordered_set>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPainter>
@@ -70,6 +71,14 @@ public slots:
     void eraseButton_clicked() { editorMode = ERASE; }
     void rectangleButton_clicked() { editorMode = RECTANGLE; }
 
+    void edit_ROIs();
+
+    void reset_undo_stacks() {
+        undo_stack_temp.clear();
+        undo_stack.clear();
+        redo_stack.clear();
+    }
+
 private slots:
     void updateGraph();
 
@@ -89,6 +98,11 @@ private:
     std::vector<bool> ROI_visibility;
     std::vector<QColor> ROI_colors;
     std::vector<float> ROI_opacities;
+
+    std::unordered_set<int64_t> undo_stack_temp;
+    std::vector<std::vector<int64_t>> undo_stack;
+    std::vector<std::vector<int64_t>> redo_stack;
+    void revert_ROIs(int64_t image_index);
 
     // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)
