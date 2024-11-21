@@ -45,9 +45,7 @@ file(GLOB_RECURSE UI_SOURCES "UI/*.cpp" "UI/*.h" "UI/*.ui")
 set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES})
 
 # Add the executable based on the sources
-add_executable(real_time_eeg ${SOURCES}
-    UI/TMSwindow.ui
-    UI/phaseEstwindow.ui)
+add_executable(real_time_eeg ${SOURCES})
 
 target_include_directories(real_time_eeg PRIVATE "${ZLIB_ROOT}")
 target_include_directories(real_time_eeg PRIVATE "${GEOG_ROOT}")

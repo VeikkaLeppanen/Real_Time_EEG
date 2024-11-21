@@ -25,6 +25,7 @@
 #include "eegwindow/eegwindow.h"
 #include "phaseEstimationwindow/phaseEstwindow.h"
 #include "TMSwindow/TMSwindow.h"
+#include "MRIwindow/mriwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -106,19 +107,6 @@ public slots:
                 .arg(isOn ? "ON" : "OFF")
         );
     }
-
-    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility) {
-        // Clear the existing items in the list
-        toggleList->clear();
-        
-        // Add new items from the names vector
-        for (int i = 0; i < names.size(); ++i) {
-            QListWidgetItem *item = new QListWidgetItem(QString::fromStdString(names[i]), toggleList);
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // Make item checkable
-            item->setCheckState(ROI_toggleStatus[i] ? Qt::Checked : Qt::Unchecked); // Set the initial state to unchecked
-            toggleList->addItem(item);
-        }
-    }
     
 private slots:
     void handleError(const QString& error);
@@ -134,21 +122,8 @@ private slots:
     void triggering_clicked();
     void resetTMSwinPointer();
 
-    void MRI_T1_load_clicked();
-    void fMRI_load_clicked();
-    
-    void onMRIsettings() {
-        QMessageBox::information(this, "onMRIsettings", "onMRIsettings action triggered.");
-    }
-
-    void toggleToolbar() {
-        if (mainToolbar)
-            mainToolbar->setVisible(!mainToolbar->isVisible());
-    }
-
-    void updateToggleStatus();
-    void loadButton_clicked();
-    void colorButton_clicked();
+    void MRI_clicked();
+    void resetMRIwinPointer();
 
 private:
     Ui::MainWindow *ui;
@@ -181,6 +156,7 @@ private:
     eegWindow *eegwindow = nullptr;
     phaseEstwindow *phaseEstwin = nullptr;
     TMSwindow *TMSwin = nullptr;
+    mriWindow *MRIwin = nullptr;
     preProcessingWorker *preProcessingworker = nullptr;
     phaseEstimationWorker *phaseEstworker = nullptr;
 
