@@ -34,8 +34,8 @@ struct phaseEstimateParameters {
     size_t hilbertWinLength = 64;
 
     // stimulation
-    double stimulation_target = M_PI * 1.5;          //M_PI * 0.5;    [0, 2*pi]
-    int phase_shift = -55;                    // for 5000Hz
+    double stimulation_target = 0;          //M_PI * 0.5;    [0, 2*pi]
+    int phase_shift = -40;                    // for 5000Hz
 };
 
 struct phaseEstimateStates {
