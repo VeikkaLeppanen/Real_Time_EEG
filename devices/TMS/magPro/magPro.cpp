@@ -42,7 +42,7 @@ void magPro::trig() {
     auto cmd = create_trig_cmd_byte_str();
     boost::asio::write(serial, boost::asio::buffer(cmd));
 
-    sleep(sleep_time_trig);
+    // sleep(sleep_time_trig);
 }
 
 void magPro::set_enable(bool status) {

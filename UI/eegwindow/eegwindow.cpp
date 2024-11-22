@@ -170,6 +170,7 @@ void eegWindow::on_sourceChannelLoad_clicked()
         if (source_channels_.size() > 0) {
             setupChannelNames();
         }
+        std::cout << "Channel map loaded successfully." << std::endl;
     }
 }
 
