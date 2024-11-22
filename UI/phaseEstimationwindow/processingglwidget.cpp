@@ -153,7 +153,7 @@ void ProcessingGlWidget::paintGL()
 
     // Initialize tracker to the next whole second
     double time_line_spacing_seconds = time_line_spacing * 1e-3;
-    double initialTimeInSeconds = time_stamps_(0) / 1e3;
+    double initialTimeInSeconds = time_stamps_(0) / 1e6;
     double tracker = std::ceil(initialTimeInSeconds / time_line_spacing_seconds) * time_line_spacing_seconds;
 
     if (drawXaxis) {
@@ -164,7 +164,7 @@ void ProcessingGlWidget::paintGL()
 
         // Draw each vertical line
         for (int i = 0; i < totalDataPoints; i++) {
-            double timeInSeconds = time_stamps_(i) / 1e3; // Convert microseconds to seconds
+            double timeInSeconds = time_stamps_(i) / 1e6; // Convert microseconds to seconds
             if (timeInSeconds >= tracker) {
                 float x = ((float)i / (totalDataPoints - 1)) * (glX + 1) - 1;  // Convert index to OpenGL coordinates
                 glBegin(GL_LINES);
@@ -213,7 +213,7 @@ void ProcessingGlWidget::paintGL()
 
     // Draw the timestamp labels and vertical lines
     for (int i = 0; i < totalDataPoints; ++i) {
-        double timeInSeconds = time_stamps_(i) / 1e3; // Convert milliseconds to seconds
+        double timeInSeconds = time_stamps_(i) / 1e6; // Convert milliseconds to seconds
         if (timeInSeconds >= tracker) {
             int minutes = static_cast<int>(tracker / 60); // Total minutes
             int seconds = static_cast<int>(tracker) % 60; // Remaining seconds after minutes
