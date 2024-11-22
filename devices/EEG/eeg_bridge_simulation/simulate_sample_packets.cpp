@@ -269,7 +269,7 @@ int main() {
             sampleVector.push_back(std::stod(cell));
         }
         
-        auto timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        auto timeStamp = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now() - startTimePoint);
         uint64_t SampleTime = static_cast<uint64_t>(timeStamp.count());
         std::vector<uint8_t> samplePacket = generateExampleSamplePacket_csv(sampleVector, sequenceNumber, SampleTime);

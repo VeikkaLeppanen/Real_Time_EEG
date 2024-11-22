@@ -279,7 +279,7 @@ void phaseEstimationWorker::process()
                     //     last_save_index = trigger_seqNum;
                     //     trigger_seqNum_list.push_back(trigger_seqNum);
                     // }
-                    // trigger_seqNum_list.push_back(trigger_seqNum);
+                    trigger_seqNum_list.push_back(trigger_seqNum);
                     
                     handler.insertTrigger(trigger_seqNum);
                 }
