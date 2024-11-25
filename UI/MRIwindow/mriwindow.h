@@ -13,6 +13,8 @@
 #include <QListWidgetItem>
 #include <QSlider>
 #include <QColorDialog>
+#include <QComboBox>
+#include <QButtonGroup>
 #include <QPushButton>
 #include <QLabel>
 #include <QMessageBox>
@@ -31,7 +33,7 @@ public:
 
 public slots:
 
-    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility) {
+    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus) {
         // Clear the existing items in the list
         toggleList->clear();
         
@@ -41,6 +43,10 @@ public slots:
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // Make item checkable
             item->setCheckState(ROI_toggleStatus[i] ? Qt::Checked : Qt::Unchecked); // Set the initial state to unchecked
             toggleList->addItem(item);
+        }
+        if (toggleList->count() <= 0) {
+            editButton->setStyleSheet("");
+            editButton->setChecked(false);
         }
     }
 
@@ -53,6 +59,21 @@ private slots:
         if (mainToolbar)
             mainToolbar->setVisible(!mainToolbar->isVisible());
     }
+    void updateTargetROI(QListWidgetItem *item) { MRIWidget->updateTargetROI(toggleList->row(item)); };
+
+    void editButton_toggled(bool checked) {
+        if (toggleList->count() > 0) {
+            if (checked) editButton->setStyleSheet("background-color: darkgreen;");
+            else editButton->setStyleSheet("");
+
+            MRIWidget->editButton_toggled(checked);
+        } else {
+            editButton->setStyleSheet("");
+            editButton->setChecked(false);
+            MRIWidget->editButton_toggled(false);
+            QMessageBox::warning(this, "Warning", "No ROI loaded.");
+        }
+    }
 
     void updateToggleStatus();
     void loadButton_clicked();
@@ -64,6 +85,7 @@ private:
     QVBoxLayout* mainLayout;
     QToolBar *mainToolbar;
 
+    QPushButton *editButton;
     QListWidget *toggleList;
     QPushButton *colorPickerButton;
 };

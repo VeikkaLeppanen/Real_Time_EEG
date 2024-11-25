@@ -283,7 +283,7 @@ void OpenGLMRIWidget::paintGL()
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                if(!ROI_visibility[ROI_num]) continue;
+                if(!ROI_toggle_states[ROI_num]) continue;
 
                 NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
                 QColor ROI_color = ROI_colors[ROI_num];
@@ -414,7 +414,7 @@ void OpenGLMRIWidget::paintGL()
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                if(!ROI_visibility[ROI_num]) continue;
+                if(!ROI_toggle_states[ROI_num]) continue;
 
                 NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
                 QColor ROI_color = ROI_colors[ROI_num];
@@ -541,7 +541,7 @@ void OpenGLMRIWidget::paintGL()
             r = r * (1.0f - overlayIntensity) + overlayIntensity;
 
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                if(!ROI_visibility[ROI_num]) continue;
+                if(!ROI_toggle_states[ROI_num]) continue;
 
                 NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
                 QColor ROI_color = ROI_colors[ROI_num];
@@ -684,33 +684,18 @@ void OpenGLMRIWidget::handleSagittalClick(const QPoint& mousePos, int viewportWi
 
 void OpenGLMRIWidget::edit_ROIs() {
     if (editMode) {
+
         switch (editorMode) {
-            case BRUSH:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
-                    
-                    if (ROI_image.data[target_index] == 1) continue;
-                    else {
-                        ROI_image.data[target_index] = 1;
-                        undo_stack_temp.insert(target_index);
-                    }
-                }
+            case BRUSH_1:
+                paint_ROI(0);
                 break;
 
-            case ERASE:
-                for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-                    if (!ROI_toggle_states[ROI_num]) continue;
-                    NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-                    int64_t target_index = ROI_image.sub2ind(i, j, k);
+            case BRUSH_2:
+                paint_ROI(1);
+                break;
 
-                    if (ROI_image.data[target_index] == 0) continue;
-                    else {
-                        ROI_image.data[target_index] = 0;
-                        undo_stack_temp.insert(target_index);
-                    }
-                }
+            case BRUSH_3:
+                paint_ROI(2);
                 break;
 
             case RECTANGLE:
@@ -990,38 +975,35 @@ void OpenGLMRIWidget::applyRectangleToROI(const QPoint& startImageCoords, const 
     }
 
     // Update the ROI
-    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-        if (!ROI_toggle_states[ROI_num]) continue;
-        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+    NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
 
-        for (int x = imgXMin; x <= imgXMax; x++) {
-            for (int y = imgYMin; y <= imgYMax; y++) {
-                int idxi, idxj, idxk;
+    for (int x = imgXMin; x <= imgXMax; x++) {
+        for (int y = imgYMin; y <= imgYMax; y++) {
+            int idxi, idxj, idxk;
 
-                switch (currentSliceType) {
-                    case AXIAL:
-                        idxi = x;
-                        idxj = y;
-                        idxk = fixedIndex;
-                        break;
-                    case CORONAL:
-                        idxi = x;
-                        idxj = fixedIndex;
-                        idxk = y;
-                        break;
-                    case SAGITTAL:
-                        idxi = fixedIndex;
-                        idxj = x;
-                        idxk = y;
-                        break;
-                }
+            switch (currentSliceType) {
+                case AXIAL:
+                    idxi = x;
+                    idxj = y;
+                    idxk = fixedIndex;
+                    break;
+                case CORONAL:
+                    idxi = x;
+                    idxj = fixedIndex;
+                    idxk = y;
+                    break;
+                case SAGITTAL:
+                    idxi = fixedIndex;
+                    idxj = x;
+                    idxk = y;
+                    break;
+            }
 
-                int64_t target_index = ROI_image.sub2ind(idxi, idxj, idxk);
-                if (ROI_image.data[target_index] == 1) continue;
-                else {
-                    ROI_image.data[target_index] = 1;
-                    undo_stack_temp.insert(target_index);
-                }
+            int64_t target_index = ROI_image.sub2ind(idxi, idxj, idxk);
+            if (ROI_image.data[target_index] == isMarking) continue;
+            else {
+                ROI_image.data[target_index] = isMarking;
+                undo_stack_temp.insert(target_index);
             }
         }
     }
@@ -1208,11 +1190,10 @@ void OpenGLMRIWidget::addButton_clicked()
     ROI_names.push_back(newName); // Add the new name
     ROI_vector.push_back(newImage);
     ROI_toggle_states.push_back(false);
-    ROI_visibility.push_back(true);
     ROI_colors.push_back(QColor(0, 255, 0));
     ROI_opacities.push_back(0.5f);
     
-    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    emit ROI_update(ROI_names, ROI_toggle_states);
     reset_undo_stacks();
     update();
 }
@@ -1232,77 +1213,55 @@ void OpenGLMRIWidget::loadButton_clicked(const QString& filePath)
 
     ROI_names.push_back(fileName);
     ROI_toggle_states.push_back(false);
-    ROI_visibility.push_back(true);
     ROI_colors.push_back(QColor(0, 255, 0));
     ROI_opacities.push_back(0.5f);
 
-    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+    emit ROI_update(ROI_names, ROI_toggle_states);
     reset_undo_stacks();
     update();
 }
 
 void OpenGLMRIWidget::saveButton_clicked() 
 {
-    for (int i = 0; i < ROI_toggle_states.size(); i++) {
-        if (ROI_toggle_states[i]) {
-            ROI_vector[i].write(ROI_names[i] + ".nii.gz");
-        }
-    }
+    ROI_vector[target_ROI].write(ROI_names[target_ROI] + ".nii.gz");
 }
 
 void OpenGLMRIWidget::deleteButton_clicked() 
 {
-    for (int i = 0; i < ROI_toggle_states.size(); i++) {
-        if (ROI_toggle_states[i]) {
-            ROI_names.erase(ROI_names.begin() + i);
-            ROI_vector.erase(ROI_vector.begin() + i);
-            ROI_toggle_states.erase(ROI_toggle_states.begin() + i);
-            ROI_visibility.erase(ROI_visibility.begin() + i);
-            ROI_colors.erase(ROI_colors.begin() + i);
-            ROI_opacities.erase(ROI_opacities.begin() + i);
-            i--;
-        }
+    if (ROI_toggle_states[target_ROI]) {
+        ROI_names.erase(ROI_names.begin() + target_ROI);
+        ROI_vector.erase(ROI_vector.begin() + target_ROI);
+        ROI_toggle_states.erase(ROI_toggle_states.begin() + target_ROI);
+        ROI_colors.erase(ROI_colors.begin() + target_ROI);
+        ROI_opacities.erase(ROI_opacities.begin() + target_ROI);
     }
-    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
-    reset_undo_stacks();
-    update();
-}
 
-void OpenGLMRIWidget::visibleButton_clicked() 
-{
-    for (int i = 0; i < ROI_toggle_states.size(); i++) {
-        if (ROI_toggle_states[i]) {
-            ROI_visibility[i] = !ROI_visibility[i];
-        }
+    if (ROI_vector.size() == 0) {
+        editMode = false;
     }
-    emit ROI_update(ROI_names, ROI_toggle_states, ROI_visibility);
+
+    emit ROI_update(ROI_names, ROI_toggle_states);
     reset_undo_stacks();
     update();
 }
 
 void OpenGLMRIWidget::onSliderValueChanged(int value) 
 {
-    for (int i = 0; i < ROI_toggle_states.size(); i++) {
-        if (ROI_toggle_states[i]) {
-            ROI_opacities[i] = value / 100.0f;
-        }
-    }
+    ROI_opacities[target_ROI] = value / 100.0f;
     update();
 }
 
 void OpenGLMRIWidget::colorButton_clicked(QColor color) 
 {
-    for (int i = 0; i < ROI_toggle_states.size(); i++) {
-        if (ROI_toggle_states[i]) {
-            ROI_colors[i] = color;
-        }
-    }
+    ROI_colors[target_ROI] = color;
     update();
 }
 
 void OpenGLMRIWidget::editButton_toggled(bool checked)
 {
-    editMode = checked;
+    if (ROI_vector.size() > 0) {
+        editMode = checked;
+    }
 }
 
 void OpenGLMRIWidget::undoButton_clicked()
@@ -1314,7 +1273,7 @@ void OpenGLMRIWidget::undoButton_clicked()
 
         // Revert the changes
         for (int64_t index : last_change) {
-            revert_ROI_index(index); // Revert the change at index
+            revert_ROI_at_index(index); // Revert the change at index
         }
 
         // Push the change onto the redo stack
@@ -1333,7 +1292,7 @@ void OpenGLMRIWidget::redoButton_clicked()
 
         // Reapply the changes
         for (int64_t index : last_redo) {
-            revert_ROI_index(index); // Reapply the change at index
+            revert_ROI_at_index(index); // Reapply the change at index
         }
 
         // Push the change back onto the undo stack
@@ -1343,21 +1302,53 @@ void OpenGLMRIWidget::redoButton_clicked()
     update();
 }
 
-void OpenGLMRIWidget::revert_ROI_index(int64_t image_index) {
-    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-        if (!ROI_toggle_states[ROI_num]) continue;
-        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-        if (ROI_image.data[image_index] == 1) ROI_image.data[image_index] = 0;
-        else ROI_image.data[image_index] = 1;
+void OpenGLMRIWidget::revert_ROI_at_index(int64_t image_index) {
+    NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
+    if (ROI_image.data[image_index] == 1) ROI_image.data[image_index] = 0;
+    else ROI_image.data[image_index] = 1;
+}
+
+void OpenGLMRIWidget::paint_ROI(int brush_size) {
+    switch (currentSliceType) {
+        case AXIAL:
+                for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                    for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                        int64_t target_index = T1_image.sub2ind(i_temp, j_temp, k);
+                        if (!(T1_image.data[target_index] == isMarking)) {
+                            set_ROI_at_index(target_index, isMarking);
+                            undo_stack_temp.insert(target_index);
+                        }
+                    }   
+                }
+            break;
+        case CORONAL:
+                for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                    for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                        int64_t target_index = T1_image.sub2ind(i_temp, j, k_temp);
+                        if (!(T1_image.data[target_index] == isMarking)) {
+                            set_ROI_at_index(target_index, isMarking);
+                            undo_stack_temp.insert(target_index);
+                        }
+                    }   
+                }
+            break;
+        case SAGITTAL:
+                for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                    for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                        int64_t target_index = T1_image.sub2ind(i, j_temp, k_temp);
+                        if (!(T1_image.data[target_index] == isMarking)) {
+                            set_ROI_at_index(target_index, isMarking);
+                            undo_stack_temp.insert(target_index);
+                        }
+                    }   
+                }
+            break;
     }
 }
 
-void OpenGLMRIWidget::set_ROI_index_true(int64_t image_index) {
-    for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
-        if (!ROI_toggle_states[ROI_num]) continue;
-        NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
-        ROI_image.data[image_index] = 1;
-    }
+void OpenGLMRIWidget::set_ROI_at_index(int64_t image_index, bool ROI_value) {
+        NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
+        ROI_image.data[image_index] = ROI_value;
 }
 
 void OpenGLMRIWidget::aboveButton_clicked() {
@@ -1437,7 +1428,7 @@ void OpenGLMRIWidget::aboveButton_clicked() {
             above_indices_set.insert(above_index);
 
             // Apply the modification
-            set_ROI_index_true(above_index);
+            set_ROI_at_index(above_index, true);
         }
 
         // Convert the set to a vector and push onto the undo stack
@@ -1530,7 +1521,7 @@ void OpenGLMRIWidget::belowButton_clicked() {
             above_indices_set.insert(above_index);
 
             // Apply the modification
-            set_ROI_index_true(above_index);
+            set_ROI_at_index(above_index, true);
         }
 
         // Convert the set to a vector and push onto the undo stack

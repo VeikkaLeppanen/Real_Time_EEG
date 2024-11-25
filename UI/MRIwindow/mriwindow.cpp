@@ -3,6 +3,9 @@
 mriWindow::mriWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    setMinimumSize(640, 360); // Ensure a reasonable starting size
+    resize(1280, 720);
+
     // Create the central widget
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -47,14 +50,12 @@ mriWindow::mriWindow(QWidget *parent)
     QPushButton *loadButton = new QPushButton(QString("load"), controlWidget);
     QPushButton *saveButton = new QPushButton(QString("save"), controlWidget);
     QPushButton *deleteButton = new QPushButton(QString("delete"), controlWidget);
-    QPushButton *visibleButton = new QPushButton(QString("visible"), controlWidget);
 
     // Connect buttons to slots
     connect(addButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::addButton_clicked);
     connect(loadButton, &QPushButton::clicked, this, &mriWindow::loadButton_clicked);
     connect(saveButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::saveButton_clicked);
     connect(deleteButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::deleteButton_clicked);
-    connect(visibleButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::visibleButton_clicked);
 
     connect(MRIWidget, &OpenGLMRIWidget::ROI_update, this, &mriWindow::ROI_update);
 
@@ -62,13 +63,11 @@ mriWindow::mriWindow(QWidget *parent)
     loadButton->setMinimumWidth(50);
     saveButton->setMinimumWidth(50);
     deleteButton->setMinimumWidth(50);
-    visibleButton->setMinimumWidth(50);
 
     buttonLayout->addWidget(addButton);
     buttonLayout->addWidget(loadButton);
     buttonLayout->addWidget(saveButton);
     buttonLayout->addWidget(deleteButton);
-    buttonLayout->addWidget(visibleButton);
     
     mainLayout->addLayout(buttonLayout);
 
@@ -79,6 +78,7 @@ mriWindow::mriWindow(QWidget *parent)
     mainLayout->addWidget(toggleList);
 
     connect(toggleList, &QListWidget::itemChanged, this, &mriWindow::updateToggleStatus);
+    connect(toggleList, &QListWidget::itemClicked, this, &mriWindow::updateTargetROI);
 
     // Create a color picker button
     colorPickerButton = new QPushButton("Color", controlWidget);
@@ -102,21 +102,16 @@ mriWindow::mriWindow(QWidget *parent)
     // Add Edit, Undo, and Redo buttons
     // ----------------------------
     QHBoxLayout *actionButtonsLayout = new QHBoxLayout();
-    QPushButton *editButton = new QPushButton("Edit", controlWidget);
+    editButton = new QPushButton("Edit", controlWidget);
     QPushButton *undoButton = new QPushButton("Undo", controlWidget);
     QPushButton *redoButton = new QPushButton("Redo", controlWidget);
     
     // Make the edit button toggleable
     editButton->setCheckable(true);
 
-    connect(editButton, &QPushButton::toggled, MRIWidget, &OpenGLMRIWidget::editButton_toggled);
+    connect(editButton, &QPushButton::toggled, this, &mriWindow::editButton_toggled);
     connect(undoButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::undoButton_clicked);
     connect(redoButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::redoButton_clicked);
-
-    connect(editButton, &QPushButton::toggled, [editButton](bool checked) {
-        if (checked) { editButton->setStyleSheet("background-color: darkgreen;"); } 
-        else         { editButton->setStyleSheet(""); }
-    });
 
     actionButtonsLayout->addWidget(editButton);
     actionButtonsLayout->addWidget(undoButton);
@@ -130,19 +125,51 @@ mriWindow::mriWindow(QWidget *parent)
     editFrame->setFrameShape(QFrame::StyledPanel);
     QVBoxLayout *editFrameLayout = new QVBoxLayout(editFrame);
 
-    // Add Brush and Rectangle selection buttons
+    // Add Brush selection dropdown and Mark/Erase buttons
     QHBoxLayout *toolButtonsLayout = new QHBoxLayout();
-    QPushButton *brushButton = new QPushButton("Brush", editFrame);
-    QPushButton *eraseButton = new QPushButton("Erase", editFrame);
-    QPushButton *rectangleButton = new QPushButton("Rectangle", editFrame);
 
-    connect(brushButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::brushButton_clicked);
-    connect(eraseButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::eraseButton_clicked);
-    connect(rectangleButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::rectangleButton_clicked);
+    // Dropdown menu for selecting brushes
+    QComboBox *brushDropdown = new QComboBox(editFrame);
+    brushDropdown->addItem("Brush 1");
+    brushDropdown->addItem("Brush 2");
+    brushDropdown->addItem("Brush 3");
+    brushDropdown->addItem("Rectangle");
+
+    QPushButton *markButton = new QPushButton("Mark", editFrame);
+    QPushButton *eraseButton = new QPushButton("Erase", editFrame);
+
+    // Stylesheet to visually indicate the selected button
+    QString buttonStyle = R"(
+        QPushButton:checked {
+            opacity: 0.8; /* Makes the button slightly dimmed */
+        }
+    )";
+
+    // Apply the stylesheet to the buttons
+    markButton->setStyleSheet(buttonStyle);
+    eraseButton->setStyleSheet(buttonStyle);
     
-    toolButtonsLayout->addWidget(brushButton);
+    markButton->setCheckable(true);
+    eraseButton->setCheckable(true);
+
+    markButton->setChecked(true);
+
+    // Create a button group
+    QButtonGroup *buttonGroup = new QButtonGroup(editFrame);
+    buttonGroup->addButton(markButton);
+    buttonGroup->addButton(eraseButton);
+
+    // Set mutual exclusivity
+    buttonGroup->setExclusive(true);
+
+    connect(markButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::onMarkButtonClicked);
+    connect(eraseButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::onEraseButtonClicked);
+    connect(brushDropdown, QOverload<int>::of(&QComboBox::currentIndexChanged), MRIWidget, &OpenGLMRIWidget::onBrushSelected);
+
+    // Add more brushes as needed
+    toolButtonsLayout->addWidget(brushDropdown);
+    toolButtonsLayout->addWidget(markButton);
     toolButtonsLayout->addWidget(eraseButton);
-    toolButtonsLayout->addWidget(rectangleButton);
     editFrameLayout->addLayout(toolButtonsLayout);
 
     // Add label and Above/Below buttons for "Copy from slice"

@@ -16,9 +16,10 @@
 #include <image/orientation.h>
 #include <Eigen/Dense>
 
-enum EditorMode {
-  BRUSH,
-  ERASE,
+enum BrushMode {
+  BRUSH_1,
+  BRUSH_2,
+  BRUSH_3,
   RECTANGLE
 };
 
@@ -49,16 +50,16 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 signals:
-    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus, std::vector<bool> ROI_visibility);
+    void ROI_update(const std::vector<std::string> &names, std::vector<bool> ROI_toggleStatus);
 
 public slots:
     void addButton_clicked();
     void loadButton_clicked(const QString& filePath);
     void saveButton_clicked();
     void deleteButton_clicked();
-    void visibleButton_clicked();
 
-    void updateToggleStates(std::vector<bool> states) { ROI_toggle_states = states; };
+    void updateToggleStates(std::vector<bool> states) { ROI_toggle_states = states; update(); };
+    void updateTargetROI(int index) { target_ROI = index; };
 
     void onSliderValueChanged(int value);
     void colorButton_clicked(QColor color);
@@ -67,9 +68,15 @@ public slots:
     void undoButton_clicked();
     void redoButton_clicked();
 
-    void brushButton_clicked() { editorMode = BRUSH; }
-    void eraseButton_clicked() { editorMode = ERASE; }
-    void rectangleButton_clicked() { editorMode = RECTANGLE; }
+    void onMarkButtonClicked() { isMarking = true; }
+    void onEraseButtonClicked() { isMarking = false; }
+    void onBrushSelected(int index) {
+        if (index >= 0 && index <= RECTANGLE) {
+            editorMode = static_cast<BrushMode>(index);
+        } else {
+            qWarning() << "Invalid brush mode index selected:" << index;
+        }
+    }
 
     void aboveButton_clicked();
     void belowButton_clicked();
@@ -95,18 +102,19 @@ private:
     float minValue_f;
     float maxValue_f;
 
+    int target_ROI;
     std::vector<std::string> ROI_names;
     std::vector<NIBR::Image<bool>> ROI_vector;
     std::vector<bool> ROI_toggle_states;
-    std::vector<bool> ROI_visibility;
     std::vector<QColor> ROI_colors;
     std::vector<float> ROI_opacities;
 
     std::unordered_set<int64_t> undo_stack_temp;
     std::vector<std::vector<int64_t>> undo_stack;
     std::vector<std::vector<int64_t>> redo_stack;
-    void revert_ROI_index(int64_t image_index);
-    void set_ROI_index_true(int64_t image_index);
+    void revert_ROI_at_index(int64_t image_index);
+    void paint_ROI(int brush_size);
+    void set_ROI_at_index(int64_t image_index, bool ROI_value);
 
     // Slice indices for each plane T1
     int i; // Sagittal (along x-axis)
@@ -154,7 +162,8 @@ private:
 
     // ROI parameters
     bool editMode = false;
-    EditorMode editorMode = BRUSH;
+    BrushMode editorMode = BRUSH_1;
+    bool isMarking = true;
     QPoint rectStartPoint;   // Starting point of the rectangle
     QPoint rectCurrentPoint; // Current point as the mouse moves
     QPoint rectStartImageCoords;
