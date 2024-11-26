@@ -13,7 +13,7 @@ OpenGLMRIWidget::OpenGLMRIWidget(QWidget *parent)
     // Initialize slice indices
     i = j = k = 0;
 
-    overlayOpacity = 0.5f;
+    fMRI_overlayOpacity = 0.5f;
     
     this->setFocusPolicy ( Qt::StrongFocus );
     setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -66,7 +66,9 @@ void OpenGLMRIWidget::loadImage_T1(const QString& filePath)
         float value = T1_image.data[idx];
         if (value < minValue) minValue = value;
         if (value > maxValue) maxValue = value;
+        mean_intensity += value;
     }
+    mean_intensity /= T1_image.voxCnt;
     std::cout << "Voxel value range: [" << minValue << ", " << maxValue << "]" << std::endl;
 
     // Update slice indices to the middle of the new image dimensions
@@ -119,7 +121,9 @@ void OpenGLMRIWidget::loadImage_fMRI(const QString& filePath)
         float value = fMRI_image_resampled.data[idx];
         if (value < minValue_f) minValue_f = value;
         if (value > maxValue_f) maxValue_f = value;
+        mean_intensity_f += value;
     }
+    mean_intensity_f /= fMRI_image_resampled.voxCnt;
     
     std::cout << "Voxel value range: [" << minValue_f << ", " << maxValue_f << "]" << std::endl;
 
@@ -247,8 +251,11 @@ void OpenGLMRIWidget::paintGL()
             int idx = voxelIndex(xFlipped, yFlipped, z);
             float value = voxelData[idx];
 
+            // Adjust the voxel value using contrast factor
+            float adjusted_value = (value - mean_intensity) * T1_contrast + mean_intensity;
+
             // Normalize T1 voxel value for grayscale color
-            float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
+            float gray = std::clamp((adjusted_value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
             // Base color from T1 image
             float r = gray;
@@ -264,11 +271,14 @@ void OpenGLMRIWidget::paintGL()
                 // If images are resampled and aligned, use the same index
                 float value_f = fMRI_image_resampled.data[idx];
 
+                // Adjust the voxel value using contrast factor
+                float adjusted_value_f = (value_f - mean_intensity_f) * fMRI_contrast + mean_intensity_f;
+
                 // Normalize fMRI value for visualization
-                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+                float intensity = std::clamp((adjusted_value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
 
                 // Update overlay intensity based on the fMRI value
-                overlayIntensity = intensity * overlayOpacity;
+                overlayIntensity = intensity * fMRI_overlayOpacity;
             }
 
             // Combine the T1 and fMRI colors
@@ -378,8 +388,11 @@ void OpenGLMRIWidget::paintGL()
             int idx = voxelIndex(xFlipped, y, zFlipped);
             float value = voxelData[idx];
 
+            // Adjust the voxel value using contrast factor
+            float adjusted_value = (value - mean_intensity) * T1_contrast + mean_intensity;
+
             // Normalize T1 voxel value for grayscale color
-            float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
+            float gray = std::clamp((adjusted_value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
             // Base color from T1 image
             float r = gray;
@@ -395,11 +408,14 @@ void OpenGLMRIWidget::paintGL()
                 // If images are resampled and aligned, use the same index
                 float value_f = fMRI_image_resampled.data[idx];
 
+                // Adjust the voxel value using contrast factor
+                float adjusted_value_f = (value_f - mean_intensity_f) * fMRI_contrast + mean_intensity_f;
+
                 // Normalize fMRI value for visualization
-                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+                float intensity = std::clamp((adjusted_value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
 
                 // Update overlay intensity based on the fMRI value
-                overlayIntensity = intensity * overlayOpacity;
+                overlayIntensity = intensity * fMRI_overlayOpacity;
             }
 
             // Combine the T1 and fMRI colors
@@ -505,8 +521,11 @@ void OpenGLMRIWidget::paintGL()
             int idx = voxelIndex(x, yFlipped, zFlipped);
             float value = voxelData[idx];
 
+            // Adjust the voxel value using contrast factor
+            float adjusted_value = (value - mean_intensity) * T1_contrast + mean_intensity;
+
             // Normalize T1 voxel value for grayscale color
-            float gray = std::clamp((value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
+            float gray = std::clamp((adjusted_value - minValue) / (maxValue - minValue), 0.0f, 1.0f);
 
             // Base color from T1 image
             float r = gray;
@@ -522,11 +541,14 @@ void OpenGLMRIWidget::paintGL()
                 // If images are resampled and aligned, use the same index
                 float value_f = fMRI_image_resampled.data[idx];
 
+                // Adjust the voxel value using contrast factor
+                float adjusted_value_f = (value_f - mean_intensity_f) * fMRI_contrast + mean_intensity_f;
+
                 // Normalize fMRI value for visualization
-                float intensity = std::clamp((value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
+                float intensity = std::clamp((adjusted_value_f - minValue_f) / (maxValue_f - minValue_f), 0.0f, 1.0f);
 
                 // Update overlay intensity based on the fMRI value
-                overlayIntensity = intensity * overlayOpacity;
+                overlayIntensity = intensity * fMRI_overlayOpacity;
             }
 
             // Combine the T1 and fMRI colors
@@ -834,7 +856,7 @@ void OpenGLMRIWidget::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    if (pressedButton == Qt::RightButton || event->modifiers() & Qt::ControlModifier) {
+    if (event->modifiers() & Qt::ControlModifier) {
         // Handle panning
         QPoint currentPoint = event->pos();
         QPoint delta = -(currentPoint - lastPanPoint);
@@ -891,6 +913,38 @@ void OpenGLMRIWidget::mouseMoveEvent(QMouseEvent *event)
         } else {
             handleSagittalClick(mousePos, viewportWidth, height());
         }
+
+    } else if ((pressedButton == Qt::RightButton) && (event->modifiers() & Qt::ShiftModifier)) {
+        // Handle fMRI contrast adjustment
+        QPoint currentPoint = event->pos();
+        int deltaY = currentPoint.y() - lastContrastPoint.y(); // Vertical movement
+        lastContrastPoint = currentPoint;
+
+        // Adjust the fMRI contrast factor
+        float sensitivity = 0.01f; // Adjust this value to control the speed of contrast change
+
+        fMRI_contrast += -deltaY * sensitivity;
+
+        // Clamp the contrast factor to reasonable limits
+        fMRI_contrast = std::clamp(fMRI_contrast, 0.1f, 10.0f);
+
+        update(); // Repaint the image with updated contrast
+
+    } else if (pressedButton == Qt::RightButton) {
+        // Handle T1 contrast adjustment
+        QPoint currentPoint = event->pos();
+        int deltaY = currentPoint.y() - lastContrastPoint.y(); // Vertical movement
+        lastContrastPoint = currentPoint;
+
+        // Adjust the T1 contrast factor
+        float sensitivity = 0.01f; // Adjust this value to control the speed of contrast change
+
+        T1_contrast += -deltaY * sensitivity;
+
+        // Clamp the contrast factor to reasonable limits
+        T1_contrast = std::clamp(T1_contrast, 0.1f, 10.0f);
+
+        update(); // Repaint the image with updated contrast
     }
 }
 
@@ -1000,6 +1054,8 @@ void OpenGLMRIWidget::keyPressEvent(QKeyEvent *event)
         // Reset zoom and pan
         zoomFactor = 1.0f;
         panOffset = QVector3D(0.0f, 0.0f, 0.0f);
+        T1_contrast = 1.0f;
+        fMRI_contrast = 1.0f;
         update();
     }
     else {

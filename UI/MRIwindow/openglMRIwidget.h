@@ -108,8 +108,15 @@ private:
     NIBR::Image<float> fMRI_image_resampled;
     float minValue;
     float maxValue;
+    float mean_intensity;
     float minValue_f;
     float maxValue_f;
+    float mean_intensity_f;
+
+    float T1_contrast = 1.0f;
+    float fMRI_contrast = 1.0f;
+    float fMRI_overlayOpacity; // Value between 0.0f and 1.0f
+    QPoint lastContrastPoint;
 
     int target_ROI;
     std::vector<std::string> ROI_names;
@@ -153,8 +160,6 @@ private:
     float zoomFactor;
     QVector3D panOffset;
     QPoint lastPanPoint; // For tracking mouse movement during panning
-    float overlayOpacity; // Value between 0.0f and 1.0f
-    // const double aspectRatio; // Set your aspect ratio (e.g., 16:9 or 4:3)
 
     // Mouse event handlers
     void handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight);
