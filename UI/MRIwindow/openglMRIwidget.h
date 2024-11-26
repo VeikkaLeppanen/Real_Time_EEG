@@ -11,15 +11,15 @@
 #include <QWheelEvent>
 #include <QPainter>
 #include <QFont>
+#include <QMessageBox>
 #include <image/image.h>
 #include <image/image_operators.h>
 #include <image/orientation.h>
 #include <Eigen/Dense>
 
 enum BrushMode {
-  BRUSH_1,
-  BRUSH_2,
-  BRUSH_3,
+  BRUSH_SQUARE,
+  BRUSH_CIRCLE,
   RECTANGLE
 };
 
@@ -27,6 +27,13 @@ enum SliceType {
     AXIAL,
     CORONAL,
     SAGITTAL
+};
+
+struct Viewport {
+    int x;
+    int y;
+    int width;
+    int height;
 };
 
 class OpenGLMRIWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -43,6 +50,7 @@ protected:
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
+    void drawDirectionLabels(QPainter &painter, const Viewport &viewport, const QString &sliceType);
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -77,6 +85,7 @@ public slots:
             qWarning() << "Invalid brush mode index selected:" << index;
         }
     }
+    void onBrushSizeChanged(int size) { brush_size = size; }
 
     void aboveButton_clicked();
     void belowButton_clicked();
@@ -104,7 +113,7 @@ private:
 
     int target_ROI;
     std::vector<std::string> ROI_names;
-    std::vector<NIBR::Image<bool>> ROI_vector;
+    std::vector<std::shared_ptr<NIBR::Image<bool>>> ROI_vector;
     std::vector<bool> ROI_toggle_states;
     std::vector<QColor> ROI_colors;
     std::vector<float> ROI_opacities;
@@ -113,7 +122,8 @@ private:
     std::vector<std::vector<int64_t>> undo_stack;
     std::vector<std::vector<int64_t>> redo_stack;
     void revert_ROI_at_index(int64_t image_index);
-    void paint_ROI(int brush_size);
+    void paint_square_ROI(int brush_size);
+    void paint_circle_ROI(int brush_size);
     void set_ROI_at_index(int64_t image_index, bool ROI_value);
 
     // Slice indices for each plane T1
@@ -162,7 +172,8 @@ private:
 
     // ROI parameters
     bool editMode = false;
-    BrushMode editorMode = BRUSH_1;
+    BrushMode editorMode = BRUSH_SQUARE;
+    int brush_size = 0;
     bool isMarking = true;
     QPoint rectStartPoint;   // Starting point of the rectangle
     QPoint rectCurrentPoint; // Current point as the mouse moves

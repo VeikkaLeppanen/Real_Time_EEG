@@ -51,6 +51,11 @@ mriWindow::mriWindow(QWidget *parent)
     QPushButton *saveButton = new QPushButton(QString("save"), controlWidget);
     QPushButton *deleteButton = new QPushButton(QString("delete"), controlWidget);
 
+    addButton->setMinimumWidth(50);
+    loadButton->setMinimumWidth(50);
+    saveButton->setMinimumWidth(50);
+    deleteButton->setMinimumWidth(50);
+
     // Connect buttons to slots
     connect(addButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::addButton_clicked);
     connect(loadButton, &QPushButton::clicked, this, &mriWindow::loadButton_clicked);
@@ -58,11 +63,6 @@ mriWindow::mriWindow(QWidget *parent)
     connect(deleteButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::deleteButton_clicked);
 
     connect(MRIWidget, &OpenGLMRIWidget::ROI_update, this, &mriWindow::ROI_update);
-
-    addButton->setMinimumWidth(50);
-    loadButton->setMinimumWidth(50);
-    saveButton->setMinimumWidth(50);
-    deleteButton->setMinimumWidth(50);
 
     buttonLayout->addWidget(addButton);
     buttonLayout->addWidget(loadButton);
@@ -106,6 +106,10 @@ mriWindow::mriWindow(QWidget *parent)
     QPushButton *undoButton = new QPushButton("Undo", controlWidget);
     QPushButton *redoButton = new QPushButton("Redo", controlWidget);
     
+    editButton->setMinimumWidth(50);
+    undoButton->setMinimumWidth(50);
+    redoButton->setMinimumWidth(50);
+    
     // Make the edit button toggleable
     editButton->setCheckable(true);
 
@@ -130,13 +134,30 @@ mriWindow::mriWindow(QWidget *parent)
 
     // Dropdown menu for selecting brushes
     QComboBox *brushDropdown = new QComboBox(editFrame);
-    brushDropdown->addItem("Brush 1");
-    brushDropdown->addItem("Brush 2");
-    brushDropdown->addItem("Brush 3");
+    brushDropdown->addItem("Brush square");
+    brushDropdown->addItem("Brush circle");
     brushDropdown->addItem("Rectangle");
+
+    brushDropdown->setMinimumWidth(100);
+
+    // Create SpinBox for Brush Size
+    QSpinBox *brushSizeSpinBox = new QSpinBox(editFrame);
+    brushSizeSpinBox->setMinimum(0);  // Set minimum brush size
+    brushSizeSpinBox->setMaximum(10); // Set maximum brush size
+    brushSizeSpinBox->setValue(0);    // Set default brush size
+    brushSizeSpinBox->setSuffix(" px"); // Optional: add 'px' suffix
+    brushSizeSpinBox->setMinimumWidth(50);
+    toolButtonsLayout->addWidget(brushSizeSpinBox);
+
+    // Connect the valueChanged signal
+    connect(brushSizeSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            MRIWidget, &OpenGLMRIWidget::onBrushSizeChanged);
 
     QPushButton *markButton = new QPushButton("Mark", editFrame);
     QPushButton *eraseButton = new QPushButton("Erase", editFrame);
+
+    markButton->setMinimumWidth(50);
+    eraseButton->setMinimumWidth(50);
 
     // Stylesheet to visually indicate the selected button
     QString buttonStyle = R"(
@@ -177,6 +198,9 @@ mriWindow::mriWindow(QWidget *parent)
     QLabel *copyLabel = new QLabel("Copy from slice:", editFrame);
     QPushButton *aboveButton = new QPushButton("Above", editFrame);
     QPushButton *belowButton = new QPushButton("Below", editFrame);
+
+    aboveButton->setMinimumWidth(50);
+    belowButton->setMinimumWidth(50);
 
     connect(aboveButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::aboveButton_clicked);
     connect(belowButton, &QPushButton::clicked, MRIWidget, &OpenGLMRIWidget::belowButton_clicked);

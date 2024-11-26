@@ -16,6 +16,7 @@
 #include <QComboBox>
 #include <QButtonGroup>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QLabel>
 #include <QMessageBox>
 #include <QFileDialog>

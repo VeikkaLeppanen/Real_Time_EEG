@@ -175,14 +175,6 @@ void OpenGLMRIWidget::paintGL()
     // Calculate the width of each viewport section
     int viewportWidth = widgetWidth / 3;
 
-    // Define viewports for each slice in the order: Axial, Coronal, Sagittal
-    struct Viewport {
-        int x;
-        int y;
-        int width;
-        int height;
-    };
-
     Viewport axialViewport = {0, 0, viewportWidth, widgetHeight};
     Viewport coronalViewport = {viewportWidth, 0, viewportWidth, widgetHeight};
     Viewport sagittalViewport = {2 * viewportWidth, 0, viewportWidth, widgetHeight};
@@ -285,7 +277,7 @@ void OpenGLMRIWidget::paintGL()
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
                 if(!ROI_toggle_states[ROI_num]) continue;
 
-                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                NIBR::Image<bool> &ROI_image = *(ROI_vector[ROI_num]);
                 QColor ROI_color = ROI_colors[ROI_num];
                 float ROI_opacity = ROI_opacities[ROI_num];
                 if (ROI_image.data[idx]) {
@@ -416,7 +408,7 @@ void OpenGLMRIWidget::paintGL()
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
                 if(!ROI_toggle_states[ROI_num]) continue;
 
-                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                NIBR::Image<bool> &ROI_image = *(ROI_vector[ROI_num]);
                 QColor ROI_color = ROI_colors[ROI_num];
                 float ROI_opacity = ROI_opacities[ROI_num];
                 if (ROI_image.data[idx]) {
@@ -543,7 +535,7 @@ void OpenGLMRIWidget::paintGL()
             for (int ROI_num = 0; ROI_num < ROI_vector.size(); ROI_num++) {
                 if(!ROI_toggle_states[ROI_num]) continue;
 
-                NIBR::Image<bool> &ROI_image = ROI_vector[ROI_num];
+                NIBR::Image<bool> &ROI_image = *(ROI_vector[ROI_num]);
                 QColor ROI_color = ROI_colors[ROI_num];
                 float ROI_opacity = ROI_opacities[ROI_num];
                 if (ROI_image.data[idx]) {
@@ -631,10 +623,19 @@ void OpenGLMRIWidget::paintGL()
 
     // Begin QPainter
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Set text properties
+    painter.setPen(Qt::red);
+    painter.setFont(QFont("Arial", 10));
+
+    // Draw direction labels for each viewport
+    drawDirectionLabels(painter, axialViewport, "axial");
+    drawDirectionLabels(painter, coronalViewport, "coronal");
+    drawDirectionLabels(painter, sagittalViewport, "sagittal");
 
     // Set text properties
     painter.setPen(Qt::yellow);
-    painter.setFont(QFont("Arial", 10));
 
     // Get the position unit
     QString spaceUnit = QString::fromStdString(T1_image.getSpaceUnit());
@@ -654,6 +655,70 @@ void OpenGLMRIWidget::paintGL()
     // End QPainter
     painter.end();
 }
+
+void OpenGLMRIWidget::drawDirectionLabels(QPainter &painter, const Viewport &viewport, const QString &sliceType)
+{
+    // Translate the painter to the viewport origin
+    painter.save();
+    painter.translate(viewport.x, viewport.y);
+
+    // Get the size of the viewport
+    int vpWidth = viewport.width;
+    int vpHeight = viewport.height;
+
+    // Determine the labels based on slice type and orientation
+    QString labelTop, labelBottom, labelLeft, labelRight;
+
+    if (sliceType == "axial") {
+        labelTop = T1_orientation[1] == "A" ? "A" : "P";
+        labelBottom = T1_orientation[1] == "A" ? "P" : "A";
+        labelLeft = T1_orientation[0] == "R" ? "R" : "L";
+        labelRight = T1_orientation[0] == "R" ? "L" : "R";
+    } else if (sliceType == "coronal") {
+        labelTop = T1_orientation[2] == "S" ? "S" : "I";
+        labelBottom = T1_orientation[2] == "S" ? "I" : "S";
+        labelLeft = T1_orientation[0] == "R" ? "R" : "L";
+        labelRight = T1_orientation[0] == "R" ? "L" : "R";
+    } else if (sliceType == "sagittal") {
+        labelTop = T1_orientation[2] == "S" ? "S" : "I";
+        labelBottom = T1_orientation[2] == "S" ? "I" : "S";
+        labelLeft = T1_orientation[1] == "A" ? "A" : "P";
+        labelRight = T1_orientation[1] == "A" ? "P" : "A";
+    }
+
+    // Set up font metrics
+    QFontMetrics fm(painter.font());
+    int textWidth = fm.horizontalAdvance("M"); // Assume all labels are single letters
+    int textHeight = fm.height();
+
+    int margin = 10; // Margin from the edge
+
+    // Positions for labels
+    // Top label
+    int topX = (vpWidth - textWidth) / 2;
+    int topY = margin + textHeight;
+
+    // Bottom label
+    int bottomX = (vpWidth - textWidth) / 2;
+    int bottomY = vpHeight - margin;
+
+    // Left label
+    int leftX = margin;
+    int leftY = (vpHeight + textHeight) / 2;
+
+    // Right label
+    int rightX = vpWidth - margin - textWidth;
+    int rightY = (vpHeight + textHeight) / 2;
+
+    // Draw labels
+    painter.drawText(topX, topY, labelTop);
+    painter.drawText(bottomX, bottomY, labelBottom);
+    painter.drawText(leftX, leftY, labelLeft);
+    painter.drawText(rightX, rightY, labelRight);
+
+    painter.restore();
+}
+
 
 void OpenGLMRIWidget::handleAxialClick(const QPoint& mousePos, int viewportWidth, int viewportHeight)
 {
@@ -686,16 +751,12 @@ void OpenGLMRIWidget::edit_ROIs() {
     if (editMode) {
 
         switch (editorMode) {
-            case BRUSH_1:
-                paint_ROI(0);
+            case BRUSH_SQUARE:
+                paint_square_ROI(brush_size);
                 break;
 
-            case BRUSH_2:
-                paint_ROI(1);
-                break;
-
-            case BRUSH_3:
-                paint_ROI(2);
+            case BRUSH_CIRCLE:
+                paint_circle_ROI(brush_size);
                 break;
 
             case RECTANGLE:
@@ -975,7 +1036,7 @@ void OpenGLMRIWidget::applyRectangleToROI(const QPoint& startImageCoords, const 
     }
 
     // Update the ROI
-    NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
+    NIBR::Image<bool> &ROI_image = *(ROI_vector[target_ROI]);
 
     for (int x = imgXMin; x <= imgXMax; x++) {
         for (int y = imgYMin; y <= imgYMax; y++) {
@@ -1170,8 +1231,9 @@ void OpenGLMRIWidget::updateGraph()
 // ----------------------------
 void OpenGLMRIWidget::addButton_clicked() 
 {
-    NIBR::Image<bool> newImage;
-    newImage.createFromTemplate(T1_image, true);
+    // Create a new shared_ptr for the image
+    auto newImage = std::make_shared<NIBR::Image<bool>>();
+    newImage->createFromTemplate(T1_image, true);
 
     // Find the next available number for "ROI"
     int maxNumber = 0;
@@ -1188,25 +1250,29 @@ void OpenGLMRIWidget::addButton_clicked()
 
     std::string newName = "ROI" + std::to_string(maxNumber + 1);
     ROI_names.push_back(newName); // Add the new name
-    ROI_vector.push_back(newImage);
+    ROI_vector.push_back(newImage); // Add the shared_ptr to the vector
     ROI_toggle_states.push_back(false);
     ROI_colors.push_back(QColor(0, 255, 0));
     ROI_opacities.push_back(0.5f);
-    
+
     emit ROI_update(ROI_names, ROI_toggle_states);
     reset_undo_stacks();
     update();
 }
 
 
+
 void OpenGLMRIWidget::loadButton_clicked(const QString& filePath) 
 {
     std::string filePath_std = filePath.toStdString();
-    NIBR::Image<bool> newImage(filePath_std);
-    newImage.read();
-    ROI_vector.push_back(newImage);
 
-    // Find the file name in filePath
+    // Create a new shared_ptr for the image
+    auto newImage = std::make_shared<NIBR::Image<bool>>(filePath_std);
+    newImage->read();
+
+    ROI_vector.push_back(newImage); // Add the shared_ptr to the vector
+
+    // Extract the file name from the file path
     size_t lastSlash = filePath_std.find_last_of("/\\");
     size_t lastDot = filePath_std.find_last_of(".");
     std::string fileName = filePath_std.substr(lastSlash + 1, lastDot - lastSlash - 1);
@@ -1221,29 +1287,51 @@ void OpenGLMRIWidget::loadButton_clicked(const QString& filePath)
     update();
 }
 
+
 void OpenGLMRIWidget::saveButton_clicked() 
 {
-    ROI_vector[target_ROI].write(ROI_names[target_ROI] + ".nii.gz");
+    if (target_ROI >= 0 && target_ROI < ROI_vector.size()) {
+        ROI_vector[target_ROI]->write(ROI_names[target_ROI] + ".nii.gz");
+    } else {
+        // Handle invalid target_ROI
+        QMessageBox::warning(this, "Warning", "No ROI selected to save.");
+    }
 }
+
 
 void OpenGLMRIWidget::deleteButton_clicked() 
 {
-    if (ROI_toggle_states[target_ROI]) {
+    if (target_ROI >= 0 && target_ROI < ROI_vector.size()) {
         ROI_names.erase(ROI_names.begin() + target_ROI);
         ROI_vector.erase(ROI_vector.begin() + target_ROI);
         ROI_toggle_states.erase(ROI_toggle_states.begin() + target_ROI);
         ROI_colors.erase(ROI_colors.begin() + target_ROI);
         ROI_opacities.erase(ROI_opacities.begin() + target_ROI);
-    }
 
-    if (ROI_vector.size() == 0) {
-        editMode = false;
-    }
+        // Adjust target_ROI if necessary
+        if (target_ROI >= ROI_vector.size()) {
+            target_ROI = ROI_vector.empty() ? -1 : ROI_vector.size() - 1;
+        }
 
-    emit ROI_update(ROI_names, ROI_toggle_states);
-    reset_undo_stacks();
-    update();
+        if (ROI_vector.empty()) {
+            editMode = false;
+        }
+
+        // Debugging output
+        for (size_t i = 0; i < ROI_vector.size(); ++i) {
+            std::cout << "ROI " << i << ": " << ROI_names[i] << std::endl;
+            std::cout << "ROI toggle state: " << ROI_toggle_states[i] << std::endl;
+        }
+
+        emit ROI_update(ROI_names, ROI_toggle_states);
+        reset_undo_stacks();
+        update();
+    } else {
+        // Handle invalid target_ROI
+        QMessageBox::warning(this, "Warning", "No ROI selected to delete.");
+    }
 }
+
 
 void OpenGLMRIWidget::onSliderValueChanged(int value) 
 {
@@ -1303,61 +1391,153 @@ void OpenGLMRIWidget::redoButton_clicked()
 }
 
 void OpenGLMRIWidget::revert_ROI_at_index(int64_t image_index) {
-    NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
+    NIBR::Image<bool> &ROI_image = *(ROI_vector[target_ROI]);
     if (ROI_image.data[image_index] == 1) ROI_image.data[image_index] = 0;
     else ROI_image.data[image_index] = 1;
 }
 
-void OpenGLMRIWidget::paint_ROI(int brush_size) {
+void OpenGLMRIWidget::paint_square_ROI(int brush_size) {
+    // Get image dimensions for bounds checking
+    int dimX = T1_image.imgDims[0];
+    int dimY = T1_image.imgDims[1];
+    int dimZ = T1_image.imgDims[2];
+
     switch (currentSliceType) {
         case AXIAL:
-                for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
-                    for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+            for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                    // Check bounds to prevent accessing invalid indices
+                    if (i_temp >= 0 && i_temp < dimX &&
+                        j_temp >= 0 && j_temp < dimY) {
+
                         int64_t target_index = T1_image.sub2ind(i_temp, j_temp, k);
                         if (!(T1_image.data[target_index] == isMarking)) {
                             set_ROI_at_index(target_index, isMarking);
                             undo_stack_temp.insert(target_index);
                         }
-                    }   
+                    }
                 }
+            }
             break;
+
         case CORONAL:
-                for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
-                    for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+            for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                    // Check bounds
+                    if (i_temp >= 0 && i_temp < dimX &&
+                        k_temp >= 0 && k_temp < dimZ) {
+
                         int64_t target_index = T1_image.sub2ind(i_temp, j, k_temp);
                         if (!(T1_image.data[target_index] == isMarking)) {
                             set_ROI_at_index(target_index, isMarking);
                             undo_stack_temp.insert(target_index);
                         }
-                    }   
+                    }
                 }
+            }
             break;
+
         case SAGITTAL:
-                for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
-                    for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+            for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                    // Check bounds
+                    if (j_temp >= 0 && j_temp < dimY &&
+                        k_temp >= 0 && k_temp < dimZ) {
+
                         int64_t target_index = T1_image.sub2ind(i, j_temp, k_temp);
                         if (!(T1_image.data[target_index] == isMarking)) {
                             set_ROI_at_index(target_index, isMarking);
                             undo_stack_temp.insert(target_index);
                         }
-                    }   
+                    }
                 }
+            }
+            break;
+    }
+}
+
+void OpenGLMRIWidget::paint_circle_ROI(int brush_size) {
+    switch (currentSliceType) {
+        case AXIAL:
+            for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                    // Calculate the squared distance from the center
+                    int di = i_temp - i;
+                    int dj = j_temp - j;
+                    if (di*di + dj*dj <= brush_size*brush_size) {
+                        // Check bounds to prevent accessing invalid indices
+                        if (i_temp >= 0 && i_temp < T1_image.imgDims[0] &&
+                            j_temp >= 0 && j_temp < T1_image.imgDims[1]) {
+
+                            int64_t target_index = T1_image.sub2ind(i_temp, j_temp, k);
+                            if (!(T1_image.data[target_index] == isMarking)) {
+                                set_ROI_at_index(target_index, isMarking);
+                                undo_stack_temp.insert(target_index);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+
+        case CORONAL:
+            for (int i_temp = i - brush_size; i_temp <= i + brush_size; i_temp++) {
+                for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                    // Calculate the squared distance from the center
+                    int di = i_temp - i;
+                    int dk = k_temp - k;
+                    if (di*di + dk*dk <= brush_size*brush_size) {
+                        // Check bounds
+                        if (i_temp >= 0 && i_temp < T1_image.imgDims[0] &&
+                            k_temp >= 0 && k_temp < T1_image.imgDims[2]) {
+
+                            int64_t target_index = T1_image.sub2ind(i_temp, j, k_temp);
+                            if (!(T1_image.data[target_index] == isMarking)) {
+                                set_ROI_at_index(target_index, isMarking);
+                                undo_stack_temp.insert(target_index);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+
+        case SAGITTAL:
+            for (int j_temp = j - brush_size; j_temp <= j + brush_size; j_temp++) {
+                for (int k_temp = k - brush_size; k_temp <= k + brush_size; k_temp++) {
+                    // Calculate the squared distance from the center
+                    int dj = j_temp - j;
+                    int dk = k_temp - k;
+                    if (dj*dj + dk*dk <= brush_size*brush_size) {
+                        // Check bounds
+                        if (j_temp >= 0 && j_temp < T1_image.imgDims[1] &&
+                            k_temp >= 0 && k_temp < T1_image.imgDims[2]) {
+
+                            int64_t target_index = T1_image.sub2ind(i, j_temp, k_temp);
+                            if (!(T1_image.data[target_index] == isMarking)) {
+                                set_ROI_at_index(target_index, isMarking);
+                                undo_stack_temp.insert(target_index);
+                            }
+                        }
+                    }
+                }
+            }
             break;
     }
 }
 
 void OpenGLMRIWidget::set_ROI_at_index(int64_t image_index, bool ROI_value) {
-        NIBR::Image<bool> &ROI_image = ROI_vector[target_ROI];
+        NIBR::Image<bool> &ROI_image = *(ROI_vector[target_ROI]);
         ROI_image.data[image_index] = ROI_value;
 }
 
 void OpenGLMRIWidget::aboveButton_clicked() {
-    if (!undo_stack.empty()) {
+    if (!undo_stack.empty() && !ROI_vector.empty()) {
         // Get the last modification
         std::vector<int64_t> last_change = undo_stack.back();
 
         // Get image dimensions
-        NIBR::Image<bool>& ROI_image = ROI_vector[0]; // Assuming all images have the same dimensions
+        NIBR::Image<bool>& ROI_image = *(ROI_vector[target_ROI]); // Assuming all images have the same dimensions
         int dimX = ROI_image.imgDims[0];
         int dimY = ROI_image.imgDims[1];
         int dimZ = ROI_image.imgDims[2];
@@ -1449,12 +1629,12 @@ void OpenGLMRIWidget::aboveButton_clicked() {
 }
 
 void OpenGLMRIWidget::belowButton_clicked() {
-    if (!undo_stack.empty()) {
+    if (!undo_stack.empty() && !ROI_vector.empty()) {
         // Get the last modification
         std::vector<int64_t> last_change = undo_stack.back();
 
         // Get image dimensions
-        NIBR::Image<bool>& ROI_image = ROI_vector[0]; // Assuming all images have the same dimensions
+        NIBR::Image<bool>& ROI_image = *(ROI_vector[target_ROI]); // Assuming all images have the same dimensions
         int dimX = ROI_image.imgDims[0];
         int dimY = ROI_image.imgDims[1];
         int dimZ = ROI_image.imgDims[2];
