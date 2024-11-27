@@ -38,6 +38,8 @@ private slots:
 
     void on_RequestInfo_clicked();
 
+    void on_comboBox_connectionType_currentIndexChanged(int index);
+
 private:
     Ui::TMSwindow *ui;
 
@@ -47,6 +49,8 @@ private:
 
     QStringList mode_names ={"Standard", "Power", "Twin", "Dual"};
     QStringList waveform_names ={"StanMonophasicdard", "Biphasic", "Half sine", "Biphasic burst"};
+
+    TMSConnectionType connectionType = COM;
 };
 
 #endif // TRIGGERINGWINDOW_H
