@@ -138,7 +138,7 @@ void eegWindow::on_disconnectButton_clicked()
 
 void eegWindow::on_sourceChannelLoad_clicked()
 {
-    std::vector<std::string> channelMapStd;
+    std::map<int, std::string> channelMapStd;
     QString fileName = QFileDialog::getOpenFileName(
         this,                 // parent widget
         "Open Document",      // dialog caption
@@ -148,15 +148,28 @@ void eegWindow::on_sourceChannelLoad_clicked()
 
     if (!fileName.isEmpty()) {
         QFile file(fileName);
-        if (file.open(QIODevice::ReadOnly)) {
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream in(&file);
-            QString line = in.readLine();  // Read and discard the header line
+            QString line = in.readLine();  // Read and discard the header line, if any
 
             while (!in.atEnd()) {
-                line = in.readLine();
+                line = in.readLine().trimmed();
+                if (line.isEmpty()) {
+                    continue; // Skip empty lines
+                }
+
                 QStringList fields = line.split('\t');  // assuming tab-separated values
-                if (fields.size() > 1) {  // Check if there is at least one field for input number and one for name
-                    channelMapStd.push_back(fields[1].toStdString());
+                if (fields.size() >= 2) {  // Check if there are at least two fields: key and value
+                    bool ok;
+                    int key = fields[0].toInt(&ok);
+                    if (ok) {
+                        std::string value = fields[1].toStdString();
+                        channelMapStd[key] = value;
+                    } else {
+                        qDebug() << "Invalid key in line: " << line;
+                    }
+                } else {
+                    qDebug() << "Invalid line format: " << line;
                 }
             }
             file.close();
@@ -178,18 +191,34 @@ void eegWindow::setupChannelNames()
 {
     std::vector<std::string> channelNames;
     QStringList QchannelNames;
-    for(size_t i = 0; i < source_channels_.size(); i++) {
-        std::string C_Name = channelMap_[source_channels_(i) - 1];              // CHECK LATER FOR CORRECT INDEXING!
-        channelNames.push_back(C_Name);
-        QchannelNames.append(QString::fromStdString(C_Name));
+
+    for (size_t i = 0; i < source_channels_.size(); i++) {
+        int channelIndex = source_channels_(i);
+
+        // Check if the channel index exists in the map
+        auto it = channelMap_.find(channelIndex);
+        if (it != channelMap_.end()) {
+            // Key exists, safe to use
+            std::string C_Name = it->second;
+            channelNames.push_back(C_Name);
+            QchannelNames.append(QString::fromStdString(C_Name));
+        } else {
+            // Handle the case where the channel index is not found
+            qDebug() << "Channel index" << channelIndex << "not found in channelMap_.";
+
+            // Option 1: Assign a default name
+            std::string defaultName = "Undefined";
+            channelNames.push_back(defaultName);
+            QchannelNames.append(QString::fromStdString(defaultName));
+        }
     }
+
     handler.setChannelNames(channelNames);
-    
+
     channelNames_ = QchannelNames;
 
     emit updateChannelNamesQt(QchannelNames);
 }
-
 
 void eegWindow::on_lineEditPort_editingFinished()
 {

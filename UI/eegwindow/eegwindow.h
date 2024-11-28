@@ -18,6 +18,7 @@
 #include <QTimer>
 
 #include <array>
+#include <map>
 
 #include "workers/EEGSpinWorker.h"
 #include "glwidget.h"
@@ -128,11 +129,18 @@ private:
     phaseEstimateParameters phaseEstParams;
 
     void setupChannelNames();
-    std::vector<std::string> channelMap_ = {"Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2", "F7", "F8", "T7", "T8", "P7", "P8", "Fz",
-                                            "Cz	", "Pz", "Oz", "FC1", "FC2", "CP1", "CP2", "FC5", "FC6", "CP5", "CP6", "TP9", "TP10", "POz", "ECG",
-                                            "F1", "F2", "C1", "C2", "P1", "P2", "AF3", "AF4", "FC3", "FC4", "CP3", "CP4", "PO3", "PO4", "F5", "F6",
-                                            "C5", "C6", "P5", "P6", "AF7", "AF8", "FT7", "FT8", "TP7", "TP8", "PO7", "PO8", "FT9", "FT10", "Fpz",
-                                            "CPz", "CWL1", "CWL2", "CWL3", "CWL4", "CWL5", "CWL6", "CWL7"};
+
+    std::map<int, std::string> channelMap_ = { 
+        {1, "Fp1"}, {2, "Fp2"}, {3, "F3"}, {4, "F4"}, {5, "C3"}, {6, "C4"}, {7, "P3"}, {8, "P4"}, {9, "O1"}, {10, "O2"},
+        {11, "F7"}, {12, "F8"}, {13, "T7"}, {14, "T8"}, {15, "P7"}, {16, "P8"}, {17, "Fz"}, {18, "Cz"}, {19, "Pz"}, {20, "Oz"},
+        {21, "FC1"}, {22, "FC2"}, {23, "CP1"}, {24, "CP2"}, {25, "FC5"}, {26, "FC6"}, {27, "CP5"}, {28, "CP6"}, {29, "TP9"}, {30, "TP10"},
+        {31, "POz"}, {32, "ECG"},
+        {41, "F1"}, {42, "F2"}, {43, "C1"}, {44, "C2"}, {45, "P1"}, {46, "P2"}, {47, "AF3"}, {48, "AF4"}, {49, "FC3"}, {50, "FC4"}, 
+        {51, "CP3"}, {52, "CP4"}, {53, "PO3"}, {54, "PO4"}, {55, "F5"}, {56, "F6"}, {57, "C5"}, {58, "C6"}, {59, "P5"}, {60, "P6"}, 
+        {61, "AF7"}, {62, "AF8"}, {63, "FT7"}, {64, "FT8"}, {65, "TP7"}, {66, "TP8"}, {67, "PO7"}, {68, "PO8"}, {69, "FT9"}, {70, "FT10"}, 
+        {71, "Fpz"}, {72, "CPz"}, {73, "CWL1"}, {74, "CWL2"}, {75, "CWL3"}, {76, "CWL4"}, {77, "CWL5"}, {78, "CWL6"}, {79, "CWL7"}
+    };
+
     Eigen::VectorXi source_channels_;
     std::vector<bool> channelCheckStates_;
     QStringList channelNames_;
