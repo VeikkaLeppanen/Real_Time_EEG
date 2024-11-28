@@ -143,7 +143,9 @@ void eegWindow::on_sourceChannelLoad_clicked()
         this,                 // parent widget
         "Open Document",      // dialog caption
         QDir::homePath(),     // starting directory
-        "Text Files (*.txt)"  // file types
+        "Text Files (*.txt)", // file types
+        nullptr,
+        QFileDialog::DontUseNativeDialog
     );
 
     if (!fileName.isEmpty()) {
