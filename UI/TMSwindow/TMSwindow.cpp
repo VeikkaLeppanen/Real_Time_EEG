@@ -43,77 +43,164 @@ TMSwindow::~TMSwindow()
 
 void TMSwindow::on_connectTrigger_clicked()
 {
-    if(handler.connectTriggerPort()) {
-        handler.setTriggerConnectStatus(false);
-        std::cerr << "Trigger port connection failed" << '\n';
-    } else {
-        handler.setTriggerConnectStatus(true);
-        set_enable_UI(true);
-        on_RequestInfo_clicked();
-        handler.set_amplitude(0);
-        std::cout << "Trigger port connected" << '\n';
+    switch (connectionType) {
+        case COM:
+            if(handler.connectTriggerPort()) {
+                handler.setTriggerConnectStatus(false);
+                set_enable_UI(false);
+                std::cerr << "Trigger port connection failed" << '\n';
+            } else {
+                handler.setTriggerConnectStatus(true);
+                set_enable_UI(true);
+                on_RequestInfo_clicked();
+                handler.set_amplitude(0);
+                std::cout << "Trigger port connected" << '\n';
+            }
+
+            break;
+
+        case TTL:
+            if(handler.connectTriggerPort_TTL()) {
+                handler.setTriggerConnectStatus(false);
+                set_enable_UI(false);
+                std::cerr << "Trigger port connection failed" << '\n';
+            } else {
+                handler.setTriggerConnectStatus(true);
+                set_enable_UI(true);
+                std::cout << "Trigger port connected" << '\n';
+            }
+
+            break;
     }
 }
 
-void TMSwindow::set_enable_UI(bool enable) {
-    
-    ui->comboBoxBurstPulses->setEnabled(enable);
-    ui->comboBoxDirection->setEnabled(enable);
-    ui->comboBoxMode->setEnabled(enable);
-    ui->comboBoxWaveform->setEnabled(enable);
+void TMSwindow::set_enable_UI(bool enable) 
+{
+    switch (connectionType) {
+        case COM:
+            ui->comboBoxBurstPulses->setEnabled(enable);
+            ui->comboBoxDirection->setEnabled(enable);
+            ui->comboBoxMode->setEnabled(enable);
+            ui->comboBoxWaveform->setEnabled(enable);
 
-    ui->enable->setEnabled(enable);
-    ui->disable->setEnabled(enable);
-    ui->setAmplitude->setEnabled(enable);
-    ui->testTrigger->setEnabled(enable);
-    ui->SetMode->setEnabled(enable);
-    ui->RequestInfo->setEnabled(enable);
-    
-    ui->amplitudeLineEdit->setEnabled(enable);
-    ui->lineEditIPI->setEnabled(enable);
-    ui->lineEditBAratio->setEnabled(enable);
-    ui->TimeLimitLineEdit->setEnabled(enable);
+            ui->enable->setEnabled(enable);
+            ui->disable->setEnabled(enable);
+            ui->setAmplitude->setEnabled(enable);
+            ui->testTrigger->setEnabled(enable);
+            ui->SetMode->setEnabled(enable);
+            ui->RequestInfo->setEnabled(enable);
 
-    ui->ModeLabel->setEnabled(enable);
-    ui->DirectionLabel->setEnabled(enable);
-    ui->WaveformLabel->setEnabled(enable);
-    ui->BurstPulsesLabel->setEnabled(enable);
-    ui->IPILabel->setEnabled(enable);
-    ui->BAratioLabel->setEnabled(enable);
-    ui->EnabledLabel->setEnabled(enable);
-    
-    ui->SetModeError->setEnabled(enable);
-    ui->RequestInfoError->setEnabled(enable);
+            ui->amplitudeLineEdit->setEnabled(enable);
+            ui->lineEditIPI->setEnabled(enable);
+            ui->lineEditBAratio->setEnabled(enable);
+            ui->TimeLimitLineEdit->setEnabled(enable);
 
+            ui->ModeLabel->setEnabled(enable);
+            ui->DirectionLabel->setEnabled(enable);
+            ui->WaveformLabel->setEnabled(enable);
+            ui->BurstPulsesLabel->setEnabled(enable);
+            ui->IPILabel->setEnabled(enable);
+            ui->BAratioLabel->setEnabled(enable);
+            ui->EnabledLabel->setEnabled(enable);
+
+            ui->SetModeError->setEnabled(enable);
+            ui->RequestInfoError->setEnabled(enable);
+
+            break;
+
+        case TTL:
+            ui->comboBoxBurstPulses->setEnabled(false);
+            ui->comboBoxDirection->setEnabled(false);
+            ui->comboBoxMode->setEnabled(false);
+            ui->comboBoxWaveform->setEnabled(false);
+
+            ui->enable->setEnabled(enable);
+            ui->disable->setEnabled(enable);
+            ui->setAmplitude->setEnabled(false);
+            ui->testTrigger->setEnabled(enable);
+            ui->SetMode->setEnabled(false);
+            ui->RequestInfo->setEnabled(false);
+
+            ui->amplitudeLineEdit->setEnabled(false);
+            ui->lineEditIPI->setEnabled(false);
+            ui->lineEditBAratio->setEnabled(false);
+            ui->TimeLimitLineEdit->setEnabled(enable);
+
+            ui->ModeLabel->setEnabled(false);
+            ui->DirectionLabel->setEnabled(false);
+            ui->WaveformLabel->setEnabled(false);
+            ui->BurstPulsesLabel->setEnabled(false);
+            ui->IPILabel->setEnabled(false);
+            ui->BAratioLabel->setEnabled(false);
+            ui->EnabledLabel->setEnabled(false);
+
+            ui->SetModeError->setEnabled(false);
+            ui->RequestInfoError->setEnabled(false);
+
+            break;
+    }
 }
 
 void TMSwindow::on_testTrigger_clicked()
 {
-    if(handler.getTriggerEnableStatus()) {
-        handler.send_trigger();
-        std::cout << "Trigger sent" << '\n';
-    } else {
-        QMessageBox::warning(this, "Trigger Port Error", "Trigger port not enabled.");
+    switch (connectionType) {
+        case COM:
+            if(handler.getTriggerEnableStatus()) {
+                handler.send_trigger();
+                std::cout << "Trigger sent" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
+
+        case TTL:
+            if(handler.getTriggerEnableStatus()) {
+                handler.send_trigger_TTL();
+                std::cout << "Trigger sent" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
     }
 }
 void TMSwindow::on_enable_clicked()
 {
-    if(handler.getTriggerConnectStatus()) {
-        handler.set_enable(true);
-        std::cout << "Trigger port enabled" << '\n';
-    } else {
-        QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
+    switch (connectionType) {
+        case COM:
+            if(handler.getTriggerConnectStatus()) {
+                handler.set_enable(true);
+                std::cout << "Trigger port enabled" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
+
+        case TTL:
+            if(handler.getTriggerConnectStatus()) {
+                handler.set_enable_TTL(true);
+                std::cout << "Trigger port enabled" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
     }
 }
 
 
 void TMSwindow::on_disable_clicked()
 {
-    if(handler.getTriggerConnectStatus()) {
-        handler.set_enable(false);
-        std::cout << "Trigger port disabled" << '\n';
-    } else {
-        QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected.");
+    switch (connectionType) {
+        case COM:
+            if(handler.getTriggerConnectStatus()) {
+                handler.set_enable(false);
+                std::cout << "Trigger port disabled" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
+
+        case TTL:
+            if(handler.getTriggerConnectStatus()) {
+                handler.set_enable_TTL(false);
+                std::cout << "Trigger port disabled" << '\n';
+            } else { QMessageBox::warning(this, "Trigger Port Error", "Trigger port not connected."); }
+
+            break;
     }
 }
 
@@ -218,3 +305,10 @@ void TMSwindow::on_RequestInfo_clicked()
     }
 }
 
+
+void TMSwindow::on_comboBox_connectionType_currentIndexChanged(int index)
+{
+    if (index == 0) { connectionType = COM; }
+    else if (index == 1) { connectionType = TTL; }
+    handler.setTMSConnectionType(connectionType);
+}

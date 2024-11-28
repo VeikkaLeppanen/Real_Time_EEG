@@ -26,6 +26,11 @@ enum HandlerState {
   WAITING_FOR_STOP
 };
 
+enum TMSConnectionType {
+    COM,
+    TTL
+};
+
 class dataHandler {
 public:
     // Default constructor
@@ -169,24 +174,25 @@ public:
         triggerSet.erase(seqNum);
     }
 
+    void setTMSConnectionType(TMSConnectionType type) { TMS_connectionType = type; }
+
+    // MAGPRO FUNCTIONS
     int connectTriggerPort();
-
     void send_trigger();
-
     void set_enable(bool status);
-
     void set_amplitude(int amplitude);
-
     void magPro_set_mode(int mode = 0, int direction = 0, int waveform = 1, int burst_pulses = 5, float ipi = 1, float ba_ratio = 1.0, bool delay = true);
-
     void magPro_request_mode_info();
-
     void get_mode_info(int &mode, int &direction, int &waveform, int &burst_pulses, float &ipi, float &ba_ratio, bool &enabled);
-
     void save_seqnum_list() { 
         writeMatrixiToCSV("trigger_seqNum_list.csv", vectorToColumnMatrixi(seqNum_list)); 
         std::cout << "Trigger list size: " << seqNum_list.size() << std::endl;
     }
+
+    // TTL functions
+    int connectTriggerPort_TTL();
+    void send_trigger_TTL();
+    void set_enable_TTL(bool status);
 
 private:
     HandlerState handler_state = WAITING_FOR_START;
@@ -245,6 +251,9 @@ private:
     MultiChannelRealTimeFilter RTfilter_;
 
     // Sending triggers
+    TMSConnectionType TMS_connectionType = COM;
+
+    // MAGPRO
     magPro magPro_3G;
     bool triggerPortState = false;
     bool triggerEnableState = false;

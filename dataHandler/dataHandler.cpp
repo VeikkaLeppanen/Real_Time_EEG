@@ -132,10 +132,19 @@ void dataHandler::addData(const Eigen::VectorXd &samples, const double &time_sta
         }
 
         // Triggering
-        if (/*getTriggerEnableStatus() && */shouldTrigger(SeqNo) && checkTimeLimit()) {    
+        if (getTriggerEnableStatus() && shouldTrigger(SeqNo) && checkTimeLimit()) {
             latest_trigger_time = std::chrono::system_clock::now();
             
-            if (getTriggerConnectStatus()) send_trigger();
+            if (getTriggerConnectStatus()) {
+                switch (TMS_connectionType) {
+                    case COM:
+                        send_trigger();
+                        break;
+                    case TTL:
+                        send_trigger_TTL();
+                        break;
+                }
+            }
             
             seqNum_list.push_back(SeqNo);
 
@@ -271,4 +280,18 @@ void dataHandler::get_mode_info(int &mode, int &direction, int &waveform, int &b
     ipi = magPro_3G.get_current_ipi();
     ba_ratio = magPro_3G.get_current_ba_ratio();
     enabled = magPro_3G.get_current_enabled();
+}
+
+// TTL functions
+
+int dataHandler::connectTriggerPort_TTL() {
+    return 0;
+}
+
+void dataHandler::send_trigger_TTL() {
+    
+}
+
+void dataHandler::set_enable_TTL(bool status) {
+    triggerEnableState = status;
 }
