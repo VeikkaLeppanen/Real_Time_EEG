@@ -18,13 +18,11 @@ find_package(Boost 1.65 REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 
 include_directories(/home/veikka/Work/Real_Time_EEG)
-# include_directories(/usr/include/eigen3)
+include_directories(/usr/local/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
-# Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR})
-
 
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
 file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
@@ -51,6 +49,7 @@ target_link_libraries(real_time_eeg PRIVATE
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
+    LabJackM
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)

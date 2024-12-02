@@ -285,11 +285,43 @@ void dataHandler::get_mode_info(int &mode, int &direction, int &waveform, int &b
 // TTL functions
 
 int dataHandler::connectTriggerPort_TTL() {
-    return 0;
+    if (labjack_handle == -1) {
+        int err = LJM_Open(LJM_dtANY, LJM_ctANY, "LJM_idANY", &labjack_handle);
+        if (err != LJME_NOERROR) {
+            labjack_handle = -1;
+            std::cerr << "Failed to connect to LabJack" << std::endl;
+        } else {
+            // PrintDeviceInfoFromHandle(labjack_handle);
+            std::cerr << "Successfully connected to LabJack." << std::endl;
+            return 0;
+        }
+    }
+    return 1;
 }
 
 void dataHandler::send_trigger_TTL() {
-    
+  if (labjack_handle == -1) {
+    std::cerr << "LabJack is not connected. Skipping trigger.";
+    return;
+  }
+
+  /* Set output port state to high. */
+  int err = LJM_eWriteName(labjack_handle, "FIO5", 1);
+  if (err != LJME_NOERROR) {
+    std::cerr << "LabJack failed to set output port high." << std::endl;
+    return;
+  }
+
+  /* Wait for one millisecond. */
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+  /* Set output port state to low. */
+  err = LJM_eWriteName(labjack_handle, "FIO5", 0);
+  if (err != LJME_NOERROR) {
+    std::cerr << "LabJack failed to set output port low." << std::endl;
+    return;
+  }
+
 }
 
 void dataHandler::set_enable_TTL(bool status) {
