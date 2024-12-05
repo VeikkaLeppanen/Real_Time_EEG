@@ -125,6 +125,8 @@ private slots:
     void MRI_clicked();
     void resetMRIwinPointer();
 
+    void addSignalViewer();
+    
 private:
     Ui::MainWindow *ui;
     MainGlWidget *mainglWidget;

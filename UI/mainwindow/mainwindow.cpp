@@ -38,6 +38,19 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     connect(tmsSettingsAction, &QAction::triggered, this, &MainWindow::triggering_clicked);
 
     // ----------------------------
+    // Create the toolbar
+    // ----------------------------
+    QToolBar *toolbar = addToolBar("Main Toolbar");
+
+    // Create action for adding signal viewer
+    QAction *addSignalViewerAction = new QAction("Add Signal Viewer", this);
+    toolbar->addAction(addSignalViewerAction);
+
+    // Connect action to slot
+    connect(addSignalViewerAction, &QAction::triggered, this, &MainWindow::addSignalViewer);
+
+
+    // ----------------------------
     // Create the status bar
     // ----------------------------
     QStatusBar *statusBar = this->statusBar();
@@ -326,4 +339,36 @@ void MainWindow::MRI_clicked()
 
 void MainWindow::resetMRIwinPointer() {
     MRIwin = nullptr;  // Reset the pointer after the window is destroyed
+}
+
+void MainWindow::addSignalViewer()
+{
+    // Create a new dock widget
+    QDockWidget *dockWidget = new QDockWidget(this);
+
+    // Create a unique title for each dock widget
+    static int viewerCount = 1;
+    dockWidget->setWindowTitle(QString("Signal Viewer %1").arg(viewerCount++));
+    
+    // Create the content of the dock widget (e.g., a custom widget for displaying signals)
+    QWidget *signalViewer = new QWidget(dockWidget);
+
+    // Optionally, set up the signalViewer widget here
+
+    dockWidget->setWidget(signalViewer);
+
+    // Set the allowed dock areas
+    dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+
+    // Add the dock widget to the main window
+    addDockWidget(Qt::BottomDockWidgetArea, dockWidget);
+
+    // Adjust the initial size of the dock widget
+    // Note: Controlling the exact size can be complex due to layout management
+    // We'll set a preferred size using size hints
+    signalViewer->setMinimumHeight(height() / 5);
+    signalViewer->setMaximumHeight(height() / 5);
+
+    // Optionally, store the dock widget if you need to manage it later
+    // dockWidgets.append(dockWidget);
 }
