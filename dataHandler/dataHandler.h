@@ -235,7 +235,8 @@ private:
     // Gradient artifact correction
     bool Apply_GACorr = false;
     GACorrection GACorr_;
-    int TA_length = 10000;
+    int TA_length = 5000;
+    int TR_length = 10000;
     int GA_average_length = 25;
     int TA_tracker = 0;
 
