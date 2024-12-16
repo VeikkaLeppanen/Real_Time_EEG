@@ -8,6 +8,7 @@
 #include <QDockWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QVector>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QSlider>
@@ -21,6 +22,7 @@
 #include "workers/phaseEstimationWorker.h"
 #include "workers/EEGSpinWorker.h"
 #include "mainglwidget.h"
+#include "customTitleBar.h"
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow/eegwindow.h"
 #include "phaseEstimationwindow/phaseEstwindow.h"
@@ -39,18 +41,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 protected:
-    // void resizeEvent(QResizeEvent *event) override {
-    //     int width = event->size().width();
-    //     int height = event->size().height();
-
-    //     // Ensure width is at least 3 times the height
-    //     if (height < width / 2) {
-    //         height = width / 2;
-    //         resize(width, height); // Resize the window to enforce the aspect ratio
-    //     }
-
-    //     QMainWindow::resizeEvent(event);
-    // }
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
@@ -107,7 +98,7 @@ public slots:
                 .arg(isOn ? "ON" : "OFF")
         );
     }
-    
+
 private slots:
     void handleError(const QString& error);
 
@@ -129,7 +120,6 @@ private slots:
     
 private:
     Ui::MainWindow *ui;
-    MainGlWidget *mainglWidget;
     QToolBar *mainToolbar;
     QLabel *eegBridgeLabel;
     QLabel *preprocessingLabel;
@@ -137,8 +127,8 @@ private:
     QLabel *fMRILabel;
     QLabel *TMSLabel;
 
-    QListWidget *toggleList;
-    QPushButton *colorPickerButton;
+    QVector<QDockWidget*> signalViewers;
+    QStringList signalSources = {"(empty)"};
 
     // eeg_bridge parameters
     EegBridge bridge;

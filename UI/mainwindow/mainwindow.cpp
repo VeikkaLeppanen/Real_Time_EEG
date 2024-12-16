@@ -11,8 +11,6 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     setMinimumSize(600, 200); // Ensure a reasonable starting size
     resize(1280, 720);
 
-    mainglWidget = ui->mainGlWidget;
-
     // ----------------------------
     // Create the menu bar
     // ----------------------------
@@ -49,6 +47,7 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
     // Connect action to slot
     connect(addSignalViewerAction, &QAction::triggered, this, &MainWindow::addSignalViewer);
 
+    setDockNestingEnabled(true);
 
     // ----------------------------
     // Create the status bar
@@ -77,11 +76,11 @@ MainWindow::~MainWindow()
 
 void MainWindow::updateData()
 {
-    MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
+    // MainGlWidget* mainglWidget = ui->mainGlWidget;
+    // if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
-        // mainglWidget->updateMatrix(processed_data);
-    }
+    //     mainglWidget->updateMatrix(processed_data);
+    // }
 }
 
 // eeg window utilities
@@ -341,34 +340,77 @@ void MainWindow::resetMRIwinPointer() {
     MRIwin = nullptr;  // Reset the pointer after the window is destroyed
 }
 
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::Close)
+    {
+        QDockWidget *dockWidget = qobject_cast<QDockWidget*>(obj);
+        if (dockWidget)
+        {
+            // Remove from the QVector
+            signalViewers.removeOne(dockWidget);
+
+            // Optionally, perform any additional cleanup
+            // For example, delete the dock widget
+            dockWidget->deleteLater();
+        }
+    }
+
+    // Pass the event on to the parent class
+    return QMainWindow::eventFilter(obj, event);
+}
+
 void MainWindow::addSignalViewer()
 {
     // Create a new dock widget
     QDockWidget *dockWidget = new QDockWidget(this);
 
-    // Create a unique title for each dock widget
-    static int viewerCount = 1;
-    dockWidget->setWindowTitle(QString("Signal Viewer %1").arg(viewerCount++));
-    
-    // Create the content of the dock widget (e.g., a custom widget for displaying signals)
-    QWidget *signalViewer = new QWidget(dockWidget);
+    // Use the index in the QVector as the viewer number
+    int viewerIndex = signalViewers.size();
+    QString viewerTitle = QString("Signal Viewer %1").arg(viewerIndex + 1);
+    dockWidget->setWindowTitle(viewerTitle); // This is still useful for window management
 
-    // Optionally, set up the signalViewer widget here
+    // Create the custom title bar with the sources, passing the dockWidget
+    CustomTitleBar *titleBar = new CustomTitleBar(viewerTitle, signalSources, dockWidget, dockWidget);
 
-    dockWidget->setWidget(signalViewer);
+    // Set the custom title bar on the dock widget
+    dockWidget->setTitleBarWidget(titleBar);
+
+    // Create the content of the dock widget
+    MainGlWidget* mainglWidget = new MainGlWidget(dockWidget);
+
+    // Set size policies to allow expansion
+    dockWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mainglWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // Set minimum height if desired
+    mainglWidget->setMinimumHeight(50);
+
+    // Set the widget
+    dockWidget->setWidget(mainglWidget);
 
     // Set the allowed dock areas
     dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);
 
     // Add the dock widget to the main window
-    addDockWidget(Qt::BottomDockWidgetArea, dockWidget);
+    if (signalViewers.isEmpty())
+    {
+        // First dock widget; add it normally
+        addDockWidget(Qt::TopDockWidgetArea, dockWidget);
+    }
+    else
+    {
+        // Not the first dock widget; split the previous one vertically
+        QDockWidget *previousDockWidget = signalViewers.last();
+        splitDockWidget(previousDockWidget, dockWidget, Qt::Vertical);
+    }
 
-    // Adjust the initial size of the dock widget
-    // Note: Controlling the exact size can be complex due to layout management
-    // We'll set a preferred size using size hints
-    signalViewer->setMinimumHeight(height() / 5);
-    signalViewer->setMaximumHeight(height() / 5);
+    // Install the event filter on the dock widget
+    dockWidget->installEventFilter(this);
 
-    // Optionally, store the dock widget if you need to manage it later
-    // dockWidgets.append(dockWidget);
+    // Store the dock widget in the QVector
+    signalViewers.append(dockWidget);
+
+    // Connect the signal from the title bar to the MainGlWidget
+    connect(titleBar, &CustomTitleBar::signalSourceChanged, mainglWidget, &MainGlWidget::setSignalSource);
 }
