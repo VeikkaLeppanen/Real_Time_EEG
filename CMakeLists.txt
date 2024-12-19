@@ -24,6 +24,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+# set(NIBRARY_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static")
+message(STATUS "NIBRARY_ROOT: $ENV{NIBRARY_ROOT}")
+
+include_directories("$ENV{NIBRARY_ROOT}/install/include/nibrary_v0.1.0")
+link_directories("$ENV{NIBRARY_ROOT}/install/lib/nibrary_v0.1.0")
+
+# add_subdirectory(external/nibrary)
+
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
 file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
 file(GLOB_RECURSE EEG_BRIDGE_SOURCES "devices/EEG/eeg_bridge/*.cpp" "devices/EEG/eeg_bridge/*.h")
@@ -37,9 +45,7 @@ file(GLOB_RECURSE UI_SOURCES "UI/*.cpp" "UI/*.h" "UI/*.ui")
 set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES})
 
 # Add the executable based on the sources
-add_executable(real_time_eeg ${SOURCES}
-    UI/TMSwindow.ui
-    UI/phaseEstwindow.ui)
+add_executable(real_time_eeg ${SOURCES})
 
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
@@ -50,6 +56,9 @@ target_link_libraries(real_time_eeg PRIVATE
     ${Boost_LIBRARIES}
     fftw3
     LabJackM
+    "$ENV{NIBRARY_ROOT}/libNibrary.a"
+    "$ENV{NIBRARY_ROOT}/external/zlib/src/build_zlib-build/libz.a"
+    "$ENV{NIBRARY_ROOT}/external/geogram/src/build_geogram-build/lib/libgeogram.a"
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)

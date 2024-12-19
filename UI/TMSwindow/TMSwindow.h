@@ -19,6 +19,9 @@ public:
     explicit TMSwindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~TMSwindow();
 
+signals:
+    void TMSStatusChanged(bool status);
+
 private slots:
     void on_connectTrigger_clicked();
 

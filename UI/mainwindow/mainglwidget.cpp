@@ -3,11 +3,9 @@
 MainGlWidget::MainGlWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
+    windowLength_seconds = 2;   // Total time in seconds displayed
+    time_line_spacing = 500;    // Line spacing in milliseconds
     QTimer *timer = new QTimer(this);
-    matrixCapasity_ = 30000;
-    n_channels_ = 0;
-    dataMatrix_ = Eigen::MatrixXd::Zero(n_channels_, matrixCapasity_);
-
     connect(timer, &QTimer::timeout, this, &MainGlWidget::updateGraph);
     timer->start(16); // Update approximately every 16 ms (60 FPS)
 }
@@ -25,89 +23,45 @@ void MainGlWidget::resizeGL(int w, int h)
 
 void MainGlWidget::paintGL()
 {
-    // Initializing positional parameters
-    int windowHeight = height();
-    int enabled_channel_count = n_channels_;
-    int rowHeight = windowHeight / std::max(1, enabled_channel_count);
 
-    // min max values for y axis
-    Eigen::VectorXd min_coeffs = Eigen::VectorXd::Zero(n_channels_);
-    Eigen::VectorXd max_coeffs = Eigen::VectorXd::Zero(n_channels_);
-    
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // Draw graphs for enabled channels
-    int graph_index = 0;
-    for (int row = 0; row < dataMatrix_.rows(); row++) {
-        // Set viewport for this row
-        glViewport(0, graph_index * rowHeight, width(), rowHeight);
-
-        // Set up the projection matrix
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);  // Set the coordinate system to cover [-1,1] in both axes
-
-        // Switch back to modelview matrix
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-        // Prepare data and draw the line strip
-        Eigen::VectorXd dataVector = dataMatrix_.row(n_channels_ - 1 - row);
-        double minVal = dataVector.minCoeff();
-        min_coeffs(row) = minVal;
-        double maxVal = dataVector.maxCoeff();
-        max_coeffs(row) = maxVal;
-
-        glColor3f(1.0, 1.0, 1.0); // Set the color to white for the lines
-        glBegin(GL_LINE_STRIP);
-        for (int i = 0; i < dataVector.size(); ++i) {
-            float x = (float)i / (dataVector.size() - 1) * 2.0f - 1.0f;
-            float y = 0;
-            if (maxVal != minVal) {
-                y = (dataVector(i) - minVal) / (maxVal - minVal) * 2.0f - 1.0f;
-            }
-            glVertex2f(x, y);
-        }
-        glEnd();
-        graph_index++;
-    }
-
-    // QPainter for text overlays
-    QPainter painter(this);
-    painter.setPen(Qt::red);
-    painter.setFont(QFont("Arial", 10)); // Set font here
-
-    graph_index = 0;
-    for (int row = 0; row < dataMatrix_.rows(); row++) {
-        // Draw channel name for each channel
-        int yPos_name = windowHeight - (rowHeight * graph_index + rowHeight / 2 + 10);  // Adjust vertical position
-        QString name = "Undefined";  // Default name if no channel name is available
-        if (row < channelNames_.size()) {
-            name = channelNames_.at(n_channels_ - 1 - row);
-        }
-        painter.drawText(10, yPos_name, name);
-
-        // Draw channel scales
-        if (draw_channel_scales) {
-            int yPos_min = windowHeight - (rowHeight * graph_index + 10);
-            int yPos_max = windowHeight - (rowHeight * graph_index + rowHeight - 10);
-            
-            QString min_value = QString::number(min_coeffs(row));
-            QString max_value = QString::number(max_coeffs(row));
-            painter.drawText(width() - 50, yPos_min, min_value);
-            painter.drawText(width() - 50, yPos_max, max_value);
-        }
-
-
-        graph_index++;
-    }
-
-    painter.end();
 }
+
 
 void MainGlWidget::updateGraph()
 {
     // This method should ideally handle fetching new data and triggering a redraw
-    emit fetchData();
     update();  // Request a re-draw
+}
+
+void MainGlWidget::setSignalSource(const QString &source)
+{
+    // Update the signal source based on the selection
+    // Implement the logic to handle the signal source change
+    qDebug() << "Signal source changed to:" << source;
+
+    // For example, you might have a method like:
+    // loadSignalSource(source);
+}
+
+void MainGlWidget::updateData(const Eigen::VectorXi &newData, 
+                              const Eigen::VectorXi &triggers_A, 
+                              const Eigen::VectorXi &triggers_B, 
+                              const Eigen::VectorXd &time_stamps, 
+                                        std::string source_name) { 
+    if (!pause_view) {
+        std::lock_guard<std::mutex> lock(this->dataMutex);
+        
+        // Check if dimensions differ
+        if (dataVector_.size() != newData.size()) dataVector_.resize(newData.size());
+        if (triggers_A_.size() != triggers_A.size()) triggers_A_.resize(triggers_A.size());
+        if (triggers_B_.size() != triggers_B.size()) triggers_B_.resize(triggers_B.size());
+        if (time_stamps_.size() != time_stamps.size()) time_stamps_.resize(time_stamps.size());
+
+        dataVector_ = newData;
+        vectorCapasity = newData.size();
+        triggers_A_ = triggers_A;
+        triggers_B_ = triggers_B;
+        time_stamps_ = time_stamps;
+        source_name_ = QString::fromStdString(source_name);
+    }
 }

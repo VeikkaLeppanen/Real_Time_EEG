@@ -8,17 +8,65 @@ MainWindow::MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_
       signal_received(signal_received)
 {
     ui->setupUi(this);
+    setMinimumSize(600, 200); // Ensure a reasonable starting size
     resize(1280, 720);
 
-    MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (false && mainglWidget) {                                        // REMOVE FALSE IN ORDER TO ENABLE THE GLWIDGET
+    // ----------------------------
+    // Create the menu bar
+    // ----------------------------
+    QMenuBar *menuBar = this->menuBar();
 
-        connect(mainglWidget, &MainGlWidget::fetchData, this, &MainWindow::updateData);
+    // Create the File menu and add actions
+    QMenu *eegMenu = menuBar->addMenu("EEG");
+    QAction *prepAction = eegMenu->addAction("Preprocessing");
+    QAction *phaseEstAction = eegMenu->addAction("Phase estimation");
 
-    } else {
-        // Error handling if glWidget is not found
-        qWarning("Glwidget not found in UI!");
-    }
+    // Create the Edit menu and add actions
+    QMenu *mriMenu = menuBar->addMenu("MRI");
+    QAction *mriSettingsAction = mriMenu->addAction("MRI settings");
+
+    // Create the View menu and add actions
+    QMenu *tmsMenu = menuBar->addMenu("TMS");
+    QAction *tmsSettingsAction = tmsMenu->addAction("Settings");
+
+    // Connect actions to slots
+    connect(prepAction, &QAction::triggered, this, &MainWindow::EEG_clicked);
+    connect(phaseEstAction, &QAction::triggered, this, &MainWindow::processing_clicked);
+    connect(mriSettingsAction, &QAction::triggered, this, &MainWindow::MRI_clicked);
+    connect(tmsSettingsAction, &QAction::triggered, this, &MainWindow::triggering_clicked);
+
+    // ----------------------------
+    // Create the toolbar
+    // ----------------------------
+    QToolBar *toolbar = addToolBar("Main Toolbar");
+
+    // Create action for adding signal viewer
+    QAction *addSignalViewerAction = new QAction("Add Signal Viewer", this);
+    toolbar->addAction(addSignalViewerAction);
+
+    // Connect action to slot
+    connect(addSignalViewerAction, &QAction::triggered, this, &MainWindow::addSignalViewer);
+
+    setDockNestingEnabled(true);
+
+    // ----------------------------
+    // Create the status bar
+    // ----------------------------
+    QStatusBar *statusBar = this->statusBar();
+
+    // Create labels for different conditions
+    eegBridgeLabel = new QLabel("EEG Bridge: <span style='color: red;'>OFF</span>");
+    preprocessingLabel = new QLabel("EEG preprocessing: <span style='color: red;'>OFF</span>");
+    phaseEstLabel = new QLabel("EEG phase estimation: <span style='color: red;'>OFF</span>");
+    fMRILabel = new QLabel("fMRI: <span style='color: red;'>OFF</span>");
+    TMSLabel = new QLabel("TMS: <span style='color: red;'>OFF</span>");
+
+    // Add labels to the status bar
+    statusBar->addWidget(eegBridgeLabel);
+    statusBar->addWidget(preprocessingLabel);
+    statusBar->addWidget(phaseEstLabel);
+    statusBar->addWidget(fMRILabel);
+    statusBar->addWidget(TMSLabel);
 }
 
 MainWindow::~MainWindow()
@@ -28,16 +76,12 @@ MainWindow::~MainWindow()
 
 void MainWindow::updateData()
 {
-    MainGlWidget* mainglWidget = ui->mainGlWidget;
-    if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
+    // MainGlWidget* mainglWidget = ui->mainGlWidget;
+    // if (mainglWidget && processingWorkerRunning && (processed_data.size() > 0)) {
 
-        mainglWidget->updateMatrix(processed_data);
-    }
+    //     mainglWidget->updateMatrix(processed_data);
+    // }
 }
-
-
-
-
 
 // eeg window utilities
 void MainWindow::eegBridgeSpin(int port, int timeout)
@@ -58,8 +102,10 @@ void MainWindow::eegBridgeSpin(int port, int timeout)
         connect(eeg_worker, &EEGSpinWorker::finished, eeg_worker, &EEGSpinWorker::deleteLater);
         connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
+        toggleEegBridgeCondition(true);
         connect(thread, &QThread::finished, this, [=]() {
             handler.save_seqnum_list();
+            toggleEegBridgeCondition(false);
             qDebug("EEG_bridge Thread and EEGSpinWorker cleaned up properly");
         });
         
@@ -93,7 +139,7 @@ void MainWindow::stopGACorrection() {
     handler.reset_GACorr_tracker();
 }
 
-void MainWindow::on_EEG_clicked()
+void MainWindow::EEG_clicked()
 {
     if (!eegwindow) {
         eegwindow = new eegWindow(handler, signal_received, processingWorkerRunning, this);
@@ -135,10 +181,12 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
         QObject::connect(preProcessingworker, &preProcessingWorker::finished, preProcessingworker, &preProcessingWorker::deleteLater);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
+        togglePreprocessingCondition(true);
         QObject::connect(thread, &QThread::finished, this, [=]() {
             preProcessingworker = nullptr;
             preprocessingWorkerRunning = false;
             processingWorkerRunning = 0;
+            togglePreprocessingCondition(false);
             qDebug("Processing Thread and preProcessingWorker cleaned up properly");
         });
 
@@ -153,7 +201,7 @@ void MainWindow::startPreprocessing(preprocessingParameters& prepParams)
     }
 }
 
-void MainWindow::on_processing_clicked()
+void MainWindow::processing_clicked()
 {
     if (bridge.isRunning() && handler.isReady() && processingWorkerRunning) {
         if (!phaseEstwin) {
@@ -174,41 +222,41 @@ void MainWindow::on_processing_clicked()
         phaseEstParams.downsampling_factor = tempParams.downsampling_factor;
         startPhaseEstimationprocessing(phaseEstParams);
     } else {
-        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG windows device tab.");
+        QMessageBox::warning(this, "EEG error", "Please connect the system form EEG preprocessing windows device tab.");
     }
 }
 
 void MainWindow::connect_processing_worker()
 {
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updatePhaseEstDisplayedData, phaseEstwin->getProcessingGlWidget(), &ProcessingGlWidget::updateMatrix);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updatePhaseEstwindowNames, phaseEstwin->getProcessingGlWidget(), &ProcessingGlWidget::updateChannelNamesSTD);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::updateSpatialChannelNames, phaseEstwin, &phaseEstwindow::updateSpatialChannelNames);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setFilterState, phaseEstworker, &phaseEstimationWorker::setFilterState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setEEGViewState, phaseEstworker, &phaseEstimationWorker::setEEGViewState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setphaseEstimateState, phaseEstworker, &phaseEstimationWorker::setPhaseEstimationState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseTargetingState, phaseEstworker, &phaseEstimationWorker::setPhaseTargetingState);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseEstParams, phaseEstworker, &phaseEstimationWorker::setPhaseEstimateParameters);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseError, phaseEstworker, &phaseEstimationWorker::setPhaseDifference);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSpatilaTargetChannel, phaseEstworker, &phaseEstimationWorker::setSpatilaTargetChannel);
-    QObject::connect(phaseEstwin, &phaseEstwindow::outerElectrodesStateChanged, phaseEstworker, &phaseEstimationWorker::outerElectrodesStateChanged);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setPhaseErrorType, phaseEstworker, &phaseEstimationWorker::setPhaseErrorType);
-    QObject::connect(phaseEstwin, &phaseEstwindow::requestEstStates, phaseEstworker, &phaseEstimationWorker::sendEstStates);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRcheck, phaseEstworker, &phaseEstimationWorker::setSNRcheck);
-    QObject::connect(phaseEstwin, &phaseEstwindow::setSNRthreshold, phaseEstworker, &phaseEstimationWorker::setSNRthreshold);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendNumSamples, phaseEstwin, &phaseEstwindow::setNumSamples);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::newEstStates, phaseEstwin, &phaseEstwindow::newEstStates);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updatePhaseEstDisplayedData,    phaseEstwin->getProcessingGlWidget(),       &ProcessingGlWidget::updateMatrix);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updatePhaseEstwindowNames,      phaseEstwin->getProcessingGlWidget(),       &ProcessingGlWidget::updateChannelNamesSTD);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::updateSpatialChannelNames,      phaseEstwin,                                &phaseEstwindow::updateSpatialChannelNames);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setFilterState,                        phaseEstworker,                             &phaseEstimationWorker::setFilterState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setEEGViewState,                       phaseEstworker,                             &phaseEstimationWorker::setEEGViewState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setphaseEstimateState,                 phaseEstworker,                             &phaseEstimationWorker::setPhaseEstimationState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseTargetingState,                phaseEstworker,                             &phaseEstimationWorker::setPhaseTargetingState);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseEstParams,                     phaseEstworker,                             &phaseEstimationWorker::setPhaseEstimateParameters);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseError,                         phaseEstworker,                             &phaseEstimationWorker::setPhaseDifference);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSpatilaTargetChannel,               phaseEstworker,                             &phaseEstimationWorker::setSpatilaTargetChannel);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::outerElectrodesStateChanged,           phaseEstworker,                             &phaseEstimationWorker::outerElectrodesStateChanged);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setPhaseErrorType,                     phaseEstworker,                             &phaseEstimationWorker::setPhaseErrorType);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::requestEstStates,                      phaseEstworker,                             &phaseEstimationWorker::sendEstStates);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSNRcheck,                           phaseEstworker,                             &phaseEstimationWorker::setSNRcheck);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::setSNRthreshold,                       phaseEstworker,                             &phaseEstimationWorker::setSNRthreshold);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendNumSamples,                 phaseEstwin,                                &phaseEstwindow::setNumSamples);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::newEstStates,                   phaseEstwin,                                &phaseEstwindow::newEstStates);
 
     // SNR
-    QObject::connect(phaseEstwin, &phaseEstwindow::sendSNRmax, phaseEstworker, &phaseEstimationWorker::setSNRmax);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax, phaseEstwin, &phaseEstwindow::newSNRmax);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::sendSNRmax_list, phaseEstwin, &phaseEstwindow::newSNRmax_list);
+    QObject::connect(phaseEstwin,       &phaseEstwindow::sendSNRmax,                            phaseEstworker,                             &phaseEstimationWorker::setSNRmax);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendSNRmax,                     phaseEstwin,                                &phaseEstwindow::newSNRmax);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::sendSNRmax_list,                phaseEstwin,                                &phaseEstwindow::newSNRmax_list);
     
-    QObject::connect(eegwindow, &eegWindow::sendPrepStates, phaseEstworker, &phaseEstimationWorker::receivePrepStates);
-    QObject::connect(eegwindow, &eegWindow::set_processing_pause, phaseEstworker, &phaseEstimationWorker::set_processing_pause);
+    QObject::connect(eegwindow,         &eegWindow::sendPrepStates,                             phaseEstworker,                             &phaseEstimationWorker::receivePrepStates);
+    QObject::connect(eegwindow,         &eegWindow::set_processing_pause,                       phaseEstworker,                             &phaseEstimationWorker::set_processing_pause);
     
     // Polar histogram
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_1, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToFirstCircle);
-    QObject::connect(phaseEstworker, &phaseEstimationWorker::polarHistogramAddSample_2, phaseEstwin->getHistogramWidget(), &PolarHistogramOpenGLWidget::addSampleToSecondCircle);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::polarHistogramAddSample_1,      phaseEstwin->getHistogramWidget(),          &PolarHistogramOpenGLWidget::addSampleToFirstCircle);
+    QObject::connect(phaseEstworker,    &phaseEstimationWorker::polarHistogramAddSample_2,      phaseEstwin->getHistogramWidget(),          &PolarHistogramOpenGLWidget::addSampleToSecondCircle);
 }
 
 void MainWindow::connect_EEG_Prepworker()
@@ -240,11 +288,13 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
         QObject::connect(phaseEstworker, &phaseEstimationWorker::error, this, &MainWindow::handleError);
         QObject::connect(phaseEstworker, &phaseEstimationWorker::finished, phaseEstworker, &phaseEstimationWorker::deleteLater);
         QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-
+        
+        togglePhaseEstCondition(true);
         QObject::connect(thread, &QThread::finished, this, [=]() {
             phaseEstworker = nullptr;
             phaseEstWorkerRunning = false;
             processingWorkerRunning = 0;
+            togglePhaseEstCondition(false);
             qDebug("Processing Thread and phaseEstimationWorker cleaned up properly");
         });
 
@@ -261,12 +311,13 @@ void MainWindow::startPhaseEstimationprocessing(phaseEstimateParameters phaseEst
     }
 }
 
-void MainWindow::on_triggering_clicked()
+void MainWindow::triggering_clicked()
 {
     std::cout << "Triggering start" << '\n';
     if (!TMSwin) {
         TMSwin = new TMSwindow(handler, signal_received, this);
         connect(TMSwin, &TMSwindow::destroyed, this, &MainWindow::resetTMSwinPointer);
+        connect(TMSwin, &TMSwindow::TMSStatusChanged, this, &MainWindow::toggleTMSCondition);
     }
     TMSwin->show();
     TMSwin->raise();
@@ -277,5 +328,93 @@ void MainWindow::resetTMSwinPointer() {
     TMSwin = nullptr;  // Reset the pointer after the window is destroyed
 }
 
+void MainWindow::MRI_clicked()
+{
+    std::cout << "MRI start" << '\n';
+    if (!MRIwin) {
+        MRIwin = new mriWindow(this);
+        connect(MRIwin, &TMSwindow::destroyed, this, &MainWindow::resetTMSwinPointer);
+    }
+    MRIwin->show();
+    MRIwin->raise();
+    MRIwin->activateWindow();
+}
 
+void MainWindow::resetMRIwinPointer() {
+    MRIwin = nullptr;  // Reset the pointer after the window is destroyed
+}
 
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::Close)
+    {
+        QDockWidget *dockWidget = qobject_cast<QDockWidget*>(obj);
+        if (dockWidget)
+        {
+            // Remove from the QVector
+            signalViewers.removeOne(dockWidget);
+
+            // Optionally, perform any additional cleanup
+            // For example, delete the dock widget
+            dockWidget->deleteLater();
+        }
+    }
+
+    // Pass the event on to the parent class
+    return QMainWindow::eventFilter(obj, event);
+}
+
+void MainWindow::addSignalViewer()
+{
+    // Create a new dock widget
+    QDockWidget *dockWidget = new QDockWidget(this);
+
+    // Use the index in the QVector as the viewer number
+    int viewerIndex = signalViewers.size();
+    QString viewerTitle = QString("Signal Viewer %1").arg(viewerIndex + 1);
+    dockWidget->setWindowTitle(viewerTitle); // This is still useful for window management
+
+    // Create the custom title bar with the sources, passing the dockWidget
+    CustomTitleBar *titleBar = new CustomTitleBar(viewerTitle, signalSources, dockWidget, dockWidget);
+
+    // Set the custom title bar on the dock widget
+    dockWidget->setTitleBarWidget(titleBar);
+
+    // Create the content of the dock widget
+    MainGlWidget* mainglWidget = new MainGlWidget(dockWidget);
+
+    // Set size policies to allow expansion
+    dockWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mainglWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // Set minimum height if desired
+    mainglWidget->setMinimumHeight(50);
+
+    // Set the widget
+    dockWidget->setWidget(mainglWidget);
+
+    // Set the allowed dock areas
+    dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+
+    // Add the dock widget to the main window
+    if (signalViewers.isEmpty())
+    {
+        // First dock widget; add it normally
+        addDockWidget(Qt::TopDockWidgetArea, dockWidget);
+    }
+    else
+    {
+        // Not the first dock widget; split the previous one vertically
+        QDockWidget *previousDockWidget = signalViewers.last();
+        splitDockWidget(previousDockWidget, dockWidget, Qt::Vertical);
+    }
+
+    // Install the event filter on the dock widget
+    dockWidget->installEventFilter(this);
+
+    // Store the dock widget in the QVector
+    signalViewers.append(dockWidget);
+
+    // Connect the signal from the title bar to the MainGlWidget
+    connect(titleBar, &CustomTitleBar::signalSourceChanged, mainglWidget, &MainGlWidget::setSignalSource);
+}
