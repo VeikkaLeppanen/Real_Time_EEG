@@ -32,6 +32,14 @@ else()
     message(FATAL_ERROR "OpenBLAS not found")
 endif()
 
+# set(NIBRARY_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static")
+message(STATUS "NIBRARY_ROOT: $ENV{NIBRARY_ROOT}")
+
+include_directories("$ENV{NIBRARY_ROOT}/install/include/nibrary_v0.1.0")
+link_directories("$ENV{NIBRARY_ROOT}/install/lib/nibrary_v0.1.0")
+
+# add_subdirectory(external/nibrary)
+
 file(GLOB MAIN_SOURCES "*.cpp" "*.h")
 file(GLOB_RECURSE EEG_SOURCES "EEG/*.cpp" "EEG/*.h")
 file(GLOB_RECURSE EEG_BRIDGE_SOURCES "devices/EEG/eeg_bridge/*.cpp" "devices/EEG/eeg_bridge/*.h")
@@ -47,6 +55,7 @@ set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_S
 add_definitions(-DEIGEN_USE_MKL_ALL)
 add_definitions(-DEIGEN_USE_LAPACKE=0)
 
+# Add the executable based on the sources
 add_executable(real_time_eeg ${SOURCES})
 
 # Link libraries
@@ -61,6 +70,9 @@ target_link_libraries(real_time_eeg PRIVATE
     fftw3
     LabJackM
     -m64 -L${MKLROOT}/lib -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
+    "$ENV{NIBRARY_ROOT}/libNibrary.a"
+    "$ENV{NIBRARY_ROOT}/external/zlib/src/build_zlib-build/libz.a"
+    "$ENV{NIBRARY_ROOT}/external/geogram/src/build_geogram-build/lib/libgeogram.a"
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)

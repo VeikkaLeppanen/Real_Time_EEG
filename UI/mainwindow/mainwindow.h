@@ -3,6 +3,17 @@
 
 #include <QMainWindow>
 #include <QThread>
+#include <QToolBar>
+#include <QStatusBar>
+#include <QDockWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QVector>
+#include <QListWidget>
+#include <QListWidgetItem>
+#include <QSlider>
+#include <QColorDialog>
+#include <QLabel>
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QIntValidator>
@@ -11,10 +22,12 @@
 #include "workers/phaseEstimationWorker.h"
 #include "workers/EEGSpinWorker.h"
 #include "mainglwidget.h"
+#include "customTitleBar.h"
 #include "../dataHandler/dataHandler.h"
 #include "eegwindow/eegwindow.h"
 #include "phaseEstimationwindow/phaseEstwindow.h"
 #include "TMSwindow/TMSwindow.h"
+#include "MRIwindow/mriwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -27,9 +40,44 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 public:
     MainWindow(dataHandler &handler, volatile std::sig_atomic_t &signal_received, QWidget *parent = nullptr);
     ~MainWindow();
+    
+    void toggleEegBridgeCondition(bool isOn) {
+        eegBridgeLabel->setText(
+            QString("EEG Bridge: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglePreprocessingCondition(bool isOn) {
+        preprocessingLabel->setText(
+            QString("EEG preprocessing: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglePhaseEstCondition(bool isOn) {
+        phaseEstLabel->setText(
+            QString("EEG phase estimation: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
+    void togglefMRICondition(bool isOn) {
+        fMRILabel->setText(
+            QString("fMRI: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
 
 signals:
 
@@ -43,22 +91,44 @@ public slots:
     void startPreprocessing(preprocessingParameters &parameters);
     void startPhaseEstimationprocessing(phaseEstimateParameters phaseEstParams);
 
+    void toggleTMSCondition(bool isOn) {
+        TMSLabel->setText(
+            QString("TMS: <span style='color: %1;'>%2</span>")
+                .arg(isOn ? "green" : "red")
+                .arg(isOn ? "ON" : "OFF")
+        );
+    }
+
 private slots:
     void handleError(const QString& error);
 
-    void on_EEG_clicked();
+    void EEG_clicked();
     void resetEegWindowPointer();
 
-    void on_processing_clicked();
+    void processing_clicked();
     void connect_processing_worker();
     void connect_EEG_Prepworker();
     void resetProcessingWindowPointer();
 
-    void on_triggering_clicked();
+    void triggering_clicked();
     void resetTMSwinPointer();
 
+    void MRI_clicked();
+    void resetMRIwinPointer();
+
+    void addSignalViewer();
+    
 private:
     Ui::MainWindow *ui;
+    QToolBar *mainToolbar;
+    QLabel *eegBridgeLabel;
+    QLabel *preprocessingLabel;
+    QLabel *phaseEstLabel;
+    QLabel *fMRILabel;
+    QLabel *TMSLabel;
+
+    QVector<QDockWidget*> signalViewers;
+    QStringList signalSources = {"(empty)"};
 
     // eeg_bridge parameters
     EegBridge bridge;
@@ -78,6 +148,7 @@ private:
     eegWindow *eegwindow = nullptr;
     phaseEstwindow *phaseEstwin = nullptr;
     TMSwindow *TMSwin = nullptr;
+    mriWindow *MRIwin = nullptr;
     preProcessingWorker *preProcessingworker = nullptr;
     phaseEstimationWorker *phaseEstworker = nullptr;
 
