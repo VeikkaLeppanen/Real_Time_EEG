@@ -306,17 +306,17 @@ void dataHandler::send_trigger_TTL() {
   }
 
   /* Set output port state to high. */
-  int err = LJM_eWriteName(labjack_handle, "FIO5", 1);
+  int err = LJM_eWriteName(labjack_handle, "FIO4", 1);
   if (err != LJME_NOERROR) {
     std::cerr << "LabJack failed to set output port high." << std::endl;
     return;
   }
 
   /* Wait for one millisecond. */
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//   std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
   /* Set output port state to low. */
-  err = LJM_eWriteName(labjack_handle, "FIO5", 0);
+  err = LJM_eWriteName(labjack_handle, "FIO4", 0);
   if (err != LJME_NOERROR) {
     std::cerr << "LabJack failed to set output port low." << std::endl;
     return;

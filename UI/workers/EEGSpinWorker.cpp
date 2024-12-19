@@ -52,10 +52,11 @@ void EEGSpinWorker::bridge_handler_spin(EegBridge &bridge, dataHandler &handler,
     bridge.eeg_bridge_status = WAITING_MEASUREMENT_START;
     while (!signal_received) {
         int n = bridge.receive_packet();
-        if (n < 0) {
+        if (n <= 0) {
             if (signal_received) break; // Check if the signal caused recvfrom to fail
             std::cerr << "Receive failed" << '\n';
-            break; // Optionally break on other errors too
+            // break; // Optionally break on other errors too
+            continue;
         }
 
         unsigned char firstByte = bridge.buffer[0];
@@ -63,14 +64,29 @@ void EEGSpinWorker::bridge_handler_spin(EegBridge &bridge, dataHandler &handler,
         switch (firstByte)
         {
         case 0x01: { // MeasurementStartPacket
+            // Add buffer validation
+            if (n <= 0 || bridge.buffer == nullptr) {
+                throw std::runtime_error("Invalid buffer or size in MeasurementStart: n=" + std::to_string(n));
+            }
             
-            std::cout << "MeasurementStart package received!\n";
+            std::cout << "MeasurementStart package received!" << '\n';
+            std::cout << "Packet size: " << n << " Bytes" << '\n';
             measurement_start_packet packet_info;
             std::vector<uint16_t> SourceChannels;
             std::vector<uint8_t> ChannelTypes;
             
-            deserializeMeasurementStartPacket_pointer(bridge.buffer, n, packet_info, SourceChannels, ChannelTypes);
+            try {
+                deserializeMeasurementStartPacket_pointer(bridge.buffer, n, packet_info, SourceChannels, ChannelTypes);
+            } catch (const std::exception& e) {
+                std::cerr << "MeasurementStart deserialization error: " << e.what() << '\n';
+                break;
+            }
 
+            // Validate channel data
+            if (SourceChannels.empty()) {
+                throw std::runtime_error("No channels received in MeasurementStart packet");
+            }
+            
             // Divide channels into data and trigger sources
             std::vector<uint16_t> data_channel_sources;
             uint16_t trigger_channel_source = -1;
@@ -108,12 +124,24 @@ void EEGSpinWorker::bridge_handler_spin(EegBridge &bridge, dataHandler &handler,
         } case 0x02: { // SamplesPacket
             if (bridge.eeg_bridge_status == WAITING_MEASUREMENT_START || !handler.isReady()) break;
 
+            // Add buffer validation
+            if (n <= 0 || bridge.buffer == nullptr) {
+                throw std::runtime_error("Invalid buffer or size: n=" + std::to_string(n));
+            }
+
             // Deserialize the received data into a sample_packet instance
             sample_packet packet_info;
             Eigen::VectorXi triggers_A;
             Eigen::VectorXi triggers_B;
 
-            deserializeSamplePacketEigen_pointer(bridge.buffer, n, packet_info, bridge.data_handler_samples, triggers_A, triggers_B, (bridge.numChannels > bridge.numDataChannels));
+            try {
+                deserializeSamplePacketEigen_pointer(bridge.buffer, n, packet_info, 
+                    bridge.data_handler_samples, triggers_A, triggers_B, 
+                    (bridge.numChannels > bridge.numDataChannels));
+            } catch (const std::exception& e) {
+                std::cerr << "Deserialization error: " << e.what() << '\n';
+                break;
+            }
             
             int sequenceNumber = packet_info.PacketSeqNo;
 

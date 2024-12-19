@@ -266,7 +266,6 @@ void MainWindow::on_triggering_clicked()
     std::cout << "Triggering start" << '\n';
     if (!TMSwin) {
         TMSwin = new TMSwindow(handler, signal_received, this);
-        TMSwin->setAttribute(Qt::WA_DeleteOnClose); // Window is deleted on close
         connect(TMSwin, &TMSwindow::destroyed, this, &MainWindow::resetTMSwinPointer);
     }
     TMSwin->show();

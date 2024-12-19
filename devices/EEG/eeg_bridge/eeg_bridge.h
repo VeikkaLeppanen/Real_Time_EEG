@@ -54,7 +54,7 @@ public:
 
 private:
     int PORT = 50000;
-    int socket_timeout = 10;
+    int socket_timeout = 60;
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
     socklen_t len;
