@@ -114,7 +114,7 @@ private:
 
     // eeg_bridge parameters
     int port = 50000;
-    int bridge_timeout = 10;
+    int bridge_timeout = 60;
 
     // Graph parameters
     int samples_to_display = 10000;
