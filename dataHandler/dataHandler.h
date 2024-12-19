@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <cmath>
 #include <Eigen/Dense>
+#include <LabJackM.h>
 
 #include "EEG/preprocessing/GACorrection.h"
 #include "devices/TMS/magPro/magPro.h"
@@ -257,6 +258,11 @@ private:
     magPro magPro_3G;
     bool triggerPortState = false;
     bool triggerEnableState = false;
+
+    // LABJACK
+    int LJM_dtANY = 0;
+    int LJM_ctANY = 0;
+    int labjack_handle = -1;
 
     // Time limit in milliseconds
     int time_limit = 100;

@@ -19,7 +19,7 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenBLAS REQUIRED)
 
 include_directories(/home/veikka/Work/Real_Time_EEG)
-# include_directories(/usr/include/eigen3)
+include_directories(/usr/local/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UI)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -59,6 +59,7 @@ target_link_libraries(real_time_eeg PRIVATE
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
+    LabJackM
     -m64 -L${MKLROOT}/lib -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
 )
 
