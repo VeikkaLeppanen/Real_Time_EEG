@@ -13,6 +13,7 @@
 
 mkdir build
 cd build
+export NIBRARY_ROOT="/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static"
 cmake .. #-DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10
 make
 sudo setcap cap_ipc_lock+ep real_time_eeg

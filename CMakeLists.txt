@@ -25,10 +25,11 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Add the include directories
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-include_directories("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/install/include/nibrary_v0.1.0")
-link_directories("/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/install/lib/nibrary_v0.1.0")
-set(ZLIB_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/external/zlib/src/build_zlib-build")
-set(GEOG_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/external/geogram/src/build_geogram-build")
+# set(NIBRARY_ROOT "/home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static")
+message(STATUS "NIBRARY_ROOT: $ENV{NIBRARY_ROOT}")
+
+include_directories("$ENV{NIBRARY_ROOT}/install/include/nibrary_v0.1.0")
+link_directories("$ENV{NIBRARY_ROOT}/install/lib/nibrary_v0.1.0")
 
 # add_subdirectory(external/nibrary)
 
@@ -47,9 +48,6 @@ set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_S
 # Add the executable based on the sources
 add_executable(real_time_eeg ${SOURCES})
 
-target_include_directories(real_time_eeg PRIVATE "${ZLIB_ROOT}")
-target_include_directories(real_time_eeg PRIVATE "${GEOG_ROOT}")
-
 target_link_libraries(real_time_eeg PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::OpenGL
@@ -58,9 +56,9 @@ target_link_libraries(real_time_eeg PRIVATE
     Threads::Threads
     ${Boost_LIBRARIES}
     fftw3
-    /home/veikka/Work/EEG/DataStream/Real_Time_EEG/external/nibrary/build-static/libNibrary.a
-    "${ZLIB_ROOT}/libz.a"
-    "${GEOG_ROOT}/lib/libgeogram.a"
+    "$ENV{NIBRARY_ROOT}/libNibrary.a"
+    "$ENV{NIBRARY_ROOT}/external/zlib/src/build_zlib-build/libz.a"
+    "$ENV{NIBRARY_ROOT}/external/geogram/src/build_geogram-build/lib/libgeogram.a"
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
