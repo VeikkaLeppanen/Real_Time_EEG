@@ -26,8 +26,9 @@ A real-time EEG data acquisition, processing, and visualization system with inte
 ## Building
 
 1. Set up Nibrary:
-bash
+```bash
 export NIBRARY_ROOT="/path/to/nibrary/build-static"
+```
 
 2. Create build directory and compile:
 ```bash
