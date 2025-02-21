@@ -1,4 +1,4 @@
-# Real_Time_EEG
+# TMS-EEG-MRI
 
 A real-time EEG data acquisition, processing, and visualization system with integrated TMS (Transcranial Magnetic Stimulation) control and MRI visualization capabilities.
 
@@ -72,7 +72,7 @@ The application provides:
 
 BSD 3-Clause License
 
-Copyright (c) 2024 Veikka Leppänen, Copyright (c) 2024 Joonas Laurinoja, Copyright (c) 2024 Dogu Baran Aydogan.
+Copyright (c) 2025 Veikka Leppänen, Copyright (c) 2025 Joonas Laurinoja, Copyright (c) 2025 Dogu Baran Aydogan.
 
 See the [LICENSE](LICENSE.md) file for details.
 
