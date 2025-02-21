@@ -2,3 +2,4 @@ build
 myenv
 run.sh
 *.csv
+CMakeLists.txt.user
