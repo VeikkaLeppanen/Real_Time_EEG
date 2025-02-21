@@ -8,17 +8,14 @@
 #include <malloc.h>
 #include <sys/mman.h> // For mlockall
 
-#include "dataProcessor/dataProcessor.h"
-#include "dataProcessor/processingFunctions.h"
 #include "dataHandler/dataHandler.h"
-#include "eeg_bridge/eeg_bridge.h"
+#include "devices/EEG/eeg_bridge/eeg_bridge.h"
 
-#include "UI/mainwindow.h"
+#include "UI/mainwindow/mainwindow.h"
 #include <QApplication>
 #include <QWidget>
-
-// #include "matplotlibcpp.h"
-// namespace plt = matplotlibcpp;
+#include <Eigen/Dense>
+#include <QMetaType>
 
 // In case of bind failed the previous process can be terminated with the following commands on linux
 // lsof -i :50000       Find PID
@@ -29,6 +26,10 @@ volatile std::sig_atomic_t signal_received = 0;
 void signal_handler(int signal) {
     signal_received = 1;
 }
+
+Q_DECLARE_METATYPE(Eigen::MatrixXd)
+Q_DECLARE_METATYPE(Eigen::VectorXi)
+Q_DECLARE_METATYPE(Eigen::VectorXd)
 
 int main(int argc, char *argv[])
 {
@@ -51,8 +52,16 @@ int main(int argc, char *argv[])
     dataHandler handler;
 
     QApplication a(argc, argv);
-    // qRegisterMetaType<Eigen::MatrixXd>("Eigen::MatrixXd");
-    // qRegisterMetaType<Eigen::MatrixXd&>("Eigen::MatrixXd&");
+    qRegisterMetaType<Eigen::MatrixXd>("Eigen::MatrixXd");
+    qRegisterMetaType<Eigen::VectorXi>("Eigen::VectorXi");
+    qRegisterMetaType<Eigen::VectorXd>("Eigen::VectorXd");
+    
+    // Connect application quit signal
+    QObject::connect(&a, &QApplication::aboutToQuit, [&]() {
+        signal_received = 1;
+        QThread::msleep(100);  // Give threads time to clean up
+    });
+    
     MainWindow w(handler, signal_received);
     w.show();
     return a.exec();

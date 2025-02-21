@@ -6,6 +6,7 @@
 
 mkdir build
 cd build
+export NIBRARY_ROOT="/home/user/nibrary/build-static"
 cmake -DCMAKE_PREFIX_PATH=~/Qt/6.7.0/gcc_64/lib/cmake -DCMAKE_BUILD_TYPE=Release ..
 # cmake ..
 make # VERBOSE=1

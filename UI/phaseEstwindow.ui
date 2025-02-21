@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>phaseEstwindow</class>
+ <widget class="QMainWindow" name="phaseEstwindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1054</width>
+    <height>730</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QFrame" name="frame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="ProcessingGlWidget" name="processingGlWidget" native="true"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item alignment="Qt::AlignTop">
+     <widget class="QFrame" name="frame_3">
+      <property name="maximumSize">
+       <size>
+        <width>220</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QFrame" name="frame_4">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>3</number>
+          </property>
+          <item row="0" column="0" colspan="4">
+           <widget class="QTabWidget" name="tabWidget">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <widget class="QWidget" name="tab_9">
+             <attribute name="title">
+              <string>Tab 1</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <property name="spacing">
+               <number>3</number>
+              </property>
+              <property name="leftMargin">
+               <number>2</number>
+              </property>
+              <property name="topMargin">
+               <number>2</number>
+              </property>
+              <property name="rightMargin">
+               <number>2</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
+              <item>
+               <widget class="QFrame" name="frame_2">
+                <property name="maximumSize">
+                 <size>
+                  <width>220</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QGridLayout" name="gridLayout">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item row="2" column="2">
+                  <widget class="QComboBox" name="comboBox_spatialTarget"/>
+                 </item>
+                 <item row="0" column="0" colspan="3">
+                  <widget class="QCheckBox" name="checkBox_phaseEstimate">
+                   <property name="text">
+                    <string>Phase estimate</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="11" column="2">
+                  <widget class="QLineEdit" name="hilbertLength">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="14" column="0">
+                  <widget class="QLabel" name="label">
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Sample shift</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="2">
+                  <widget class="QLineEdit" name="SNRmax"/>
+                 </item>
+                 <item row="12" column="0">
+                  <widget class="QCheckBox" name="checkBox_PhaseTargeting">
+                   <property name="text">
+                    <string>Phase trgt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_8">
+                   <property name="text">
+                    <string>Outer electrodes</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QLabel" name="label_11">
+                   <property name="text">
+                    <string>Alpha threshold</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="13" column="2">
+                  <widget class="QLineEdit" name="stimulationTarget">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="14" column="2">
+                  <widget class="QLineEdit" name="phaseShift">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_7">
+                   <property name="text">
+                    <string>Center electrode</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="2">
+                  <widget class="QLineEdit" name="modelOrder">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="13" column="0">
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>Target phase(rad)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="2">
+                  <widget class="QLineEdit" name="edge">
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="11" column="0">
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Hilbert length</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="15" column="0" colspan="3">
+                  <widget class="QPushButton" name="setParamsButton">
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Set parameters</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QLabel" name="label_12">
+                   <property name="text">
+                    <string>Mean peak alpha</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QLabel" name="label_5">
+                   <property name="text">
+                    <string>Edge length</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QLabel" name="label_4">
+                   <property name="text">
+                    <string>Model order</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="12" column="2">
+                  <widget class="QCheckBox" name="checkBox_Stimulation">
+                   <property name="text">
+                    <string>Stimulation</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="8" column="0">
+                  <widget class="QCheckBox" name="Filter_checkbox">
+                   <property name="text">
+                    <string>Filter 9-13Hz</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="2">
+                  <widget class="QComboBox" name="comboBox_outElectrodes"/>
+                 </item>
+                 <item row="7" column="2">
+                  <widget class="QLineEdit" name="SNRtreshold"/>
+                 </item>
+                 <item row="4" column="0" colspan="3">
+                  <widget class="QCheckBox" name="checkBox_SNRcheck">
+                   <property name="text">
+                    <string>Alpha (8-12 Hz) check</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="tab_10">
+             <attribute name="title">
+              <string>Tab 2</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_3">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item alignment="Qt::AlignTop">
+               <widget class="QFrame" name="frame_5">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_3">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="horizontalSpacing">
+                  <number>6</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>3</number>
+                 </property>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_10">
+                   <property name="text">
+                    <string>Trig ports</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="3">
+                  <widget class="QCheckBox" name="checkBox_triggers_out">
+                   <property name="text">
+                    <string>out</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QCheckBox" name="checkBox_triggers_A">
+                   <property name="text">
+                    <string>A</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0" colspan="4">
+                  <widget class="QCheckBox" name="checkBox_Channels">
+                   <property name="text">
+                    <string>Show EEG channels</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0" colspan="3">
+                  <widget class="QCheckBox" name="checkBox_Xaxis">
+                   <property name="text">
+                    <string>X axis spacing (ms)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="3">
+                  <widget class="QLineEdit" name="lineEdit_XaxisSpacing"/>
+                 </item>
+                 <item row="6" column="3">
+                  <widget class="QLineEdit" name="scaleMax"/>
+                 </item>
+                 <item row="0" column="0" colspan="4">
+                  <widget class="QLabel" name="label_6">
+                   <property name="text">
+                    <string>View settings</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="4">
+                  <widget class="QPushButton" name="pushButton_pause_view">
+                   <property name="text">
+                    <string>Pause/Resume View</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="2">
+                  <widget class="QCheckBox" name="checkBox_triggers_B">
+                   <property name="text">
+                    <string>B</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="2" colspan="2">
+                  <widget class="QComboBox" name="comboBox_phaseError">
+                   <item>
+                    <property name="text">
+                     <string>Default</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Realtime</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="4" column="0" colspan="2">
+                  <widget class="QCheckBox" name="checkBox_phaseError">
+                   <property name="text">
+                    <string>Phase error</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="2">
+                  <widget class="QLineEdit" name="scaleMin"/>
+                 </item>
+                 <item row="6" column="0" colspan="2">
+                  <widget class="QCheckBox" name="checkBox">
+                   <property name="text">
+                    <string>Amp limit</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1054</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ProcessingGlWidget</class>
+   <extends>QWidget</extends>
+   <header>phaseEstimationwindow/processingglwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

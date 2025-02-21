@@ -214,7 +214,7 @@
                  <item row="3" column="1">
                   <widget class="QLineEdit" name="lineEditTimeOut">
                    <property name="text">
-                    <string>10</string>
+                    <string>60</string>
                    </property>
                   </widget>
                  </item>
@@ -249,27 +249,6 @@
                  <property name="bottomMargin">
                   <number>3</number>
                  </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="graph_settings_label">
-                   <property name="text">
-                    <string>Graph settings</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label">
-                   <property name="text">
-                    <string>Samples</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEditGraphSamples">
-                   <property name="text">
-                    <string>30000</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -295,56 +274,6 @@
            <property name="bottomMargin">
             <number>3</number>
            </property>
-           <item>
-            <widget class="QFrame" name="frame_10">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_6">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="stopButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Stop</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="startButton">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Start</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item alignment="Qt::AlignTop">
             <widget class="QFrame" name="frame_3">
              <property name="frameShape">
@@ -366,7 +295,94 @@
               <property name="bottomMargin">
                <number>3</number>
               </property>
-              <item row="10" column="1">
+              <item row="7" column="1">
+               <widget class="QLineEdit" name="lineEditGAaverage">
+                <property name="text">
+                 <string>25</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QCheckBox" name="checkBox_2">
+                <property name="text">
+                 <string>Baseline</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>TR length</string>
+                </property>
+               </widget>
+              </item>
+              <item row="17" column="1">
+               <widget class="QLineEdit" name="downsampling">
+                <property name="maximumSize">
+                 <size>
+                  <width>100</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>TA length</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="lineEditTRLength">
+                <property name="text">
+                 <string>10000</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QCheckBox" name="filter1">
+                <property name="text">
+                 <string>Filter 0-80Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item row="17" column="0">
+               <widget class="QLabel" name="label_13">
+                <property name="text">
+                 <string>down sampling</string>
+                </property>
+               </widget>
+              </item>
+              <item row="15" column="0">
+               <widget class="QCheckBox" name="checkBox_removeBCG">
+                <property name="text">
+                 <string>remove BCG</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="lineEditTALength">
+                <property name="text">
+                 <string>5000</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Window length</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Average</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="1">
                <widget class="QLineEdit" name="numberOfSamples">
                 <property name="maximumSize">
                  <size>
@@ -382,65 +398,6 @@
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
-               <widget class="QCheckBox" name="checkBox_removeBCG">
-                <property name="text">
-                 <string>remove BCG</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
-               <widget class="QLabel" name="label_13">
-                <property name="text">
-                 <string>down sampling</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_7">
-                <property name="text">
-                 <string>Average</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QCheckBox" name="filter1">
-                <property name="text">
-                 <string>Filter 0-80Hz</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0">
-               <widget class="QCheckBox" name="checkBox_2">
-                <property name="text">
-                 <string>Baseline</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="1">
-               <widget class="QLineEdit" name="downsampling">
-                <property name="maximumSize">
-                 <size>
-                  <width>100</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1">
-               <widget class="QLineEdit" name="lineEditGAaverage">
-                <property name="text">
-                 <string>25</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QLineEdit" name="lineEditGALength">
-                <property name="text">
-                 <string>5000</string>
-                </property>
-               </widget>
-              </item>
               <item row="4" column="0" colspan="2">
                <widget class="QCheckBox" name="checkBox_GA">
                 <property name="text">
@@ -448,34 +405,54 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>TA length</string>
+              <item row="12" column="0" colspan="2">
+               <widget class="QFrame" name="frame_10">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
                 </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <property name="lineWidth">
+                 <number>1</number>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_6">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                </layout>
                </widget>
               </item>
-              <item row="10" column="0">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>Window length</string>
-                </property>
-               </widget>
-              </item>
-              <item row="12" column="0">
+              <item row="18" column="0">
                <widget class="QLabel" name="label_11">
                 <property name="text">
                  <string>delay</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="1">
+              <item row="18" column="1">
                <widget class="QLineEdit" name="delay">
                 <property name="maximumSize">
                  <size>
                   <width>100</width>
                   <height>16777215</height>
                  </size>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QCheckBox" name="checkBox_GeoSum">
+                <property name="text">
+                 <string>GeoSum</string>
                 </property>
                </widget>
               </item>
@@ -525,10 +502,41 @@
           <enum>QFrame::Raised</enum>
          </property>
          <layout class="QGridLayout" name="gridLayout_7">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox">
+            <property name="text">
+             <string>Display graph scales</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLineEdit" name="lineEdit_XaxisSpacing"/>
+          </item>
           <item row="4" column="0">
+           <widget class="QCheckBox" name="checkBox_triggers_B">
+            <property name="text">
+             <string>Trigger port B</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
            <widget class="QCheckBox" name="checkBox_triggers_A">
             <property name="text">
              <string>Trigger port A</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QPushButton" name="pushButton_pauseView">
+            <property name="text">
+             <string>Pause/Resume View</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="checkBox_Xaxis">
+            <property name="text">
+             <string>X axis spacing (ms)</string>
             </property>
            </widget>
           </item>
@@ -537,56 +545,6 @@
             <property name="text">
              <string>View options</string>
             </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QCheckBox" name="checkBox_triggers_B">
-            <property name="text">
-             <string>Trigger port B</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox">
-            <property name="text">
-             <string>Display graph scales</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QCheckBox" name="checkBox_Xaxis">
-            <property name="text">
-             <string>X axis spacing (ms)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="1">
-           <widget class="QLineEdit" name="lineEdit_XaxisSpacing"/>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_pauseView">
-            <property name="text">
-             <string>Pause/Resume View</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBox_view">
-            <item>
-             <property name="text">
-              <string>GA correction</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Downsampled</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>RemoveBCG</string>
-             </property>
-            </item>
            </widget>
           </item>
          </layout>
@@ -613,7 +571,7 @@
   <customwidget>
    <class>Glwidget</class>
    <extends>QWidget</extends>
-   <header>glwidget.h</header>
+   <header>eegwindow/glwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
