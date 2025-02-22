@@ -43,9 +43,10 @@ file(GLOB_RECURSE TMS_SOURCES "devices/TMS/*.cpp" "devices/TMS/*.h")
 file(GLOB_RECURSE MATH_SOURCES "math/*.cpp" "math/*.h")
 file(GLOB_RECURSE UTILS_SOURCES "utils/*.cpp" "utils/*.h")
 file(GLOB_RECURSE UI_SOURCES "UI/*.cpp" "UI/*.h" "UI/*.ui")
+file(GLOB_RECURSE WORKERS_SOURCES "workers/*.cpp" "workers/*.h")
 
 # Combine all source lists
-set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES})
+set(SOURCES ${MAIN_SOURCES} ${EEG_SOURCES} ${EEG_BRIDGE_SOURCES} ${DATAHANDLER_SOURCES} ${TMS_SOURCES} ${MATH_SOURCES} ${UTILS_SOURCES} ${UI_SOURCES} ${WORKERS_SOURCES})
 
 # Add the executable based on the sources
 add_executable(real_time_eeg ${SOURCES})

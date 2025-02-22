@@ -18,9 +18,9 @@
 #include <QLineEdit>
 #include <QIntValidator>
 #include <iostream>
-#include "workers/preProcessingWorker.h"
-#include "workers/phaseEstimationWorker.h"
-#include "workers/EEGSpinWorker.h"
+#include "../../workers/preProcessingWorker.h"
+#include "../../workers/phaseEstimationWorker.h"
+#include "../../workers/EEGSpinWorker.h"
 #include "mainglwidget.h"
 #include "customTitleBar.h"
 #include "../dataHandler/dataHandler.h"

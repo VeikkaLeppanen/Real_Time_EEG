@@ -1,4 +1,4 @@
-# TMS-EEG-MRI
+# Real_Time_EEG
 
 A real-time EEG data acquisition, processing, and visualization system with integrated TMS (Transcranial Magnetic Stimulation) control and MRI visualization capabilities.
 
@@ -61,6 +61,13 @@ The application provides:
 ## Project Structure
 
 - `UI/`: Qt-based user interface components
+  - `mainwindow/`: Main application window components
+  - `eegwindow/`: EEG visualization and control interface
+  - `phaseEstimationwindow/`: Phase estimation interface
+- `workers/`: Data processing worker threads
+  - `EEGSpinWorker`: EEG data acquisition
+  - `preProcessingWorker`: EEG preprocessing
+  - `phaseEstimationWorker`: Phase calculation
 - `devices/`: Hardware interface implementations
   - `EEG/`: EEG device communication and processing
   - `TMS/`: TMS device control (MagPro)
