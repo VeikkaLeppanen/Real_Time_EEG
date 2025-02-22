@@ -1,4 +1,4 @@
-# Real_Time_EEG
+# TMS-EEG-MRI
 
 A real-time EEG data acquisition, processing, and visualization system with integrated TMS (Transcranial Magnetic Stimulation) control and MRI visualization capabilities.
 
